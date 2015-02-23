@@ -657,6 +657,7 @@ void Console::ProcessCommand(const char* command) {
 				whom->wclass = 0xFFFF;
 				whom->wrace = 0xFFFF;
 				whom->gmlookup = 0xFFFF;
+				whom->guildid = 0xFFFF;
 				for (int i=1; i<=sep.argnum; i++) {
 					if (strcasecmp(sep.arg[i], "gm") == 0)
 						whom->gmlookup = 1;

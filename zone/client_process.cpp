@@ -432,6 +432,10 @@ bool Client::Process() {
 			}
 		}
 
+		if (position_update_timer.Check()) {
+			client_position_update = true;
+		}
+
 		if(HasVirus()) {
 			if(viral_timer.Check()) {
 				viral_timer_counter++;
@@ -642,6 +646,7 @@ void Client::OnDisconnect(bool hard_disconnect) {
 	database.CharacterQuit(this->CharacterID());
 	if(hard_disconnect)
 	{
+		database.ClearAccountActive(this->AccountID());
 		LeaveGroup();
 		Raid *MyRaid = entity_list.GetRaidByClient(this);
 
@@ -1746,7 +1751,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 }
 
 void Client::DoHPRegen() {
-	if(!GetGM() && GetEndurance() == 0)
+	if (GetHP() >= max_hp || FoodFamished())
 		return;
 
 	SetHP(GetHP() + CalcHPRegen() + RestRegenHP);
@@ -1754,7 +1759,7 @@ void Client::DoHPRegen() {
 }
 
 void Client::DoManaRegen() {
-	if (GetMana() >= max_mana || (!GetGM() && GetEndurance() == 0))
+	if (GetMana() >= max_mana || WaterFamished())
 		return;
 
 	SetMana(GetMana() + CalcManaRegen() + RestRegenMana);
@@ -1847,11 +1852,11 @@ void Client::DoStaminaUpdate() {
 			if(!Hungry() && !Thirsty())
 				m_pp.famished = RuleI(Character, FamishedLevel)/2; //We are above the client's auto-consume threshold. Reduce us back down to stage 2.
 
-			else if(m_pp.hunger_level < 1500 || m_pp.thirst_level < 1500)
+			else if(FoodFamished())
 			{
 				if(GetEndurance() > 0)
 				{
-					//We are famished and are slowly losing endurance. (End regen has stopped, and HP/mana will stop once end reaches 0.)
+					//We are food famished and are slowly losing endurance.
 					//Rate of End loss is 10 minutes regardless of race. Adjust SetEndurance() to compensate for different timers.
 					float endper = 0.0f;
 					if(stamina_timer.GetDuration() == 45000)
@@ -1883,9 +1888,7 @@ void Client::DoStaminaUpdate() {
 
 void Client::DoEnduranceRegen()
 {
-	if(GetEndurance() >= GetMaxEndurance() || 
-		(!GetGM() && m_pp.famished >= RuleI(Character, FamishedLevel) && 
-		(m_pp.hunger_level < 1500 || m_pp.thirst_level < 1500)))
+	if(GetEndurance() >= GetMaxEndurance() || FoodFamished())
 		return;
 
 	SetEndurance(GetEndurance() + CalcEnduranceRegen() + RestRegenEndurance);

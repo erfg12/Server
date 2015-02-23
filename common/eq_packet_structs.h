@@ -1167,8 +1167,8 @@ struct Death_Struct
 	  /*0002*/ uint8	anim_type; // ??
 	  /*0003*/ uint8	heading;                // Heading
 	  /*0004*/ int8		delta_heading;          // Heading Change
-	  /*0005*/ int16	x_pos;                  // New X position of spawn
-	  /*0007*/ int16	y_pos;                  // New Y position of spawn
+	  /*0005*/ int16	y_pos;                  // New X position of spawn
+	  /*0007*/ int16	x_pos;                  // New Y position of spawn
 	  /*0009*/ int16	z_pos;                  // New Z position of spawn
 	  /*0011*/ uint32	delta_y : 10,             // Y Velocity
 						spacer1 : 1,              // ***Placeholder
@@ -1183,6 +1183,13 @@ struct Death_Struct
 	/*0000*/ uint32  num_updates;               // Number of SpawnUpdates
 	/*0004*/ struct SpawnPositionUpdate_Struct // Spawn Position Update
 						spawn_update;
+};
+
+struct PlayerPositionUpdates_Struct
+{
+	/*0000*/ uint32  num_updates;               // Number of SpawnUpdates
+	/*0004*/ struct SpawnPositionUpdate_Struct // Spawn Position Update
+						spawn_update[0];
 };
 
 /*
@@ -1883,19 +1890,17 @@ struct Petition_Struct {
 	char gmtext[1024];
 };
 
-
-struct Who_All_Struct { // 76 length total
-/*000*/	char	whom[64];
-/*064*/	uint32	wrace;		// FF FF = no race
-
-/*068*/	uint32	wclass;		// FF FF = no class
-/*072*/	uint32	lvllow;		// FF FF = no numbers
-/*076*/	uint32	lvlhigh;	// FF FF = no numbers
-/*080*/	uint32	gmlookup;	// FF FF = not doing /who all gm
-/*084*/	uint32	guildid;
-/*088*/	uint8	unknown076[64];
-/*152*/	uint32	type;		// New for SoF. 0 = /who 3 = /who all
-/*156*/
+struct Who_All_Struct 
+{ 
+	/*000*/	char	whom[64];
+	/*064*/	int16	wrace;		// FF FF = no race
+	/*066*/	int16	wclass;		// FF FF = no class
+	/*068*/	int16	lvllow;		// FF FF = no numbers
+	/*070*/	int16	lvlhigh;	// FF FF = no numbers
+	/*072*/	int16	gmlookup;	// FF FF = not doing /who all gm
+	/*074*/	int16	guildid;
+	/*076*/	int8	unknown076[64];
+	/*140*/
 };
 
 struct Stun_Struct { // 4 bytes total
@@ -3358,11 +3363,6 @@ struct ServerLootItem_Struct {
 	int16	equip_slot;	  // int16	equip_slot;
 	uint16	charges;	  // uint8	charges; 
 	uint16	lootslot;	  // uint16	lootslot;
-	uint32	aug_1;		  // uint32	aug_1;
-	uint32	aug_2;		  // uint32	aug_2;
-	uint32	aug_3;		  // uint32	aug_3;
-	uint32	aug_4;		  // uint32	aug_4;
-	uint32	aug_5;		  // uint32	aug_5;
 	uint8	min_level;		  // 
 	uint8	max_level;		  // 
 };

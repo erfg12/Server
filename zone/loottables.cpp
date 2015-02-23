@@ -34,8 +34,9 @@
 #define snprintf	_snprintf
 #endif
 
+
 // Queries the loottable: adds item & coin to the npc
-void ZoneDatabase::AddLootTableToNPC(NPC* npc,uint32 loottable_id, ItemList* itemlist, uint32* copper, uint32* silver, uint32* gold, uint32* plat) {
+void ZoneDatabase::AddLootTableToNPC(NPC* npc, uint32 loottable_id, ItemList* itemlist, uint32* copper, uint32* silver, uint32* gold, uint32* plat) {
 	const LootTable_Struct* lts = nullptr;
 	*copper = 0;
 	*silver = 0;
@@ -46,48 +47,45 @@ void ZoneDatabase::AddLootTableToNPC(NPC* npc,uint32 loottable_id, ItemList* ite
 	if (!lts)
 		return;
 
-	// do coin
-	if (lts->mincash > lts->maxcash) {
-		std::cerr << "Error in loottable #" << loottable_id << ": mincash > maxcash" << std::endl;
+	uint32 min_cash = lts->mincash;
+	uint32 max_cash = lts->maxcash;
+	if (min_cash > max_cash) {
+		uint32 t = min_cash;
+		min_cash = max_cash;
+		max_cash = t;
 	}
-	else if (lts->maxcash != 0) {
-		uint32 cash = 0;
-		if (lts->mincash == lts->maxcash)
-			cash = lts->mincash;
-		else
-			cash = zone->random.Int(lts->mincash, lts->maxcash);
-		if (cash != 0) {
-			if (lts->avgcoin != 0) {
-				//this is some crazy ass stuff... and makes very little sense... dont use it, k?
-				uint32 mincoin = (uint32) (lts->avgcoin * 0.75 + 1);
-				uint32 maxcoin = (uint32) (lts->avgcoin * 1.25 + 1);
-				*copper = zone->random.Int(mincoin, maxcoin);
-				*silver = zone->random.Int(mincoin, maxcoin);
-				*gold = zone->random.Int(mincoin, maxcoin);
-				if(*copper > cash) { *copper = cash; }
-					cash -= *copper;
-				if(*silver>(cash/10)) { *silver = (cash/10); }
-					cash -= *silver*10;
-				if(*gold > (cash/100)) { *gold = (cash/100); }
-					cash -= *gold*100;
-			}
-			if (cash < 0) {
-				cash = 0;
-			}
-			*plat = cash / 1000;
-			cash -= *plat * 1000;
-			uint32 gold2 = cash / 100;
-			cash -= gold2 * 100;
-			uint32 silver2 = cash / 10;
-			cash -= silver2 * 10;
-			*gold += gold2;
-			*silver += silver2;
-			*copper += cash;
+
+	uint32 cash = 0;
+	if (max_cash > 0 && lts->avgcoin > 0 && EQEmu::ValueWithin(lts->avgcoin, min_cash, max_cash)) {
+		float upper_chance = (float)(lts->avgcoin - min_cash) / (float)(max_cash - min_cash);
+		float avg_cash_roll = (float)zone->random.Real(0.0, 1.0);
+
+		if (avg_cash_roll < upper_chance) {
+			cash = zone->random.Int(lts->avgcoin, max_cash);
 		}
+		else {
+			cash = zone->random.Int(min_cash, lts->avgcoin);
+		}
+	}
+	else {
+		cash = zone->random.Int(min_cash, max_cash);
+	}
+
+	if (cash != 0) {
+		*plat = cash / 1000;
+		cash -= *plat * 1000;
+
+		*gold = cash / 100;
+		cash -= *gold * 100;
+
+		*silver = cash / 10;
+		cash -= *silver * 10;
+
+		*copper = cash;
 	}
 
 	// Do items
-	for (uint32 i=0; i<lts->NumEntries; i++) {
+	for (uint32 i = 0; i<lts->NumEntries; i++) {
 		for (uint32 k = 1; k <= lts->Entries[i].multiplier; k++) {
 			uint8 droplimit = lts->Entries[i].droplimit;
 			uint8 mindrop = lts->Entries[i].mindrop;
@@ -97,8 +95,8 @@ void ZoneDatabase::AddLootTableToNPC(NPC* npc,uint32 loottable_id, ItemList* ite
 			ltchance = lts->Entries[i].probability;
 
 			float drop_chance = 0.0f;
-			if(ltchance > 0.0 && ltchance < 100.0) {
-				drop_chance = zone->random.Real(0.0, 100.0);
+			if (ltchance > 0.0 && ltchance < 100.0) {
+				drop_chance = (float)zone->random.Real(0.0, 100.0);
 			}
 
 			if (ltchance != 0.0 && (ltchance == 100.0 || drop_chance <= ltchance)) {
@@ -110,13 +108,15 @@ void ZoneDatabase::AddLootTableToNPC(NPC* npc,uint32 loottable_id, ItemList* ite
 
 // Called by AddLootTableToNPC
 // maxdrops = size of the array npcd
-void ZoneDatabase::AddLootDropToNPC(NPC* npc,uint32 lootdrop_id, ItemList* itemlist, uint8 droplimit, uint8 mindrop) {
+void ZoneDatabase::AddLootDropToNPC(NPC* npc, uint32 lootdrop_id, ItemList* itemlist, uint8 droplimit, uint8 mindrop) {
 	const LootDrop_Struct* lds = GetLootDrop(lootdrop_id);
 	if (!lds) {
 		return;
 	}
+
 	if (lds->NumEntries == 0)
 		return;
+
 	if (droplimit == 0 && mindrop == 0) {
 		for (uint32 i = 0; i < lds->NumEntries; ++i) {
 			int charges = lds->Entries[i].multiplier;
@@ -130,12 +130,15 @@ void ZoneDatabase::AddLootDropToNPC(NPC* npc,uint32 lootdrop_id, ItemList* iteml
 		}
 		return;
 	}
+
 	if (lds->NumEntries > 100 && droplimit == 0) {
 		droplimit = 10;
 	}
+
 	if (droplimit < mindrop) {
 		droplimit = mindrop;
 	}
+
 	float roll_t = 0.0f;
 	bool active_item_list = false;
 	for (uint32 i = 0; i < lds->NumEntries; ++i) {
@@ -145,29 +148,35 @@ void ZoneDatabase::AddLootDropToNPC(NPC* npc,uint32 lootdrop_id, ItemList* iteml
 			active_item_list = true;
 		}
 	}
+
 	roll_t = EQEmu::ClampLower(roll_t, 100.0f);
+
 	if (!active_item_list) {
 		return;
 	}
+
 	mindrop = EQEmu::ClampLower(mindrop, (uint8)1);
 	int item_count = zone->random.Int(mindrop, droplimit);
 	for (int i = 0; i < item_count; ++i) {
-		float roll = zone->random.Real(0.0, roll_t);
+		float roll = (float)zone->random.Real(0.0, roll_t);
 		for (uint32 j = 0; j < lds->NumEntries; ++j) {
 			const Item_Struct* db_item = GetItem(lds->Entries[j].item_id);
 			if (db_item) {
 				if (roll < lds->Entries[j].chance) {
 					npc->AddLootDrop(db_item, itemlist, lds->Entries[j].item_charges, lds->Entries[j].minlevel,
 						lds->Entries[j].maxlevel, lds->Entries[j].equip_item > 0 ? true : false, false);
+
 					int charges = (int)lds->Entries[i].multiplier;
 					charges = EQEmu::ClampLower(charges, 1);
+
 					for (int k = 1; k < charges; ++k) {
-						float c_roll = zone->random.Real(0.0, 100.0);
+						float c_roll = (float)zone->random.Real(0.0, 100.0);
 						if (c_roll <= lds->Entries[i].chance) {
 							npc->AddLootDrop(db_item, itemlist, lds->Entries[j].item_charges, lds->Entries[j].minlevel,
 								lds->Entries[j].maxlevel, lds->Entries[j].equip_item > 0 ? true : false, false);
 						}
 					}
+
 					j = lds->NumEntries;
 					break;
 				}
@@ -176,7 +185,7 @@ void ZoneDatabase::AddLootDropToNPC(NPC* npc,uint32 lootdrop_id, ItemList* iteml
 				}
 			}
 		}
-	}
+	} // We either ran out of items or reached our limit.
 
 	npc->UpdateEquipLightValue();
 	// no wearchange associated with this function..so, this should not be needed
@@ -209,11 +218,6 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 
 	item->item_id = item2->ID;
 	item->charges = charges;
-	item->aug_1 = 0;
-	item->aug_2 = 0;
-	item->aug_3 = 0;
-	item->aug_4 = 0;
-	item->aug_5 = 0;
 	item->min_level = minlevel;
 	item->max_level = maxlevel;
 	if (equipit) {

@@ -674,8 +674,8 @@ struct SpawnPositionUpdate_Struct
 	/*0002*/ uint8   anim_type; // ??
 	/*0003*/ uint8	 heading;                // Heading
 	/*0004*/ int8    delta_heading;          // Heading Change
-	/*0005*/ int16   x_pos;                  // New X position of spawn
-	/*0007*/ int16   y_pos;                  // New Y position of spawn
+	/*0005*/ int16   y_pos;                  // New X position of spawn
+	/*0007*/ int16   x_pos;                  // New Y position of spawn
 	/*0009*/ int16   z_pos;                  // New Z position of spawn
 	/*0011*/ uint32  delta_y:10,             // Y Velocity
 						spacer1:1,              // ***Placeholder
@@ -690,6 +690,13 @@ struct SpawnPositionUpdates_Struct
 	/*0000*/ uint32  num_updates;               // Number of SpawnUpdates
 	/*0004*/ struct SpawnPositionUpdate_Struct // Spawn Position Update
 						spawn_update;
+};
+
+struct PlayerPositionUpdates_Struct
+{
+	/*0000*/ uint32  num_updates;               // Number of SpawnUpdates
+	/*0004*/ struct SpawnPositionUpdate_Struct // Spawn Position Update
+						spawn_update[0];
 };
 
 struct SpawnHPUpdate_Struct

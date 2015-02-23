@@ -698,7 +698,7 @@ uint32 Corpse::CountItems() {
 	return itemlist.size();
 }
 
-void Corpse::AddItem(uint32 itemnum, uint16 charges, int16 slot, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
+void Corpse::AddItem(uint32 itemnum, uint16 charges, int16 slot) {
 	if (!database.GetItem(itemnum))
 		return;
 
@@ -710,11 +710,6 @@ void Corpse::AddItem(uint32 itemnum, uint16 charges, int16 slot, uint32 aug1, ui
 	item->item_id = itemnum;
 	item->charges = charges;
 	item->equip_slot = slot;
-	item->aug_1=aug1;
-	item->aug_2=aug2;
-	item->aug_3=aug3;
-	item->aug_4=aug4;
-	item->aug_5=aug5;
 	itemlist.push_back(item);
 
 	UpdateEquipLightValue();

@@ -1112,8 +1112,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial)
 							quantity = 1;
 
 						if (SummonedItem) {
-							c->PushItemOnCursor(*SummonedItem);
-							c->SendItemPacket(MainCursor, SummonedItem, ItemPacketSummonItem);
+							c->SummonItem(SummonedItem->GetID(), SummonedItem->GetCharges());
 							safe_delete(SummonedItem);
 						}
 						SummonedItem = database.CreateItem(spell.base[i], quantity);
@@ -1491,6 +1490,8 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial)
 					snprintf(eye_name, sizeof(eye_name), "Eye_of_%s", caster->GetCleanName());
 					int duration = CalcBuffDuration(caster, this, spell_id) * 6;
 					caster->TemporaryPets(spell_id, nullptr, eye_name, duration);
+					caster->CastToClient()->has_zomm = true;
+					CastToClient()->AI_Start(0, true);
 				}
 				break;
 			}
@@ -1671,34 +1672,6 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial)
 					else
 						TargetClient = this->CastToClient();
 
-					// We now have a valid target for this spell. Either the caster himself or a targetted player. Lets see if the target is in the group.
-					Group* group = entity_list.GetGroupByClient(TargetClient);
-					if(group) {
-						if(!group->IsGroupMember(TargetClient)) {
-							Message(CC_Red, "Your target must be a group member for this spell.");
-							break;
-						}
-					}
-					else {
-						Raid *r = entity_list.GetRaidByClient(caster->CastToClient());
-						if(r)
-						{
-							uint32 gid = r->GetGroup(caster->GetName());
-							if(gid < 11)
-							{
-								if(r->GetGroup(TargetClient->GetName()) != gid) {
-									Message(CC_Red, "Your target must be a group member for this spell.");
-									break;
-								}
-							}
-						} else {
-							if(TargetClient != this->CastToClient()) {
-								Message(CC_Red, "Your target must be a group member for this spell.");
-								break;
-							}
-						}
-					}
-
 					// Now we should either be casting this on self or its being cast on a valid group member
 					if(TargetClient) {
 
@@ -1716,13 +1689,18 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial)
 							else {
 								// No corpse found in the zone
 								Message_StringID(CC_User_Spells, CORPSE_CANT_SENSE);
+								this->CastToClient()->SummonItem(spells[spell_id].components[0]);
 							}
 						}
 						else
+						{
 							caster->Message_StringID(MT_SpellFailure, SPELL_LEVEL_REQ);
+							this->CastToClient()->SummonItem(spells[spell_id].components[0]);
+						}
 					}
 					else {
 						Message_StringID(CC_Red, TARGET_NOT_FOUND);
+						this->CastToClient()->SummonItem(spells[spell_id].components[0]);
 						Log.Out(Logs::General, Logs::Error, "%s attempted to cast spell id %u with spell effect SE_SummonCorpse, but could not cast target into a Client object.", GetCleanName(), spell_id);
 					}
 				}
@@ -3956,6 +3934,22 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses, bool death)
 					my_c->m_TimeSinceLastPositionCheck = cur_time;
 					my_c->m_DistanceSinceLastPositionCheck = 0.0f;
 				}
+
+				break;
+			}
+
+			case SE_EyeOfZomm:
+			{
+				if(IsClient())
+				{
+					CastToClient()->AI_Stop(true);
+					CastToClient()->has_zomm = false;
+					
+					// The client handles this as well on the first OP_ClientUpdate sent after Zomm fades, but we can't trust the client.
+					m_Position = glm::vec4(GetEQX(), GetEQY(), GetEQZ(), GetEQHeading());
+				}
+
+				break;
 			}
 		}
 	}

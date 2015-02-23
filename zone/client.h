@@ -189,8 +189,8 @@ public:
 	float GetQuiverHaste();
 
 	void	AI_Init();
-	void	AI_Start(uint32 iMoveDelay = 0);
-	void	AI_Stop();
+	void	AI_Start(uint32 iMoveDelay = 0, bool zomm = false);
+	void	AI_Stop(bool zomm = false);
 	void	AI_Process();
 	void	AI_SpellCast();
 	void	Trader_ShowItems();
@@ -724,7 +724,7 @@ public:
 	void	QSSwapItemAuditor(MoveItem_Struct* move_in, bool postaction_call = false);
 	void	PutLootInInventory(int16 slot_id, const ItemInst &inst, ServerLootItem_Struct** bag_item_data = 0);
 	bool	AutoPutLootInInventory(ItemInst& inst, bool try_worn = false, bool try_cursor = true, ServerLootItem_Struct** bag_item_data = 0);
-	bool	SummonItem(uint32 item_id, int16 quantity = -1, uint32 aug1 = 0, uint32 aug2 = 0, uint32 aug3 = 0, uint32 aug4 = 0, uint32 aug5 = 0, bool attuned = false, uint16 to_slot = MainCursor);
+	bool	SummonItem(uint32 item_id, int16 quantity = -1, bool attuned = false, uint16 to_slot = MainCursor);
 	void	DropItem(int16 slot_id);
 	bool	MakeItemLink(char* &ret_link, const ItemInst* inst);
 	int		GetItemLinkHash(const ItemInst* inst);
@@ -743,6 +743,8 @@ public:
 
 	bool Hungry() const {if (GetGM()) return false; return m_pp.hunger_level <= 3000;}
 	bool Thirsty() const {if (GetGM()) return false; return m_pp.thirst_level <= 3000;}
+	bool FoodFamished(); 
+	bool WaterFamished();
 int32 GetHunger() const { return m_pp.hunger_level; }
 int32 GetThirst() const { return m_pp.thirst_level; }
 int32 GetFamished() const { return m_pp.famished; }
@@ -952,10 +954,13 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	virtual int32 Tune_GetMeleeMitDmg(Mob* GM, Mob *attacker, int32 damage, int32 minhit, float mit_rating, float atk_rating);
 	int32 GetMeleeDamage(Mob* other, bool GetMinDamage = false);
 
+	bool has_zomm;
+	bool client_position_update;
+
 protected:
 	friend class Mob;
 	void CalcItemBonuses(StatBonuses* newbon);
-	void AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAug = false, bool isTribute = false);
+	void AddItemBonuses(const ItemInst *inst, StatBonuses* newbon);
 	int CalcRecommendedLevelBonus(uint8 level, uint8 reclevel, int basestat);
 	void CalcEdibleBonuses(StatBonuses* newbon);
 	void CalcAABonuses(StatBonuses* newbon);
@@ -1135,6 +1140,7 @@ private:
 	Timer afk_toggle_timer;
 	Timer helm_toggle_timer;
 	Timer light_update_timer;
+	Timer position_update_timer;
 
     glm::vec3 m_Proximity;
 
@@ -1224,6 +1230,7 @@ private:
 
 	void InterrogateInventory_(bool errorcheck, Client* requester, int16 head, int16 index, const ItemInst* inst, const ItemInst* parent, bool log, bool silent, bool &error, int depth);
 	bool InterrogateInventory_error(int16 head, int16 index, const ItemInst* inst, const ItemInst* parent, int depth);
+
 };
 
 #endif

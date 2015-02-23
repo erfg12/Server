@@ -305,7 +305,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	// Don't aggro new clients if we are already engaged unless PROX_AGGRO is set
 	if(IsEngaged() && (!GetSpecialAbility(PROX_AGGRO) || (GetSpecialAbility(PROX_AGGRO) && !CombatRange(mob))))
 	{
-		Log.Out(Logs::Detail, Logs::Aggro, "%s is in combat, and does not have prox_aggro, or does and is out of combat range with %s", GetName(), mob->GetName()); 
+		Log.Out(Logs::Moderate, Logs::Aggro, "%s is in combat, and does not have prox_aggro, or does and is out of combat range with %s", GetName(), mob->GetName()); 
 		return(false);
 	}
 
@@ -315,8 +315,9 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	}
 
 	// Summoned pets are indifferent
-	if(mob->IsPet() && !mob->IsCharmed())
+	if((mob->IsClient() && mob->CastToClient()->has_zomm) || mob->iszomm || (mob->IsPet() && !mob->IsCharmed()))
 	{
+		Log.Out(Logs::Moderate, Logs::Aggro, "Zomm or Pet: Skipping aggro.");
 		return(false);
 	}
 
@@ -366,7 +367,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	{
 		//FatherNiwtit: make sure we can see them. last since it is very expensive
 		if(CheckLosFN(mob)) {
-			Log.Out(Logs::Detail, Logs::Aggro, "Check aggro for %s target %s.", GetName(), mob->GetName()); 
+			Log.Out(Logs::Moderate, Logs::Aggro, "Check aggro for %s target %s.", GetName(), mob->GetName()); 
 			return( mod_will_aggro(mob, this) );
 		}
 	}

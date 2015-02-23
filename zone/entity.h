@@ -235,6 +235,7 @@ public:
 	void	RemoveAllRaids();
 	void	DestroyTempPets(Mob *owner);
 	int16	CountTempPets(Mob *owner);
+	bool	GetZommPet(Mob *owner, NPC* &pet);
 	void	AddTempPetsToHateList(Mob *owner, Mob* other, bool bFrenzy = false);
 	Entity *GetEntityMob(uint16 id);
 	Entity *GetEntityMerc(uint16 id);
@@ -363,7 +364,6 @@ public:
 	uint16	CreateGroundObject(uint32 itemid, const glm::vec4& position, uint32 decay_time = 300000);
 	uint16	CreateGroundObjectFromModel(const char *model, const glm::vec4& position, uint8 type = 0x00, uint32 decay_time = 0);
 	uint16	CreateDoor(const char *model, const glm::vec4& position, uint8 type = 0, uint16 size = 100);
-	void	ZoneWho(Client *c, Who_All_Struct* Who);
 
 	void	GateAllClients();
 	void	SignalAllClients(uint32 data);

@@ -4,5 +4,7 @@ Alkabor Quests: http://code.google.com/p/peqmacquests/
 
 Maps: https://code.google.com/p/eqmacemu-maps/
 
-For installation, follow instructions on EQEmu wiki as other than login we are using compatible EQEmu code. 
+Our login server requires OpenSSL: https://www.openssl.org/related/binaries.html
+
+For the rest, follow instructions on EQEmu (https://github.com/EQEmu/Server/blob/master/README.md) as other than login we are using compatible EQEmu code. 
 

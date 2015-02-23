@@ -291,13 +291,15 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 	}
 
 	if (Log.log_settings[Logs::Client_Server_Packet].is_category_enabled == 1)
-		if(RuleB(EventLog, SkipCommonPacketLogging) && app->GetOpcode() != OP_MobHealth  && app->GetOpcode() != OP_MobUpdate && app->GetOpcode() != OP_ClientUpdate){
-			Log.Out(Logs::General, Logs::Client_Server_Packet, "[%s - 0x%04x] [Size: %u]", OpcodeManager::EmuToName(app->GetOpcode()), app->GetOpcode(), app->Size());
+		if (!RuleB(EventLog, SkipCommonPacketLogging) ||
+			(RuleB(EventLog, SkipCommonPacketLogging) && app->GetOpcode() != OP_MobHealth && app->GetOpcode() != OP_MobUpdate && app->GetOpcode() != OP_ClientUpdate)){
+			Log.Out(Logs::General, Logs::Client_Server_Packet, "[%s - 0x%04x] [Size: %u]", OpcodeManager::EmuToName(app->GetOpcode()), app->GetOpcode(), app->Size()-2);
 		}
 	
 	if (Log.log_settings[Logs::Client_Server_Packet_With_Dump].is_category_enabled == 1)
-		if(RuleB(EventLog, SkipCommonPacketLogging) && app->GetOpcode() != OP_MobHealth  && app->GetOpcode() != OP_MobUpdate && app->GetOpcode() != OP_ClientUpdate){
-			Log.Out(Logs::General, Logs::Client_Server_Packet_With_Dump, "[%s - 0x%04x] [Size: %u] %s", OpcodeManager::EmuToName(app->GetOpcode()), app->GetOpcode(), app->Size(), DumpPacketToString(app).c_str());
+		if (!RuleB(EventLog, SkipCommonPacketLogging) ||
+			(RuleB(EventLog, SkipCommonPacketLogging) && app->GetOpcode() != OP_MobHealth && app->GetOpcode() != OP_MobUpdate && app->GetOpcode() != OP_ClientUpdate)){
+			Log.Out(Logs::General, Logs::Client_Server_Packet_With_Dump, "[%s - 0x%04x] [Size: %u] %s", OpcodeManager::EmuToName(app->GetOpcode()), app->GetOpcode(), app->Size()-2, DumpPacketToString(app).c_str());
 		}
 	
 	EmuOpcode opcode = app->GetOpcode();
@@ -388,6 +390,7 @@ void Client::CompleteConnect()
 	hpupdate_timer.Start();
 	position_timer.Start();
 	autosave_timer.Start();
+	position_update_timer.Start();
 	SetDuelTarget(0);
 	SetDueling(false);
 
@@ -620,6 +623,7 @@ void Client::CompleteConnect()
 	zoneinpacket_timer.Start();
 
 	conn_state = ClientConnectFinished;
+	database.SetAccountActive(AccountID());
 
 	if (GetGroup())
 	{
@@ -912,7 +916,10 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 
 	CreateSpawnPacket(outapp);
 	outapp->priority = 6;
-	if (!GetHideMe()) entity_list.QueueClients(this, outapp, true);
+	if(GetHideMe())
+		entity_list.QueueClientsStatus(this, outapp, true, Admin(), 255);
+	else
+		entity_list.QueueClients(this, outapp, true);
 	safe_delete(outapp);
 	if (GetPVP())	//force a PVP update until we fix the spawn struct
 		SendAppearancePacket(AT_PVP, GetPVP(), true, false);
@@ -1502,7 +1509,15 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	FillSpawnStruct(&sze->player, CastToMob());
 	sze->player.spawn.curHp = 1;
 	sze->player.spawn.NPC = 0;
-	sze->player.spawn.z += 2;	//arbitrary lift, seems to help spawning under zone.
+	if(zone->zonemap)
+	{
+		// This prevents hopping on logging in.
+		glm::vec3 loc(sze->player.spawn.x,sze->player.spawn.y,sze->player.spawn.z);
+		m_Position.z = zone->zonemap->FindBestZ(loc, nullptr);
+		if(size > 0)
+			m_Position.z += static_cast<int16>(size);
+		sze->player.spawn.z = m_Position.z;
+	}
 	sze->player.spawn.zoneID = zone->GetZoneID();
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
@@ -2422,15 +2437,12 @@ void Client::Handle_OP_ClickObjectAction(const EQApplicationPacket *app)
 
 void Client::Handle_OP_ClientError(const EQApplicationPacket *app)
 {
-	ClientError_Struct* error = (ClientError_Struct*)app->pBuffer;
-	Log.Out(Logs::General, Logs::Error, "Client error: %s", error->character_name);
-	Log.Out(Logs::General, Logs::Error, "Error message:%s", error->message);
 	return;
 }
 
 void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 {
-	if (IsAIControlled())
+	if (IsAIControlled() && !has_zomm)
 		return;
 
 	if(dead)
@@ -2444,6 +2456,14 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 		return;
 	}
 	SpawnPositionUpdate_Struct* ppu = (SpawnPositionUpdate_Struct*)app->pBuffer;
+
+	if(client_position_update)
+	{
+		Log.Out(Logs::Detail, Logs::Pathing, "PositionUpdate for %s(%d): loc: %d,%d,%d,%d delta: %d,%d,%d,%d anim: %d", GetName(), ppu->spawn_id, ppu->x_pos, ppu->y_pos, ppu->z_pos, ppu->heading, ppu->delta_x, ppu->delta_y, ppu->delta_z, ppu->delta_heading, ppu->anim_type);
+		client_position_update = false;
+	}
+
+	ppu->z_pos /= 10;
 
 	/* Web Interface */
 	if (IsClient() && RemoteCallSubscriptionHandler::Instance()->IsSubscribed("Client.Position")) {
@@ -2459,6 +2479,26 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 		RemoteCallSubscriptionHandler::Instance()->OnEvent("Client.Position", params);
 	}
 
+	if(has_zomm)
+	{
+		NPC* zommnpc = nullptr;
+		if(entity_list.GetZommPet(this, zommnpc))
+		{
+			if(zommnpc)
+			{
+				auto zommPos = glm::vec4(ppu->x_pos, ppu->y_pos, ppu->z_pos, ppu->heading);
+				zommnpc->SetPosition(zommPos);
+				// Update internal position so we don't warp back to our body. (Self updates don't occur while zomm is out, 
+				// and other players will be given the player's original coords on timeout updates.)
+				m_Position = glm::vec4(ppu->x_pos, ppu->y_pos, ppu->z_pos, ppu->heading);
+				zommnpc->SendPosUpdate(1);
+				pLastUpdate = Timer::GetCurrentTime();
+				entity_list.OpenDoorsNear(zommnpc);
+				return;
+			}
+		}
+	}
+
 	if(ppu->spawn_id != GetID()) {
 		// check if the id is for a boat the player is controlling
 		if (ppu->spawn_id == BoatID) {
@@ -2472,17 +2512,21 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 			auto boatDelta = glm::vec4(ppu->delta_x, ppu->delta_y, ppu->delta_z, ppu->delta_heading);
 			boat->SetDelta(boatDelta);
 			// send an update to everyone nearby except the client controlling the boat
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClientUpdate, sizeof(SpawnPositionUpdate_Struct));
-			SpawnPositionUpdate_Struct* ppus = (SpawnPositionUpdate_Struct*)outapp->pBuffer;
-			boat->MakeSpawnUpdate(ppus);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_MobUpdate, sizeof(SpawnPositionUpdates_Struct));
+			SpawnPositionUpdates_Struct* ppus = (SpawnPositionUpdates_Struct*)outapp->pBuffer;
+			boat->MakeSpawnUpdate(&ppus->spawn_update);
+			ppus->num_updates = 1;
 			entity_list.QueueCloseClients(boat,outapp,true,300,this,false);
 			safe_delete(outapp);
+			pLastUpdate = Timer::GetCurrentTime();
 			// update the boat's position on the server, without sending an update
 			boat->GMMove(ppu->x_pos, ppu->y_pos, ppu->z_pos, EQ19toFloat(ppu->heading), false);
 			return;
 		}
 		else return;	// if not a boat, do nothing
 	}
+
+	m_EQPosition = glm::vec4(ppu->x_pos, ppu->y_pos, ppu->z_pos, ppu->heading);
 
 	float dist = 0;
 	float tmp;
@@ -2663,12 +2707,15 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 			CheckIncreaseSkill(SkillTracking, nullptr, -20);
 	}
 
-	// Break Hide and Trader mode if moving without sneaking and set rewind timer if moved
-	if(ppu->y_pos != m_Position.y || ppu->x_pos != m_Position.x){
-		if((hidden || improved_hidden) && !sneaking){
+	// Break Hide, Trader, and fishing mode if moving and set rewind timer
+	if(ppu->y_pos != m_Position.y || ppu->x_pos != m_Position.x)
+	{
+		if((hidden || improved_hidden) && !sneaking)
+		{
 			hidden = false;
 			improved_hidden = false;
-			if(!invisible) {
+			if(!invisible) 
+			{
 				EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
 				SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
 				sa_out->spawn_id = GetID();
@@ -2680,29 +2727,27 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app)
 		}
 		if(Trader)
 			Trader_EndTrader();
+
+		if(fishing_timer.Enabled())
+		{
+			// Todo: Figure out how to stop fishing on a moving boat. (Perhaps deltas?)
+			if(GetBoatNPCID() == 0)
+				fishing_timer.Disable();
+		}
+
 		rewind_timer.Start(30000, true);
 	}
 
 	float water_x = m_Position.x;
 	float water_y = m_Position.y;
+	m_Position.x = ppu->x_pos;
+	m_Position.y = ppu->y_pos;
+	m_Position.z = ppu->z_pos;
+	animation = ppu->anim_type;
 
-	// Outgoing client packet
-	if (ppu->y_pos != m_Position.y || ppu->x_pos != m_Position.x || ppu->heading != m_Position.w || ppu->anim_type != animation || (m_Delta.x != 0 || m_Delta.y != 0 || m_Delta.z != 0) && animation == 0)
-	{
-		m_Position.x = ppu->x_pos;
-		m_Position.y = ppu->y_pos;
-		m_Position.z = ppu->z_pos;
-		animation = ppu->anim_type;
-
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ClientUpdate, sizeof(SpawnPositionUpdate_Struct));
-		SpawnPositionUpdate_Struct* ppu = (SpawnPositionUpdate_Struct*)outapp->pBuffer;
-		MakeSpawnUpdate(ppu);
-		if (gmhideme)
-			entity_list.QueueClientsStatus(this,outapp,true,Admin(),255);
-		else
-			entity_list.QueueCloseClients(this,outapp,true,300,nullptr,false);
-		safe_delete(outapp);
-	}
+	// No need to check for loc change, our client only sends this packet if it has actually moved in some way.
+	SendPosUpdate();
+	pLastUpdate = Timer::GetCurrentTime();
 
 	if(zone->watermap)
 	{
@@ -7107,11 +7152,13 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 
 	std::string packet;
 	if (!stacked && inst) {
-		PutItemInInventory(freeslotid, *inst);
-		if (freeslotid == MainCursor)
-			SendItemPacket(freeslotid, inst, ItemPacketSummonItem);
-		else
-			SendItemPacket(freeslotid, inst, ItemPacketTrade);
+		if(PutItemInInventory(freeslotid, *inst))
+		{
+			if (freeslotid == MainCursor)
+				SendItemPacket(freeslotid, inst, ItemPacketSummonItem);
+			else
+				SendItemPacket(freeslotid, inst, ItemPacketTrade);
+		}
 	}
 	else if (!stacked){
 		Log.Out(Logs::General, Logs::Error, "OP_ShopPlayerBuy: item->ItemClass Unknown! Type: %i", item->ItemClass);
@@ -7168,11 +7215,6 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 		qsaudit->items[0].charges = mpo->quantity;
 
 		if (freeslotid == INVALID_INDEX) {
-			qsaudit->items[0].aug_1 = 0;
-			qsaudit->items[0].aug_2 = 0;
-			qsaudit->items[0].aug_3 = 0;
-			qsaudit->items[0].aug_4 = 0;
-			qsaudit->items[0].aug_5 = 0;
 		}
 
 		qspack->Deflate();
@@ -8468,7 +8510,7 @@ void Client::Handle_OP_Translocate(const EQApplicationPacket *app)
 void Client::Handle_OP_WearChange(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(WearChange_Struct)) {
-		std::cout << "Wrong size: OP_WearChange, size=" << app->size << ", expected " << sizeof(WearChange_Struct) << std::endl;
+		Log.Out(Logs::General, Logs::Error, "Wrong size: OP_WearChange, size %i expected %i", app->size, sizeof(WearChange_Struct));
 		return;
 	}
 
@@ -8484,7 +8526,7 @@ void Client::Handle_OP_WearChange(const EQApplicationPacket *app)
 void Client::Handle_OP_WhoAllRequest(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(Who_All_Struct)) {
-		std::cout << "Wrong size on OP_WhoAll. Got: " << app->size << ", Expected: " << sizeof(Who_All_Struct) << std::endl;
+		Log.Out(Logs::General, Logs::Error, "Wrong size on OP_WhoAll. Got: %i, Expected: %i", app->size, sizeof(Who_All_Struct));
 		return;
 	}
 	Who_All_Struct* whoall = (Who_All_Struct*)app->pBuffer;
@@ -8605,7 +8647,7 @@ void Client::Handle_OP_Disarm(const EQApplicationPacket *app)
 		}
 	}
 
-	//Message(CC_Yellow, "Disarm: Roll: %0.2f < TOTAL: %0.2f (142.5 max) Base: %0.2f Chance: %0.2f Diff: %i SUCCESS %i)", roll, totaldisarm, disarmbase, disarmchance, level_diff, success);
+	Log.Out(Logs::Detail, Logs::Skills, "Disarm: Roll: %0.2f < TOTAL: %0.2f (142.5 max) Base: %0.2f Chance: %0.2f Diff: %i SUCCESS %i)", roll, totaldisarm, disarmbase, disarmchance, level_diff, success);
 
 	EQApplicationPacket *outapp = new EQApplicationPacket(OP_Disarm, sizeof(Disarm_Struct));
 	Disarm_Struct* dis = (Disarm_Struct*)outapp->pBuffer;

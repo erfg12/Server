@@ -471,49 +471,9 @@ const char *Lua_Item::GetCharmFile() {
 	return self->CharmFile;
 }
 
-uint32 Lua_Item::GetAugType() {
-	Lua_Safe_Call_Int();
-	return self->AugType;
-}
-
-int Lua_Item::GetAugSlotType(int i) {
-	Lua_Safe_Call_Int();
-
-	if(i >= 5 || i < 0) {
-		return 0;
-	}
-
-	return self->AugSlotType[i];
-}
-
-int Lua_Item::GetAugSlotVisible(int i) {
-	Lua_Safe_Call_Int();
-
-	if(i >= 5 || i < 0) {
-		return 0;
-	}
-
-	return self->AugSlotVisible[i];
-}
-
-int Lua_Item::GetAugSlotUnk2(int i) {
-	Lua_Safe_Call_Int();
-
-	if(i >= 5 || i < 0) {
-		return 0;
-	}
-
-	return self->AugSlotUnk2[i];
-}
-
 uint32 Lua_Item::GetBaneDmgRaceAmt() {
 	Lua_Safe_Call_Int();
 	return self->BaneDmgRaceAmt;
-}
-
-uint32 Lua_Item::GetAugRestrict() {
-	Lua_Safe_Call_Int();
-	return self->AugRestrict;
 }
 
 uint32 Lua_Item::GetEndur() {
@@ -564,11 +524,6 @@ uint32 Lua_Item::GetRecastDelay() {
 uint32 Lua_Item::GetRecastType() {
 	Lua_Safe_Call_Int();
 	return self->RecastType;
-}
-
-uint32 Lua_Item::GetAugDistiller() {
-	Lua_Safe_Call_Int();
-	return self->AugDistiller;
 }
 
 bool Lua_Item::GetAttuneable() {
@@ -969,12 +924,7 @@ luabind::scope lua_register_item() {
 		.def("FactionAmt3", &Lua_Item::GetFactionAmt3)
 		.def("FactionAmt4", &Lua_Item::GetFactionAmt4)
 		.def("CharmFile", &Lua_Item::GetCharmFile)
-		.def("AugType", &Lua_Item::GetAugType)
-		.def("AugSlotType", &Lua_Item::GetAugSlotType)
-		.def("AugSlotVisible", &Lua_Item::GetAugSlotVisible)
-		.def("AugSlotUnk2", &Lua_Item::GetAugSlotUnk2)
 		.def("BaneDmgRaceAmt", &Lua_Item::GetBaneDmgRaceAmt)
-		.def("AugRestrict", &Lua_Item::GetAugRestrict)
 		.def("Endur", &Lua_Item::GetEndur)
 		.def("DotShielding", &Lua_Item::GetDotShielding)
 		.def("Attack", &Lua_Item::GetAttack)
@@ -985,7 +935,6 @@ luabind::scope lua_register_item() {
 		.def("DamageShield", &Lua_Item::GetDamageShield)
 		.def("RecastDelay", &Lua_Item::GetRecastDelay)
 		.def("RecastType", &Lua_Item::GetRecastType)
-		.def("AugDistiller", &Lua_Item::GetAugDistiller)
 		.def("Attuneable", &Lua_Item::GetAttuneable)
 		.def("NoPet", &Lua_Item::GetNoPet)
 		.def("Stackable", &Lua_Item::GetStackable)

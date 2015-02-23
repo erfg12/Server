@@ -2553,3 +2553,51 @@ void Database::LoadLogSettings(EQEmuLogSys::LogSettings* log_settings){
 		}
 	}
 }
+
+void Database::ClearAllActive() {
+	std::string query = "UPDATE `account` set active = 0";
+	auto results = QueryDatabase(query);
+
+	return;
+}
+
+bool Database::CheckAccountActive(uint32 account_id) {
+	std::string query = StringFormat("SELECT `active` FROM `account` WHERE `id` = %i", account_id);
+
+	auto results = QueryDatabase(query); 
+	if (!results.Success()) {
+		return false;
+	}
+
+	if (results.RowCount() != 1)
+		return false;
+	
+	auto row = results.begin(); 
+	uint8 active = atoi(row[0]); 
+
+	if(active == 0)
+	{
+		std::string query = StringFormat("UPDATE `account` SET active = 1 WHERE id = %i", account_id);
+		QueryDatabase(query);
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
+void Database::ClearAccountActive(uint32 account_id) {
+	std::string query = StringFormat("UPDATE `account` set active = 0 WHERE id = %i", account_id);
+	auto results = QueryDatabase(query);
+	Log.Out(Logs::Detail, Logs::World_Server,"Setting account %d inactive", account_id);
+	return;
+}
+
+void Database::SetAccountActive(uint32 account_id)
+{
+	std::string query = StringFormat("UPDATE `account` SET active = 1 WHERE id = %i", account_id);
+    QueryDatabase(query);
+
+	return;
+}

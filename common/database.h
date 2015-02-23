@@ -362,11 +362,6 @@ namespace Convert {
 			int16	equipSlot;
 			uint8	charges;
 			uint16	lootslot;
-			uint32 aug1;
-			uint32 aug2;
-			uint32 aug3;
-			uint32 aug4;
-			uint32 aug5;
 		};
 	}
 
@@ -482,6 +477,10 @@ public:
 	bool	CheckGMIPs(const char* loginIP, uint32 account_id);
 	bool	AddGMIP(char* ip_address, char* name);
 	void	LoginIP(uint32 AccountID, const char* LoginIP);
+	bool	CheckAccountActive(uint32 AccountID);
+	void	ClearAllActive();
+	void	ClearAccountActive(uint32 AccountID);
+	void	SetAccountActive(uint32 AccountID);
 
 	/*
 	* Instancing Stuff
@@ -559,6 +558,7 @@ public:
 	bool DBSetup_webdata_character();
 	bool DBSetup_webdata_servers();
 	bool DBSetup_feedback();
+	bool DBSetup_account_active();
 	bool DBSetup_PlayerCorpseBackup();
 	bool DBSetup_CharacterSoulMarks();
 	bool DBSetup_MessageBoards();

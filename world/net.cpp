@@ -347,6 +347,9 @@ int main(int argc, char** argv) {
 	Timer PurgeInstanceTimer(450000);
 	PurgeInstanceTimer.Start(450000);
 
+	Log.Out(Logs::General, Logs::World_Server, "Clearing active accounts...");
+	database.ClearAllActive();
+
 	Log.Out(Logs::General, Logs::World_Server, "Loading char create info...");
 	database.LoadCharacterCreateAllocations();
 	database.LoadCharacterCreateCombos();

@@ -31,6 +31,7 @@
 #define SPELL_HARM_TOUCH2 2821
 #define SPELL_IMP_HARM_TOUCH 2774
 #define SPELL_NPC_HARM_TOUCH 929
+#define SPELL_CAZIC_TOUCH 982
 
 
 #define EFFECT_COUNT 12
@@ -797,6 +798,7 @@ bool IsPureNukeSpell(uint16 spell_id);
 bool IsAENukeSpell(uint16 spell_id);
 bool IsPBAENukeSpell(uint16 spell_id);
 bool IsAERainNukeSpell(uint16 spell_id);
+bool IsPureDispelSpell(uint16 spell_id);
 bool IsPartialCapableSpell(uint16 spell_id);
 bool IsResistableSpell(uint16 spell_id);
 bool IsGroupSpell(uint16 spell_id);
@@ -865,6 +867,7 @@ uint32 GetPartialMagicRuneReduction(uint32 spell_id);
 uint32 GetPartialMeleeRuneAmount(uint32 spell_id);
 uint32 GetPartialMagicRuneAmount(uint32 spell_id);
 bool IsRacialIllusion(uint16 spell_id);
+bool IsCorpseSummon(uint16 spell_id);
 
 int CalcPetHp(int levelb, int classb, int STA = 75);
 const char *GetRandPetName();

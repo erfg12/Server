@@ -224,7 +224,12 @@ void NPC::UpdateWaypoint(int wp_index)
 			float newz = zone->zonemap->FindBestZ(dest, nullptr);
 
 			if ((newz > -2000) && std::abs(newz - dest.z) < RuleR(Map, FixPathingZMaxDeltaWaypoint))
-				m_CurrentWayPoint.z = newz + 1;
+			{
+				if(IsNPC())
+					m_CurrentWayPoint.z = newz + 0.65 * size;
+				else
+					m_CurrentWayPoint.z = newz + 1;
+			}
 		}
 	}
 
@@ -560,10 +565,20 @@ bool Mob::MakeNewPositionAndSendUpdate(float x, float y, float z, float speed, b
 						if (std::abs(z - m_Position.z) <= RuleR(Map, FixPathingZMaxDeltaMoving))
 							m_Position.z = z;
 						else
-							m_Position.z = newz + 1;
+						{
+							if(IsNPC())
+								m_Position.z = newz + 0.65 * size;
+							else
+								m_Position.z = newz + 1;
+						}
 					}
 					else
-						m_Position.z = newz + 1;
+					{
+						if(IsNPC())
+							m_Position.z = newz + 0.65 * size;
+						else
+							m_Position.z = newz + 1;
+					}
 				}
 			}
 		}
@@ -688,11 +703,21 @@ bool Mob::MakeNewPositionAndSendUpdate(float x, float y, float z, float speed, b
 					if(std::abs(z - m_Position.z) <= RuleR(Map, FixPathingZMaxDeltaMoving))
 						m_Position.z = z;
 					else
-						m_Position.z = newz + 1;
+					{
+						if(IsNPC())
+							m_Position.z = newz + 0.65 * size;
+						else
+							m_Position.z = newz + 1;
+					}
 				}
 				else
-					m_Position.z = newz+1;
+				{
+					if(IsNPC())
+						m_Position.z = newz + 0.65 * size;
+					else
+						m_Position.z = newz + 1;
 				}
+			}
 		}
 	}
 
@@ -830,10 +855,20 @@ bool Mob::CalculateNewPosition(float x, float y, float z, float speed, bool chec
 					if(std::abs(z - m_Position.z) <= RuleR(Map, FixPathingZMaxDeltaMoving))
 						m_Position.z = z;
 					else
-						m_Position.z = newz + 1;
+					{
+						if(IsNPC())
+							m_Position.z = newz + 0.65 * size;
+						else
+							m_Position.z = newz + 1;
+					}
 				}
 				else
-					m_Position.z = newz+1;
+				{
+					if(IsNPC())
+						m_Position.z = newz + 0.65 * size;
+					else
+						m_Position.z = newz + 1;
+				}
 			}
 		}
 	}
@@ -912,7 +947,7 @@ void NPC::AssignWaypoints(int32 grid)
 		if(zone->HasMap() && RuleB(Map, FixPathingZWhenLoading) )
 		{
 			auto positon = glm::vec3(newwp.x,newwp.y,newwp.z);
-			if(!RuleB(Watermap, CheckWaypointsInWaterWhenLoading) || !zone->HasWaterMap() ||
+			if(RuleB(Watermap, CheckWaypointsInWaterWhenLoading) || !zone->HasWaterMap() ||
 				(zone->HasWaterMap() && !zone->watermap->InWater(positon)))
 			{
 				glm::vec3 dest(newwp.x, newwp.y, newwp.z);
@@ -920,7 +955,12 @@ void NPC::AssignWaypoints(int32 grid)
 				float newz = zone->zonemap->FindBestZ(dest, nullptr);
 
 				if( (newz > -2000) && std::abs(newz-dest.z) < RuleR(Map, FixPathingZMaxDeltaLoading))
-					newwp.z = newz + 1;
+				{
+					if(IsNPC())
+						newwp.z = newz + 0.65 * size;
+					else
+						newwp.z = newz + 1;
+				}
 			}
 		}
 
@@ -969,7 +1009,12 @@ void Mob::SendTo(float new_x, float new_y, float new_z) {
 
 			if ((newz > -2000) &&
 			    std::abs(newz - dest.z) < RuleR(Map, FixPathingZMaxDeltaSendTo)) // Sanity check.
-				m_Position.z = newz + 1;
+			{
+				if(IsNPC())
+					m_Position.z = newz + 0.65 + size;
+				else
+					m_Position.z = newz + 1;
+			}
 		}
 	}
 	else
@@ -1001,7 +1046,12 @@ void Mob::SendToFixZ(float new_x, float new_y, float new_z) {
 
 			if ((newz > -2000) &&
 			    std::abs(newz - dest.z) < RuleR(Map, FixPathingZMaxDeltaSendTo)) // Sanity check.
-				m_Position.z = newz + 1;
+			{
+				if(IsNPC())
+					m_Position.z = newz + 0.65 + size;
+				else
+					m_Position.z = newz + 1;
+			}
 		}
 	}
 }

@@ -603,6 +603,12 @@ void Mob::TemporaryPets(uint16 spell_id, Mob *targ, const char *name_override, u
 		if (npc_dup != nullptr)
 			npca->GiveNPCTypeData(npc_dup);
 
+		if(npca->GetRace() == EYE_OF_ZOMM)
+		{
+			npca->iszomm = true;
+			npca->SetNPCFactionID(0);
+		}
+
 		entity_list.AddNPC(npca, true, true);
 		summon_count--;
 	}

@@ -38,6 +38,7 @@
 #define FORAGE_NOEAT				154		//You have scrounged up something that doesn't look edible.
 #define FORAGE_FAILED				155		//You fail to locate any food nearby.
 #define ALREADY_FISHING				156		//You are already fishing!
+#define	FISHING_HANDS_FULL			158		//You can't fish while holding something.
 #define FISHING_NO_POLE				160		//You can't fish without a fishing pole, go buy one.
 #define FISHING_EQUIP_POLE			161		//You need to put your fishing pole in your primary hand.
 #define FISHING_NO_BAIT				162		//You can't fish without fishing bait, go buy some.
@@ -68,6 +69,7 @@
 #define CAST_NIGHTTIME              209		//Spell can only be cast during the night.
 #define CANNOT_AFFECT_PC			210		//That spell can not affect this target PC.
 #define SPELL_NEED_TAR				214		//You must first select a target for this spell!
+#define CORPSE_SUMMON_TAR			215		//You must first target a living group member whose corpse you wish to summon.
 #define ONLY_ON_CORPSES				221		//This spell only works on corpses.
 #define CANT_DRAIN_SELF				224		//You can't drain yourself!
 #define CORPSE_NOT_VALID			230		//This corpse is not valid.
@@ -278,6 +280,10 @@
 #define CORPSEDRAG_STOPALL			4065	//You stop dragging the corpses.
 #define CORPSEDRAG_STOP				4066	//You stop dragging the corpse.
 #define	TARGET_TOO_CLOSE			4602	//You are too close to your target. Get farther away.
+#define	WHOALL_GM					5022	//%T1[ANON (%2 %3)] %4 (%5) %6 %7 %8
+#define WHOALL_ROLE					5023	//%T1[ANONYMOUS] %2 %3 %4
+#define WHOALL_ANON					5024	//%T1[ANONYMOUS] %2 %3
+#define WHOALL_ALL					5025	//%T1[%2 %3] %4 (%5) %6 %7 %8 %9
 #define WHOALL_NO_RESULTS			5029	//There are no players in EverQuest that match those who filters.
 #define TELL_QUEUED_MESSAGE			5045	//You told %1 '%T2. %3'
 #define TOLD_NOT_ONLINE				5046	//%1 is not online at this time.

@@ -182,7 +182,7 @@ public:
 	uint32	GetServerFilters(char* name, ServerSideFilters_Struct *ssfs);
 
 	void LogCommands(const char* char_name, const char* acct_name, float y, float x, float z, const char* command, const char* targetType, const char* target, float tar_y, float tar_x, float tar_z, uint32 zone_id, const char* zone_name);
-	uint8 GetCommandAccess(std::string command);
+	uint8 GetCommandAccess(const char* command);
 	void SaveBuffs(Client *c);
 	void LoadBuffs(Client *c);
 	void LoadPetInfo(Client *c);
@@ -414,7 +414,6 @@ public:
 	void	GetEventLogs(const char* name,char* target,uint32 account_id=0,uint8 eventid=0,char* detail=0,char* timestamp=0, CharacterEventLog_Struct* cel=0);
 	uint32	GetKarma(uint32 acct_id);
 	void	UpdateKarma(uint32 acct_id, uint32 amount);
-
 	/* Things which really dont belong here... */
 	//int16	CommandRequirement(const char* commandname); //Orphaned code?
 

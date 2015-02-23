@@ -110,7 +110,7 @@ Client::Client(EQStreamInterface* ieqs)
 
 	),
 	//these must be listed in the order they appear in client.h
-	position_timer(100), //WAS 250 CAVEDUDE
+	position_timer(250),
 	hpupdate_timer(1800),
 	camp_timer(29000),
 	process_timer(100),
@@ -138,6 +138,7 @@ Client::Client(EQStreamInterface* ieqs)
 	afk_toggle_timer(250),
 	helm_toggle_timer(250),
 	light_update_timer(600),
+	position_update_timer(10000),
 	m_Proximity(FLT_MAX, FLT_MAX, FLT_MAX), //arbitrary large number
 	m_ZoneSummonLocation(-2.0f,-2.0f,-2.0f),
 	m_AutoAttackPosition(0.0f, 0.0f, 0.0f, 0.0f),
@@ -267,6 +268,8 @@ Client::Client(EQStreamInterface* ieqs)
 
 	active_light = innate_light;
 	spell_light = equip_light = NOT_USED;
+	has_zomm = false;
+	client_position_update = false;
 }
 
 Client::~Client() {
@@ -423,7 +426,7 @@ bool Client::Save(uint8 iCommitNow) {
 	/* Wrote current basics to PP for saves */
 	m_pp.x = m_Position.x;
 	m_pp.y = m_Position.y;
-	m_pp.z = m_Position.z + 2;
+	m_pp.z = m_Position.z;
 	m_pp.guildrank = guildrank;
 	m_pp.heading = m_Position.w;
 
@@ -1224,6 +1227,7 @@ void Client::WhoAll(Who_All_Struct* whom) {
 		whoall->gmlookup = whom->gmlookup;
 		whoall->wclass = whom->wclass;
 		whoall->wrace = whom->wrace;
+		whoall->guildid = whom->guildid;
 		worldserver.SendPacket(pack);
 		safe_delete(pack);
 	}
@@ -1434,10 +1438,10 @@ void Client::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 }
 
 bool Client::GMHideMe(Client* client) {
-	if (gmhideme) {
+	if (GetHideMe()) {
 		if (client == 0)
 			return true;
-		else if (admin > client->Admin())
+		else if (Admin() > client->Admin())
 			return true;
 		else
 			return false;
@@ -2595,7 +2599,7 @@ void Client::SetHideMe(bool flag)
 	{
 		if(!GetGM())
 			SetGM(true);
-		if(!GetAnon())
+		if(GetAnon() != 1) // 1 is anon, 2 is role
 			SetAnon(true);
 		database.SetHideMe(AccountID(),true);
 		CreateDespawnPacket(&app, false);
@@ -4618,7 +4622,7 @@ void Client::SendStatsWindow(Client* client, bool use_window)
 	client->Message(0, " Level: %i Class: %i Race: %i RaceBit: %i DS: %i/%i Size: %1.1f BaseSize: %1.1f Weight: %.1f/%d  ", GetLevel(), GetClass(), GetRace(), GetRaceBitmask(GetRace()), GetDS(), RuleI(Character, ItemDamageShieldCap), GetSize(), GetBaseSize(), (float)CalcCurrentWeight() / 10.0f, GetSTR());
 	client->Message(0, " HP: %i/%i  HP Regen: %i/%i",GetHP(), GetMaxHP(), CalcHPRegen(), CalcHPRegenCap());
 	client->Message(0, " AC: %i ( Mit.: %i + Avoid.: %i + Spell: %i ) | Shield AC: %i", CalcAC(), GetACMit(), GetACAvoid(), spellbonuses.AC, shield_ac);
-	client->Message(0, " AFK: %i LFG: %i Anon: %i GM: %i Flymode: %i GMSpeed: %i LD: %i ClientVersion: %i", AFK, LFG, GetAnon(), GetGM(), flymode, GetGMSpeed(), IsLD(), GetClientVersionBit());
+	client->Message(0, " AFK: %i LFG: %i Anon: %i GM: %i Flymode: %i GMSpeed: %i Hideme: %i LD: %i ClientVersion: %i", AFK, LFG, GetAnon(), GetGM(), flymode, GetGMSpeed(), GetHideMe(), IsLD(), GetClientVersionBit());
 	if(CalcMaxMana() > 0)
 		client->Message(0, " Mana: %i/%i  Mana Regen: %i/%i", GetMana(), GetMaxMana(), CalcManaRegen(), CalcManaRegenCap());
 	client->Message(0, "  X: %0.2f Y: %0.2f Z: %0.2f", GetX(), GetY(), GetZ());
@@ -4648,7 +4652,7 @@ void Client::SendStatsWindow(Client* client, bool use_window)
 		client->Message(0, " GroupID: %i Count: %i GroupLeader: %s GroupLeaderCached: %s", g->GetID(), g->GroupCount(), g->GetLeaderName(), g->GetOldLeaderName());
 	}
 	client->Message(0, " Hidden: %i ImpHide: %i Sneaking: %i Invisible: %i InvisVsUndead: %i InvisVsAnimals: %i", hidden, improved_hidden, sneaking, invisible, invisible_undead, invisible_animals);
-	client->Message(0, " Feigned: %i Invulnerable: %i SeeInvis: %i", feigned, invulnerable, see_invis);
+	client->Message(0, " Feigned: %i Invulnerable: %i SeeInvis: %i HasZomm: %i", feigned, invulnerable, see_invis, has_zomm);
 
 	Extra_Info:
 
@@ -4661,7 +4665,7 @@ void Client::SendStatsWindow(Client* client, bool use_window)
 		if(GetLevel() < 10)
 			exploss = 0;
 		client->Message(0, "  CurrentXP: %i XP Needed: %i ExpLoss: %i CurrentAA: %i", GetEXP(), xpneeded, exploss, GetAAXP());
-
+		client->Message(0, "  Last Update: %d Current Time: %d Difference: %d", pLastUpdate, Timer::GetCurrentTime(), Timer::GetCurrentTime() - pLastUpdate);
 	}
 }
 
@@ -5434,7 +5438,7 @@ void Client::QuestReward(Mob* target, uint32 copper, uint32 silver, uint32 gold,
 		AddMoneyToPP(copper, silver, gold, platinum, false);
 
 	if (itemid > 0)
-		SummonItem(itemid, 1, 0, 0, 0, 0, 0, false, MainQuest);
+		SummonItem(itemid, 1, false, MainQuest);
 
 	if (faction)
 	{
@@ -5521,7 +5525,7 @@ bool Client::Disarm(Client* client)
 		if(freeslotid != INVALID_INDEX)
 		{
 			client->DeleteItemInInventory(MainPrimary,0,true);
-			client->SummonItem(weapon->GetID(),charges,0,0,0,0,0,false,freeslotid);
+			client->SummonItem(weapon->GetID(),charges,false,freeslotid);
 			client->WearChange(MaterialPrimary,0,0);
 
 			return true;
@@ -5544,3 +5548,34 @@ void Client::SendSoulMarks(SoulMarkList_Struct* SMS)
 	QueuePacket(outapp);
 	safe_delete(outapp);	
 }
+
+bool Client::FoodFamished()
+{
+	if(GetGM())
+	{
+		return false;
+	}
+	else
+	{
+		if(m_pp.hunger_level <= 0 && m_pp.famished >= RuleI(Character, FamishedLevel))
+			return true;
+	}
+
+	return false;
+}
+
+bool Client::WaterFamished()
+{
+	if(GetGM())
+	{
+		return false;
+	}
+	else
+	{
+		if(m_pp.thirst_level <= 0 && m_pp.famished >= RuleI(Character, FamishedLevel))
+			return true;
+	}
+
+	return false;
+}
+

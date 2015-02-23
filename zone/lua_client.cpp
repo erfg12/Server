@@ -652,49 +652,22 @@ void Lua_Client::DeleteItemInInventory(int slot_id, int quantity, bool update_cl
 
 void Lua_Client::SummonItem(uint32 item_id) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, 0, 0, 0, 0, 0, 0, false, MainQuest);
+	self->SummonItem(item_id, 0, false, MainQuest);
 }
 
 void Lua_Client::SummonItem(uint32 item_id, int charges) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, 0, 0, 0, 0, 0, false, MainQuest);
+	self->SummonItem(item_id, charges, false, MainQuest);
 }
 
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1) {
+void Lua_Client::SummonItem(uint32 item_id, int charges, bool attuned) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, 0, 0, 0, 0, false, MainQuest);
+	self->SummonItem(item_id, charges, attuned, MainQuest);
 }
 
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2) {
+void Lua_Client::SummonItem(uint32 item_id, int charges, bool attuned, int to_slot) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, 0, 0, 0, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, 0, 0, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, 0, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5,
-							bool attuned) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, attuned, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5,
-							bool attuned, int to_slot) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, attuned, to_slot);
+	self->SummonItem(item_id, charges, attuned, to_slot);
 }
 
 void Lua_Client::DropItem(int slot_id) {
@@ -1290,13 +1263,8 @@ luabind::scope lua_register_client() {
 		.def("DeleteItemInInventory", (void(Lua_Client::*)(int,int,bool))&Lua_Client::DeleteItemInInventory)
 		.def("SummonItem", (void(Lua_Client::*)(uint32))&Lua_Client::SummonItem)
 		.def("SummonItem", (void(Lua_Client::*)(uint32,int))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32,uint32,bool))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32,uint32,bool,int))&Lua_Client::SummonItem)
+		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool))&Lua_Client::SummonItem)
+		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool,int))&Lua_Client::SummonItem)
 		.def("DropItem", (void(Lua_Client::*)(int))&Lua_Client::DropItem)
 		.def("BreakInvis", (void(Lua_Client::*)(void))&Lua_Client::BreakInvis)
 		.def("LeaveGroup", (void(Lua_Client::*)(void))&Lua_Client::LeaveGroup)

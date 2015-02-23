@@ -159,7 +159,7 @@ bool Client::CheckLoreConflict(const Item_Struct* item) {
 	return (m_inv.HasItemByLoreGroup(item->LoreGroup, ~invWhereUnused) != INVALID_INDEX);
 }
 
-bool Client::SummonItem(uint32 item_id, int16 quantity, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, bool attuned, uint16 to_slot) {
+bool Client::SummonItem(uint32 item_id, int16 quantity, bool attuned, uint16 to_slot) {
 	this->EVENT_ITEM_ScriptStopReturn();
 
 	// TODO: update calling methods and script apis to handle a failure return
@@ -169,8 +169,8 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, uint32 aug1, uint32 aug2
 	// make sure the item exists
 	if(item == nullptr) {
 		Message(CC_Red, "Item %u does not exist.", item_id);
-		Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create an item with an invalid id.\n(Item: %u, Aug1: %u, Aug2: %u, Aug3: %u, Aug4: %u, Aug5: %u)\n",
-			GetName(), account_name, item_id, aug1, aug2, aug3, aug4, aug5);
+		Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create an item with an invalid id.\n(Item: %u)\n",
+			GetName(), account_name, item_id);
 
 		return false;
 	} 
@@ -187,15 +187,13 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, uint32 aug1, uint32 aug2
 	// An optional sql script will also need to be added, once this goes live, to allow changing of the min status.
 
 	// check to make sure we are a GM if the item is GM-only
-	/*
-	else if(item->MinStatus && ((this->Admin() < item->MinStatus) || (this->Admin() < RuleI(GM, MinStatusToSummonItem)))) {
+	else if(item->GMFlag == -1 && this->Admin() < RuleI(GM, MinStatusToUseGMItem)) {
 		Message(CC_Red, "You are not a GM or do not have the status to summon this item.");
-		Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create a GM-only item with a status of %i.\n(Item: %u, Aug1: %u, Aug2: %u, Aug3: %u, Aug4: %u, Aug5: %u, MinStatus: %u)\n",
-			GetName(), account_name, this->Admin(), item->ID, aug1, aug2, aug3, aug4, aug5, item->MinStatus);
+		Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create a GM-only item with a status of %i.\n(Item: %u, GMFlag: %u)\n",
+			GetName(), account_name, this->Admin(), item->ID, item->GMFlag);
 
 		return false;
 	}
-	*/
 
 	uint32 classes	= item->Classes;
 	uint32 races	= item->Races;
@@ -236,8 +234,8 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, uint32 aug1, uint32 aug2
 	if(inst == nullptr) {
 		Message(CC_Red, "An unknown server error has occurred and your item was not created.");
 		// this goes to logfile since this is a major error
-		Log.Out(Logs::General, Logs::Error, "Player %s on account %s encountered an unknown item creation error.\n(Item: %u, Aug1: %u, Aug2: %u, Aug3: %u, Aug4: %u, Aug5: %u)\n",
-			GetName(), account_name, item->ID, aug1, aug2, aug3, aug4, aug5);
+		Log.Out(Logs::General, Logs::Error, "Player %s on account %s encountered an unknown item creation error.\n(Item: %u)\n",
+			GetName(), account_name, item->ID);
 
 		return false;
 	}
@@ -248,8 +246,8 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, uint32 aug1, uint32 aug2
 
 		if(!(slots & ((uint32)1 << slottest))) {
 			Message(0, "This item is not equipable at slot %u - moving to cursor.", to_slot);
-			Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to equip an item unusable in slot %u - moved to cursor.\n(Item: %u, Aug1: %u, Aug2: %u, Aug3: %u, Aug4: %u, Aug5: %u)\n",
-				GetName(), account_name, to_slot, item->ID, aug1, aug2, aug3, aug4, aug5);
+			Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to equip an item unusable in slot %u - moved to cursor.\n(Item: %u)\n",
+				GetName(), account_name, to_slot, item->ID);
 
 			to_slot = MainCursor;
 		}
@@ -539,6 +537,14 @@ void Client::DeleteItemInInventory(int16 slot_id, int8 quantity, bool client_upd
 // client_update: Sends packet to client
 bool Client::PushItemOnCursor(const ItemInst& inst, bool client_update)
 {
+	if(inst.GetItem()->GMFlag == -1 && this->Admin() < RuleI(GM, MinStatusToUseGMItem)) {
+		Message(CC_Red, "You are not a GM or do not have the status to this item. Please relog to avoid a desync.");
+		Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create a GM-only item with a status of %i.\n(Item: %u, GMFlag: %u)\n",
+			GetName(), account_name, this->Admin(), inst.GetID(), inst.GetItem()->GMFlag);
+
+		return false;
+	}
+
 	Log.Out(Logs::Detail, Logs::Inventory, "Putting item %s (%d) on the cursor", inst.GetItem()->Name, inst.GetItem()->ID);
 	m_inv.PushCursor(inst);
 
@@ -552,6 +558,14 @@ bool Client::PushItemOnCursor(const ItemInst& inst, bool client_update)
 
 bool Client::PutItemInInventory(int16 slot_id, const ItemInst& inst, bool client_update) {
 	Log.Out(Logs::Detail, Logs::Inventory, "Putting item %s (%d) into slot %d", inst.GetItem()->Name, inst.GetItem()->ID, slot_id);
+
+	if(inst.GetItem()->GMFlag == -1 && this->Admin() < RuleI(GM, MinStatusToUseGMItem)) {
+		Message(CC_Red, "You are not a GM or do not have the status to this item. Please relog to avoid a desync.");
+		Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create a GM-only item with a status of %i.\n(Item: %u, GMFlag: %u)\n",
+			GetName(), account_name, this->Admin(), inst.GetID(), inst.GetItem()->GMFlag);
+
+		return false;
+	}
 
 	if (slot_id == MainCursor)
 		return PushItemOnCursor(inst, client_update);
@@ -1037,8 +1051,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		//SetTint(dst_slot_id,src_inst->GetColor());
 		if (src_inst->GetCharges() > 0 && (src_inst->GetCharges() < (int16)move_in->number_in_stack || move_in->number_in_stack > src_inst->GetItem()->StackSize))
 		{
-			//Damn Intel client sending SwapItem multiple times :I
-			Log.Out(Logs::Detail, Logs::Inventory, "Insufficent number in stack. Ignore this if on EQMac.");
+			Log.Out(Logs::Detail, Logs::Inventory, "Insufficent number in stack.");
 			return false;
 		}
 	}
@@ -1097,6 +1110,19 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 		}
 	}
 
+	// Check for GM only items.
+	if(src_inst)
+	{
+		if(src_inst->GetItem()->GMFlag == -1 && this->Admin() < RuleI(GM, MinStatusToUseGMItem)) 
+		{
+			Message(CC_Red, "You are not a GM or do not have the status to this item. Please relog to avoid a desync.");
+			Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to create a GM-only item with a status of %i.\n(Item: %u, GMFlag: %u)\n",
+				GetName(), account_name, this->Admin(), src_inst->GetID(), src_inst->GetItem()->GMFlag);
+
+			DeleteItemInInventory(src_slot_id,1,true);
+			return false;
+		}
+	}
 	// Check for No Drop Hacks
 	Mob* with = trade->With();
 	if ((with && with->IsClient() && dst_slot_id >= EmuConstants::TRADE_BEGIN && dst_slot_id <= EmuConstants::TRADE_END)

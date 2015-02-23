@@ -50,7 +50,6 @@ public:
 	static std::string InventoryMapName(int16 map);
 	static std::string InventoryMainName(int16 main);
 	static std::string InventorySubName(int16 sub);
-	static std::string InventoryAugName(int16 aug);
 
 	// these are currently hard-coded for existing inventory system..do not use in place of special client version handlers until ready
 	static const uint16	MAP_POSSESSIONS_SIZE = _MainCount;

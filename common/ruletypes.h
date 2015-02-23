@@ -127,7 +127,7 @@ RULE_CATEGORY(GM)
 RULE_INT(GM, GMWhoList, 80)
 RULE_INT(GM, NoCombatLow, 2)
 RULE_INT(GM, NoCombatHigh, 2)	// effectively disables this for now
-RULE_INT ( GM, MinStatusToSummonItem, 250)
+RULE_INT ( GM, MinStatusToUseGMItem, 80)
 RULE_INT ( GM, MinStatusToZoneAnywhere, 250 )
 RULE_CATEGORY_END()
 
@@ -207,11 +207,7 @@ RULE_REAL ( Map, FixPathingZMaxDeltaMoving, 20 )	//at runtime while pathing: max
 RULE_REAL ( Map, FixPathingZMaxDeltaWaypoint, 20 )	//at runtime at each waypoint: max change in Z to allow the BestZ code to apply.
 RULE_REAL ( Map, FixPathingZMaxDeltaSendTo, 20 )	//at runtime in SendTo: max change in Z to allow the BestZ code to apply.
 RULE_REAL ( Map, FixPathingZMaxDeltaLoading, 45 )	//while loading each waypoint: max change in Z to allow the BestZ code to apply.
-RULE_BOOL ( Map, UseClosestZ, true)			// Move mobs to the nearest Z above or below, rather than just the nearest below.
-							// Only set UseClosestZ true if all your .map files generated from EQGs were created
-							// with azone2.
-							//
-RULE_INT ( Map, FindBestZHeightAdjust, 1)		// Adds this to the current Z before seeking the best Z position
+RULE_INT ( Map, FindBestZHeightAdjust, 1)		// Adds this to the current Z before seeking the best Z position. If this is too high, mobs bounce when pathing.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Pathing )
@@ -254,6 +250,7 @@ RULE_BOOL ( Watermap, CheckForWaterOnSendTo, false)		// Checks if a mob has move
 RULE_BOOL ( Watermap, CheckForWaterWhenFishing, true)		// Only lets a player fish near water (if a water map exists for the zone)
 RULE_REAL ( Watermap, FishingRodLength, 30)			// How far in front of player water must be for fishing to work
 RULE_REAL ( Watermap, FishingLineLength, 28)			// If water is more than this far below the player, it is considered too far to fish
+RULE_REAL ( Watermap, FishingLineExtension, 12)		// In some zones, setting a longer length causes the line to go underworld. This gives us a variable to work with in areas that need a longer line.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Spells )
@@ -333,7 +330,7 @@ RULE_BOOL ( Combat, UseIntervalAC, true)
 RULE_INT ( Combat, PetAttackMagicLevel, 30)
 RULE_BOOL ( Combat, EnableFearPathing, true)
 RULE_INT ( Combat, FleeHPRatio, 25)	  //HP % when a NPC starts to flee.
-RULE_REAL ( Combat, FleeMultiplier, 2.0) // Determines how quickly a NPC will slow down while fleeing. Decrease multiplier to slow NPC down quicker.
+RULE_REAL ( Combat, FleeMultiplier, 3.25) // Determines how quickly a NPC will slow down while fleeing. Decrease multiplier to slow NPC down quicker.
 RULE_BOOL ( Combat, FleeIfNotAlone, false) // If false, mobs won't flee if other mobs are in combat with it.
 RULE_BOOL ( Combat, AdjustProcPerMinute, true)
 RULE_REAL ( Combat, AvgProcsPerMinute, 2.0)

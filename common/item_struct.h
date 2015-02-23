@@ -246,6 +246,7 @@ struct Item_Struct {
 	char	WornName[65];
 	char	FocusName[65];
 	char	ScrollName[65];
+	int8	GMFlag;
 
 };
 

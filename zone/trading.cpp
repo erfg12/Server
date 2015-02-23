@@ -661,11 +661,6 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 								detail->to_slot = partial_slot;
 								detail->item_id = inst->GetID();
 								detail->charges = (old_charges - inst->GetCharges());
-								detail->aug_1 = 0;
-								detail->aug_2 = 0;
-								detail->aug_3 = 0;
-								detail->aug_4 = 0;
-								detail->aug_5 = 0;
 
 								event_details->push_back(detail);
 
@@ -729,11 +724,6 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 							detail->to_slot = bias_slot;
 							detail->item_id = inst->GetID();
 							detail->charges = (old_charges - inst->GetCharges());
-							detail->aug_1 = 0;
-							detail->aug_2 = 0;
-							detail->aug_3 = 0;
-							detail->aug_4 = 0;
-							detail->aug_5 = 0;
 
 							event_details->push_back(detail);
 						}

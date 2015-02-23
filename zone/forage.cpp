@@ -152,6 +152,19 @@ uint32 ZoneDatabase::GetZoneFishing(uint32 ZoneID, uint8 skill, uint32 &npc_id, 
 
 //we need this function to immediately determine, after we receive OP_Fishing, if we can even try to fish, otherwise we have to wait a while to get the failure
 bool Client::CanFish() {
+
+	if(fishing_timer.Enabled())
+	{
+		Message_StringID(CC_Default, ALREADY_FISHING);	//You are already fishing!
+		return false;
+	}
+
+	if(m_inv.GetItem(MainCursor))
+	{
+		Message_StringID(CC_User_Skills, FISHING_HANDS_FULL);
+		return false;
+	}
+
 	//make sure we still have a fishing pole on:
 	const ItemInst* Pole = m_inv[MainPrimary];
 	int32 bslot = m_inv.HasItemByUse(ItemTypeFishingBait, 1, invWhereWorn|invWherePersonal);
@@ -178,6 +191,7 @@ bool Client::CanFish() {
 		// Tweak Rod and LineLength if required
 		const float RodLength = RuleR(Watermap, FishingRodLength);
 		const float LineLength = RuleR(Watermap, FishingLineLength);
+		const float LineExtension = RuleR(Watermap, FishingLineExtension);
 		int HeadingDegrees;
 
 		HeadingDegrees = (int) ((GetHeading()*360)/256);
@@ -205,9 +219,18 @@ bool Client::CanFish() {
 			in_water = zone->watermap->InWater(rodPosition) || zone->watermap->InVWater(rodPosition);
 			Log.Out(Logs::General, Logs::Maps, "Trying again with new Z %4.3f InWater now says %d", rodPosition.z, in_water);
 
-			if(!in_water) {
-				Message_StringID(MT_Skills, FISHING_LAND);	//Trying to catch land sharks perhaps?
-				return false;
+			if(!in_water)
+			{
+				// Our line may be too short. Reel our line out using extension, and try again
+				rodPosition.z = dest.z - (LineLength+LineExtension);
+				in_water = zone->watermap->InWater(rodPosition) || zone->watermap->InVWater(rodPosition);
+				Log.Out(Logs::General, Logs::Maps, "Trying again with new Z %4.3f InWater now says %d", rodPosition.z, in_water);
+
+				if(!in_water) 
+				{
+					Message_StringID(MT_Skills, FISHING_LAND);	//Trying to catch land sharks perhaps?
+					return false;
+				}
 			}
 		}
 	}
@@ -216,11 +239,6 @@ bool Client::CanFish() {
 
 void Client::GoFish()
 {
-	//TODO: generate a message if we're already fishing
-	/*if (!fishing_timer.Check()) {	//this isn't the right check, may need to add something to the Client class like 'bool is_fishing'
-		Message_StringID(CC_Default, ALREADY_FISHING);	//You are already fishing!
-		return;
-	}*/
 
 	fishing_timer.Disable();
 
@@ -265,8 +283,7 @@ void Client::GoFish()
 	if (zone->random.Int(0,175) < fishing_skill) {
 		uint32 food_id = 0;
 
-		//25% chance to fish an item.
-		if (zone->random.Int(0, 399) <= fishing_skill ) {
+		if (zone->random.Int(0, 299) <= fishing_skill ) {
 			uint32 npc_id = 0;
 			uint8 npc_chance = 0;
 			food_id = database.GetZoneFishing(m_pp.zone_id, fishing_skill, npc_id, npc_chance);
@@ -301,7 +318,6 @@ void Client::GoFish()
 
 		const Item_Struct* food_item = database.GetItem(food_id);
 
-		Message_StringID(MT_Skills, FISHING_SUCCESS);
 		ItemInst* inst = database.CreateItem(food_item, 1);
 		if(inst != nullptr) {
 			if(CheckLoreConflict(inst->GetItem()))
@@ -311,6 +327,7 @@ void Client::GoFish()
 			}
 			else
 			{
+				Message_StringID(MT_Skills, FISHING_SUCCESS);
 				PushItemOnCursor(*inst);
 				SendItemPacket(MainCursor, inst, ItemPacketSummonItem);
 
@@ -343,9 +360,10 @@ void Client::GoFish()
 	}
 
 	//chance to break fishing pole...
-	//this is potentially exploitable in that they can fish
-	//and then swap out items in primary slot... too lazy to fix right now
-	if (zone->random.Int(0, 49) == 1) {
+	uint16 break_chance = 49;
+	if(fishing_skill > 49)
+		break_chance = fishing_skill;
+	if (zone->random.Int(0, break_chance) == 1) {
 		Message_StringID(MT_Skills, FISHING_POLE_BROKE);	//Your fishing pole broke!
 		DeleteItemInInventory(MainPrimary, 0, true);
 	}
@@ -358,6 +376,7 @@ void Client::GoFish()
 }
 
 void Client::ForageItem(bool guarantee) {
+
 	int skill_level = GetSkill(SkillForage);
 
 	//be wary of the string ids in switch below when changing this.
@@ -388,8 +407,7 @@ void Client::ForageItem(bool guarantee) {
 		// If we're hungry or thirsty, we want to prefer food or water.
 		if(Hungry() && Thirsty())
 		{
-			// 50/50 chance of food or water.
-			if(zone->random.Roll(50))
+			if(m_pp.hunger_level <= m_pp.thirst_level)
 			{
 				if(GetZoneID() == poknowledge)
 					foragedfood = 13047; //PoK only has roots from the above array.
@@ -401,7 +419,6 @@ void Client::ForageItem(bool guarantee) {
 			}
 			else
 				foragedfood = 13044;
-
 		}
 		// We only need food.
 		else if(Hungry())
@@ -464,7 +481,6 @@ void Client::ForageItem(bool guarantee) {
 			}
 		}
 
-		Message_StringID(MT_Skills, stringid);
 		ItemInst* inst = database.CreateItem(food_item, 1);
 		if(inst != nullptr) {
 			// check to make sure it isn't a foraged lore item
@@ -473,10 +489,10 @@ void Client::ForageItem(bool guarantee) {
 				Message_StringID(CC_Default, DUP_LORE);
 				safe_delete(inst);
 			}
-			else {
-				PushItemOnCursor(*inst);
-				SendItemPacket(MainCursor, inst, ItemPacketSummonItem);
-
+			else
+			{
+				Message_StringID(MT_Skills, stringid);
+				SummonItem(inst->GetID(), inst->GetCharges());
 				safe_delete(inst);
 				inst = m_inv.GetItem(MainCursor);
 			}

@@ -232,19 +232,6 @@ std::string EmuConstants::InventorySubName(int16 sub) {
 	return ret_str;
 }
 
-std::string EmuConstants::InventoryAugName(int16 aug) {
-	if (aug == INVALID_INDEX)
-		return "Invalid Aug";
-
-	if ((uint16)aug >= ITEM_COMMON_SIZE)
-		return "Unknown Aug";
-
-	std::string ret_str;
-	ret_str = StringFormat("Augment %i", (aug + 1)); // zero-based index..but, count starts at one
-
-	return ret_str;
-}
-
 // legacy-related functions
 //
 // these should work for the first-stage coversions..but, once the new system is up and going..conversions will be incompatible

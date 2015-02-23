@@ -165,7 +165,7 @@ void Client::CalcItemBonuses(StatBonuses* newbon) {
 		newbon->EnduranceRegen = CalcEnduranceRegenCap();
 }
 
-void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAug, bool isTribute) {
+void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 	if(!inst || !inst->IsType(ItemClassCommon))
 	{
 		return;
@@ -173,7 +173,7 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAu
 
 	const Item_Struct *item = inst->GetItem();
 
-	if(!isTribute && !inst->IsEquipable(GetBaseRace(),GetClass()))
+	if(!inst->IsEquipable(GetBaseRace(),GetClass()))
 	{
 		if(item->ItemType != ItemTypeFood && item->ItemType != ItemTypeDrink)
 			return;
@@ -506,12 +506,6 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon, bool isAu
 		else
 			newbon->SkillDamageAmount[item->ExtraDmgSkill] += item->ExtraDmgAmt;
 	}
-
-	if (!isAug)
-	{
-
-	}
-
 }
 
 void Client::CalcEdibleBonuses(StatBonuses* newbon) {
@@ -870,9 +864,6 @@ void Client::ApplyAABonuses(uint32 aaid, uint32 slots, StatBonuses* newbon)
 						break;
 					case ItemTypePercussionInstrument:
 						newbon->percussionMod += base1;
-						break;
-					case ItemTypeSinging:
-						newbon->singingMod += base1;
 						break;
 				}
 				break;
@@ -2576,9 +2567,6 @@ void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* ne
 						break;
 					case ItemTypePercussionInstrument:
 						new_bonus->percussionMod += effect_value;
-						break;
-					case ItemTypeSinging:
-						new_bonus->singingMod += effect_value;
 						break;
 				}
 				break;

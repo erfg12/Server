@@ -1221,3 +1221,8 @@ bool IsRacialIllusion(uint16 spell_id)
 	}
 	return false;
 }
+
+bool IsCorpseSummon(uint16 spell_id)
+{
+	return IsEffectInSpell(spell_id, SE_SummonCorpse);
+}

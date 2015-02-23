@@ -213,16 +213,8 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 	if (((cle = client_list.CheckAuth(name, password)) || (cle = client_list.CheckAuth(id, password))))
 #endif
 	{
-		if (RuleI(World, AccountSessionLimit) >= 0) 
-		{
-			// Enforce the limit on the number of characters on the same account that can be
-			// online at the same time.
-			if(client_list.EnforceSessionLimit(cle->LSID()))
-			{
-				Log.Out(Logs::Detail, Logs::World_Server,"LSAccount %d attempted to login with an active player in the world.", cle->LSID());
-				return false;
-			}
-		}
+		if(GetSessionLimit())
+			return false;
 
 		cle->SetOnline();
 		
@@ -727,6 +719,9 @@ bool Client::Process() {
 void Client::EnterWorld(bool TryBootup) {
 	if (zoneID == 0)
 		return;
+
+	//if(GetSessionLimit())
+	//	return;
 
 	ZoneServer* zs = nullptr;
 	if(instanceID > 0)
@@ -1453,3 +1448,18 @@ void Client::SetClassLanguages(PlayerProfile_Struct *pp)
 	}
 }
 
+bool Client::GetSessionLimit()
+{
+	if (RuleI(World, AccountSessionLimit) >= 0 && cle->Admin() < (RuleI(World, ExemptAccountLimitStatus)) && (RuleI(World, ExemptAccountLimitStatus) != -1)) 
+	{
+		if(database.CheckAccountActive(cle->AccountID()))
+		{
+			Log.Out(Logs::Detail, Logs::World_Server,"Account %d attempted to login with an active player in the world.", cle->AccountID());
+			return true;
+		}
+		else
+			return false;
+	}
+
+	return false;
+}

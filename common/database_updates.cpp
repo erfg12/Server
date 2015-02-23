@@ -33,6 +33,7 @@ bool Database::DBSetup() {
 	DBSetup_MessageBoards();
 	DBSetup_Rules();
 	GITInfo();
+	DBSetup_account_active();
 	return true;
 }
 
@@ -258,11 +259,6 @@ bool Database::DBSetup_PlayerCorpseBackup(){
 			"`equip_slot` int(11) unsigned NOT NULL,	  "
 			"`item_id` int(11) unsigned DEFAULT NULL,	  "
 			"`charges` int(11) unsigned DEFAULT NULL,	  "
-			"`aug_1` int(11) unsigned DEFAULT '0',		  "
-			"`aug_2` int(11) unsigned DEFAULT '0',		  "
-			"`aug_3` int(11) unsigned DEFAULT '0',		  "
-			"`aug_4` int(11) unsigned DEFAULT '0',		  "
-			"`aug_5` int(11) unsigned DEFAULT '0',		  "
 			"`attuned` smallint(5) NOT NULL DEFAULT '0',  "
 			"PRIMARY KEY(`corpse_id`, `equip_slot`)		  "
 			") ENGINE = InnoDB DEFAULT CHARSET = latin1;  "
@@ -466,4 +462,20 @@ bool Database::DBSetup_Rules()
 			return false;
 		}
 	}
+}
+
+bool Database::DBSetup_account_active() {
+	std::string check_query = StringFormat("SHOW COLUMNS FROM `account` LIKE 'active'");
+	auto results = QueryDatabase(check_query);
+	if (results.RowCount() == 0){
+		std::string create_query = StringFormat("ALTER table `account` add column `active` tinyint(4) not null default 0");
+		Log.Out(Logs::Detail, Logs::Debug, "Attempting to add active column to accounts...");
+		auto create_results = QueryDatabase(create_query);
+		if (!create_results.Success()){
+			Log.Out(Logs::Detail, Logs::Error, "Error creating active column.");
+			return false;
+		}
+		Log.Out(Logs::Detail, Logs::Debug, "active column created.");
+	}
+	return true;
 }

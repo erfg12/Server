@@ -199,8 +199,18 @@ bool NPC::AICastSpell(Mob* tar, uint8 iChance, uint16 iSpellTypes) {
 						}
 						break;
 					}
-					case SpellType_Nuke: {
-						if (tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0)
+					case SpellType_Nuke:
+					{
+						if (AIspells[i].spellid == SPELL_CAZIC_TOUCH)
+						{
+							if (tar->IsPet() && tar->GetOwner())
+							{
+								AIDoSpellCast(i, tar->GetOwner(), 0);
+							}
+							else
+								AIDoSpellCast(i, tar, 0);
+						}
+						else if (tar->CanBuffStack(AIspells[i].spellid, GetLevel(), true) >= 0)
 						{
 							if(!checked_los) {
 								if (!CheckLosFN(tar))
@@ -497,15 +507,18 @@ void Mob::AI_Start(uint32 iMoveDelay) {
 	pLastChange = Timer::GetCurrentTime();
 }
 
-void Client::AI_Start(uint32 iMoveDelay) {
+void Client::AI_Start(uint32 iMoveDelay, bool zomm) {
 	Mob::AI_Start(iMoveDelay);
 
 	if (!pAIControlled)
 		return;
 
 	pClientSideTarget = GetTarget() ? GetTarget()->GetID() : 0;
-	SendAppearancePacket(AT_Anim, ANIM_FREEZE);	// this freezes the client
-	SendAppearancePacket(AT_Linkdead, 1); // Sending LD packet so *LD* appears by the player name when charmed/feared -Kasai
+	if(!zomm)
+	{
+		SendAppearancePacket(AT_Anim, ANIM_FREEZE);	// this freezes the client
+		SendAppearancePacket(AT_Linkdead, 1); // Sending LD packet so *LD* appears by the player name when charmed/feared -Kasai
+	}
 	SetAttackTimer();
 	if(client_state != CLIENT_LINKDEAD)
 	{
@@ -558,17 +571,21 @@ void NPC::AI_Stop() {
 	AIautocastspell_timer.reset(nullptr);
 }
 
-void Client::AI_Stop() {
+void Client::AI_Stop(bool zomm) {
 	Mob::AI_Stop();
-	this->Message_StringID(CC_Red,PLAYER_REGAIN);
+	
+	if(!zomm)
+	{
+		this->Message_StringID(CC_Red,PLAYER_REGAIN);
 
-	EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
-	Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
-	ps->owner_id = 0;
-	ps->pet_id = this->GetID();
-	ps->command = 0;
-	entity_list.QueueClients(this, app);
-	safe_delete(app);
+		EQApplicationPacket *app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
+		Charm_Struct *ps = (Charm_Struct*)app->pBuffer;
+		ps->owner_id = 0;
+		ps->pet_id = this->GetID();
+		ps->command = 0;
+		entity_list.QueueClients(this, app);
+		safe_delete(app);
+	}
 
 	SetTarget(entity_list.GetMob(pClientSideTarget));
 	SendAppearancePacket(AT_Anim, GetAppearanceValue(GetAppearance()));

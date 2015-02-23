@@ -2099,14 +2099,16 @@ void EQOldStream::MakeEQPacket(EQProtocolPacket* app, bool ack_req)
 
 				if (Log.log_settings[Logs::Server_Client_Packet].is_category_enabled == 1){
 					if (app_opcode != OP_SpecialMesg && 
-						(RuleB(EventLog, SkipCommonPacketLogging) && app_opcode != OP_MobHealth && app_opcode != OP_MobUpdate && app_opcode != OP_ClientUpdate)){
+						(!RuleB(EventLog, SkipCommonPacketLogging) ||
+						(RuleB(EventLog, SkipCommonPacketLogging) && app_opcode != OP_MobHealth && app_opcode != OP_MobUpdate && app_opcode != OP_ClientUpdate))){
 					Log.Out(Logs::General, Logs::Server_Client_Packet, "[%s - 0x%04x] [Size: %u]", OpcodeManager::EmuToName(app_opcode), app_opcode, app->size);
 					}
 				}
 
 				if (Log.log_settings[Logs::Server_Client_Packet_With_Dump].is_category_enabled == 1){
 					if (app_opcode != OP_SpecialMesg && 
-						(RuleB(EventLog, SkipCommonPacketLogging) && app_opcode != OP_MobHealth && app_opcode != OP_MobUpdate && app_opcode != OP_ClientUpdate)){
+						(!RuleB(EventLog, SkipCommonPacketLogging) ||
+						(RuleB(EventLog, SkipCommonPacketLogging) && app_opcode != OP_MobHealth && app_opcode != OP_MobUpdate && app_opcode != OP_ClientUpdate))){
 						Log.Out(Logs::General, Logs::Server_Client_Packet_With_Dump, "[%s - 0x%04x] [Size: %u] %s", OpcodeManager::EmuToName(app_opcode), app_opcode, app->size, DumpProtocolPacketToString(app).c_str());
 					}
 				}

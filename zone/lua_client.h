@@ -158,15 +158,8 @@ public:
 	void DeleteItemInInventory(int slot_id, int quantity, bool update_client);
 	void SummonItem(uint32 item_id);
 	void SummonItem(uint32 item_id, int charges);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, 
-		bool attuned);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, 
-		bool attuned, int to_slot);
+	void SummonItem(uint32 item_id, int charges, bool attuned);
+	void SummonItem(uint32 item_id, int charges, bool attuned, int to_slot);
 	void DropItem(int slot_id);
 	void BreakInvis();
 	void LeaveGroup();

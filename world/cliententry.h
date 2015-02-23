@@ -88,6 +88,7 @@ public:
 	inline void PushToTellQueue(ServerChannelMessage_Struct *scm) { tell_queue.push_back(scm); }
 	void ProcessTellQueue();
 
+
 private:
 	void	ClearVars(bool iAll = false);
 

@@ -777,6 +777,7 @@ bool ZoneServer::Process() {
 				whom->lvlhigh = whoall->lvlhigh;
 				whom->wclass = whoall->wclass;
 				whom->wrace = whoall->wrace;
+				whom->guildid = whoall->guildid;
 				strcpy(whom->whom,whoall->whom);
 				client_list.SendWhoAll(whoall->fromid,whoall->from, whoall->admin, whom, this);
 				delete whom;

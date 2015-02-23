@@ -377,7 +377,7 @@ void Client::MovePC(const char* zonename, float x, float y, float z, float headi
 
 //designed for in zone moving
 void Client::MovePC(float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
-	ProcessMovePC(zone->GetZoneID(), zone->GetInstanceID(), x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(zone->GetZoneID(), 0, x, y, z, heading, ignorerestrictions, zm);
 }
 
 void Client::MovePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
@@ -385,7 +385,7 @@ void Client::MovePC(uint32 zoneID, float x, float y, float z, float heading, uin
 }
 
 void Client::MovePC(uint32 zoneID, uint32 instanceID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm){
-	ProcessMovePC(zoneID, instanceID, x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 }
 
 
@@ -397,7 +397,7 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 	if(zoneID == 0)
 		zoneID = zone->GetZoneID();
 
-	if(zoneID == zone->GetZoneID() && instance_id == zone->GetInstanceID()) {
+	if(zoneID == zone->GetZoneID()) {
 		// TODO: Determine if this condition is necessary.
 		if(IsAIControlled()) {
 			GMMove(x, y, z);
@@ -416,30 +416,30 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 
 	switch(zm) {
 		case GateToBindPoint:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case GMSummon:
 			Message(CC_Yellow, "You have been summoned by a GM!");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case ZoneToBindPoint:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case ZoneSolicited:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case SummonPC:
 			if(!GetGM())
 				Message(CC_Yellow, "You have been summoned!");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case Rewind:
 			Message(CC_Yellow, "Rewinding to previous location.");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		default:
 			Log.Out(Logs::General, Logs::Error, "Client::ProcessMovePC received a reguest to perform an unsupported client zone operation.");
@@ -545,6 +545,10 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 				entity->CastToCorpse()->EndLoot(this, nullptr);
 			}
 			SetLooting(0);
+		}
+		if(Trader)
+		{
+			Trader_EndTrader();
 		}
 
 		zone_mode = zm;

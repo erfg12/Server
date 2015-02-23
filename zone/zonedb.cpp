@@ -2329,7 +2329,7 @@ void ZoneDatabase::LogCommands(const char* char_name, const char* acct_name, flo
 		Log.Out(Logs::General, Logs::Error, "Error in LogCommands query '%s': %s", query.c_str(), results.ErrorMessage().c_str());
 }
 
-uint8 ZoneDatabase::GetCommandAccess(std::string command) {
+uint8 ZoneDatabase::GetCommandAccess(const char* command) {
 	std::string check_query = StringFormat("SELECT command FROM `commands` WHERE `command`='%s'", command);
 	auto check_results = QueryDatabase(check_query);
 	if (check_results.RowCount() == 0)
@@ -2804,7 +2804,7 @@ bool ZoneDatabase::LoadFactionData()
 
     auto row = results.begin();
 
-	max_faction = atoi(row[0]);
+	max_faction = row[0] ? atoi(row[0]) : 0;
     faction_array = new Faction*[max_faction+1];
     for(unsigned int index=0; index<max_faction; index++)
         faction_array[index] = nullptr;
@@ -3159,31 +3159,21 @@ uint32 ZoneDatabase::SaveCharacterCorpse(uint32 charid, const char* charname, ui
 	for (unsigned int i = 0; i < dbpc->itemcount; i++) {
 		if (first_entry != 1){
 			corpse_items_query = StringFormat("REPLACE INTO `character_corpse_items` \n"
-				" (corpse_id, equip_slot, item_id, charges, aug_1, aug_2, aug_3, aug_4, aug_5, attuned) \n"
-				" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, 0) \n",
+				" (corpse_id, equip_slot, item_id, charges, attuned) \n"
+				" VALUES (%u, %u, %u, %u, 0) \n",
 				last_insert_id,
 				dbpc->items[i].equip_slot,
 				dbpc->items[i].item_id,
-				dbpc->items[i].charges,
-				dbpc->items[i].aug_1,
-				dbpc->items[i].aug_2,
-				dbpc->items[i].aug_3,
-				dbpc->items[i].aug_4,
-				dbpc->items[i].aug_5
+				dbpc->items[i].charges
 			);
 			first_entry = 1;
 		}
 		else{
-			corpse_items_query = corpse_items_query + StringFormat(", (%u, %u, %u, %u, %u, %u, %u, %u, %u, 0) \n",
+			corpse_items_query = corpse_items_query + StringFormat(", (%u, %u, %u, %u, 0) \n",
 				last_insert_id,
 				dbpc->items[i].equip_slot,
 				dbpc->items[i].item_id,
-				dbpc->items[i].charges,
-				dbpc->items[i].aug_1,
-				dbpc->items[i].aug_2,
-				dbpc->items[i].aug_3,
-				dbpc->items[i].aug_4,
-				dbpc->items[i].aug_5
+				dbpc->items[i].charges
 			);
 		}
 	}
@@ -3292,31 +3282,21 @@ bool ZoneDatabase::SaveCharacterCorpseBackup(uint32 corpse_id, uint32 charid, co
 	for (unsigned int i = 0; i < dbpc->itemcount; i++) { 
 		if (first_entry != 1){
 			query = StringFormat("REPLACE INTO `character_corpse_items_backup` \n"
-				" (corpse_id, equip_slot, item_id, charges, aug_1, aug_2, aug_3, aug_4, aug_5, attuned) \n"
-				" VALUES (%u, %u, %u, %u, %u, %u, %u, %u, %u, 0) \n",
+				" (corpse_id, equip_slot, item_id, charges, attuned) \n"
+				" VALUES (%u, %u, %u, %u, 0) \n",
 				corpse_id, 
 				dbpc->items[i].equip_slot,
 				dbpc->items[i].item_id,  
-				dbpc->items[i].charges, 
-				dbpc->items[i].aug_1, 
-				dbpc->items[i].aug_2, 
-				dbpc->items[i].aug_3, 
-				dbpc->items[i].aug_4, 
-				dbpc->items[i].aug_5
+				dbpc->items[i].charges
 			);
 			first_entry = 1;
 		}
 		else{ 
-			query = query + StringFormat(", (%u, %u, %u, %u, %u, %u, %u, %u, %u, 0) \n",
+			query = query + StringFormat(", (%u, %u, %u, %u, 0) \n",
 				corpse_id,
 				dbpc->items[i].equip_slot,
 				dbpc->items[i].item_id,
-				dbpc->items[i].charges,
-				dbpc->items[i].aug_1,
-				dbpc->items[i].aug_2,
-				dbpc->items[i].aug_3,
-				dbpc->items[i].aug_4,
-				dbpc->items[i].aug_5
+				dbpc->items[i].charges
 			);
 		}
 	}
@@ -3466,11 +3446,6 @@ bool ZoneDatabase::LoadCharacterCorpseData(uint32 corpse_id, PlayerCorpse_Struct
 		"equip_slot,                  \n"
 		"item_id,                     \n"
 		"charges,                     \n"
-		"aug_1,                       \n"
-		"aug_2,                       \n"
-		"aug_3,                       \n"
-		"aug_4,                       \n"
-		"aug_5,                       \n"
 		"attuned                      \n"
 		"FROM                         \n"
 		"character_corpse_items       \n"
@@ -3488,11 +3463,6 @@ bool ZoneDatabase::LoadCharacterCorpseData(uint32 corpse_id, PlayerCorpse_Struct
 		pcs->items[i].equip_slot = atoi(row[r++]);		// equip_slot,
 		pcs->items[i].item_id = atoul(row[r++]); 		// item_id,
 		pcs->items[i].charges = atoi(row[r++]); 		// charges,
-		pcs->items[i].aug_1 = atoi(row[r++]); 			// aug_1,
-		pcs->items[i].aug_2 = atoi(row[r++]); 			// aug_2,
-		pcs->items[i].aug_3 = atoi(row[r++]); 			// aug_3,
-		pcs->items[i].aug_4 = atoi(row[r++]); 			// aug_4,
-		pcs->items[i].aug_5 = atoi(row[r++]); 			// aug_5,
 		r = 0;
 		i++;
 	}
@@ -3780,10 +3750,10 @@ bool ZoneDatabase::CopyBackupCorpse(uint32 corpse_id) {
 	if (!tod_results.Success()){ 
 		return false;
 	}
-	std::string ci_query = StringFormat("INSERT INTO `character_corpse_items` SELECT * from `character_corpse_items_backup` WHERE `corpse_id` = %d", corpse_id);
+	std::string ci_query = StringFormat("REPLACE INTO `character_corpse_items` SELECT * from `character_corpse_items_backup` WHERE `corpse_id` = %d", corpse_id);
 	auto ci_results = QueryDatabase(ci_query);
 	if (!ci_results.Success()){ 
-		Log.Out(Logs::Detail, Logs::Error, "CopyBackupCorpse() Error inserting items. They probably already exist, so continue on...");
+		Log.Out(Logs::Detail, Logs::Error, "CopyBackupCorpse() Error replacing items.");
 	}
 
 	return true;
