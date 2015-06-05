@@ -521,7 +521,7 @@
 0x0140 is MSG_SND_PMAP
 0x0640 is MSG_SND_PNOTES
 0x0440 is MSG_SND_PSBOOK
-0x1742 is MSG_SND_TRADER_EQ
+0x1742 is MSG_SND_TRADER_EQ //This looks like it should be the trader item packet, but it does not work.
 0xfa40 is MSG_SND_WCON
 0xfb40 is MSG_SND_WEQ
 0xfc40 is MSG_SND_WNOTES

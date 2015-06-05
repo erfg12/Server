@@ -124,7 +124,7 @@ void register_event(std::string package_name, std::string name, int evt, luabind
 	e.encounter_name = name;
 	e.lua_reference = func;
 	e.event_id = static_cast<QuestEventID>(evt);
-	
+
 	auto liter = lua_encounter_events_registered.find(package_name);
 	if(liter == lua_encounter_events_registered.end()) {
 		std::list<lua_registered_event> elist;
@@ -200,8 +200,8 @@ void unregister_player_event(int evt) {
 
 void register_item_event(std::string name, int evt, int item_id, luabind::adl::object func) {
 	std::string package_name = "item_";
-	package_name += std::to_string(static_cast<long long>(item_id));
-	
+	package_name += std::to_string(item_id);
+
 	if(luabind::type(func) == LUA_TFUNCTION) {
 		register_event(package_name, name, evt, func);
 	}
@@ -214,7 +214,7 @@ void register_item_event(int evt, int item_id, luabind::adl::object func) {
 
 void unregister_item_event(std::string name, int evt, int item_id) {
 	std::string package_name = "item_";
-	package_name += std::to_string(static_cast<long long>(item_id));
+	package_name += std::to_string(item_id);
 
 	unregister_event(package_name, name, evt);
 }
@@ -251,13 +251,13 @@ void unregister_spell_event(int evt, int spell_id) {
 }
 
 Lua_Mob lua_spawn2(int npc_type, int grid, int unused, double x, double y, double z, double heading) {
-	return Lua_Mob(quest_manager.spawn2(npc_type, grid, unused,
-		static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), static_cast<float>(heading)));
+	auto position = glm::vec4(x, y, z, heading);
+	return Lua_Mob(quest_manager.spawn2(npc_type, grid, unused, position));
 }
 
 Lua_Mob lua_unique_spawn(int npc_type, int grid, int unused, double x, double y, double z, double heading = 0.0) {
-	return Lua_Mob(quest_manager.unique_spawn(npc_type, grid, unused,
-		static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), static_cast<float>(heading)));
+	auto position = glm::vec4(x, y, z, heading);
+	return Lua_Mob(quest_manager.unique_spawn(npc_type, grid, unused, position));
 }
 
 Lua_Mob lua_spawn_from_spawn2(uint32 spawn2_id) {
@@ -388,6 +388,10 @@ void lua_set_time(int hour, int min) {
 	quest_manager.settime(hour, min);
 }
 
+void lua_signal(int npc_id) {
+	quest_manager.signal(npc_id);
+}
+
 void lua_signal(int npc_id, int signal_id) {
 	quest_manager.signalwith(npc_id, signal_id);
 }
@@ -421,15 +425,15 @@ void lua_pause(int duration) {
 }
 
 void lua_move_to(float x, float y, float z) {
-	quest_manager.moveto(x, y, z, 0, false);
+	quest_manager.moveto(glm::vec4(x, y, z, 0.0f), false);
 }
 
 void lua_move_to(float x, float y, float z, float h) {
-	quest_manager.moveto(x, y, z, h, false);
+	quest_manager.moveto(glm::vec4(x, y, z, h), false);
 }
 
 void lua_move_to(float x, float y, float z, float h, bool save_guard_spot) {
-	quest_manager.moveto(x, y, z, h, save_guard_spot);
+	quest_manager.moveto(glm::vec4(x, y, z, h), save_guard_spot);
 }
 
 void lua_path_resume() {
@@ -485,11 +489,11 @@ void lua_toggle_spawn_event(int event_id, bool enable, bool strict, bool reset) 
 }
 
 void lua_summon_burried_player_corpse(uint32 char_id, float x, float y, float z, float h) {
-	quest_manager.summonburriedplayercorpse(char_id, x, y, z, h);
+	quest_manager.summonburriedplayercorpse(char_id, glm::vec4(x, y, z, h));
 }
 
 void lua_summon_all_player_corpses(uint32 char_id, float x, float y, float z, float h) {
-	quest_manager.summonallplayercorpses(char_id, x, y, z, h);
+	quest_manager.summonallplayercorpses(char_id, glm::vec4(x, y, z, h));
 }
 
 int lua_get_player_burried_corpse_count(uint32 char_id) {
@@ -517,23 +521,23 @@ int lua_get_level(int type) {
 }
 
 void lua_create_ground_object(uint32 item_id, float x, float y, float z, float h) {
-	quest_manager.CreateGroundObject(item_id, x, y, z, h);
+	quest_manager.CreateGroundObject(item_id, glm::vec4(x, y, z, h));
 }
 
 void lua_create_ground_object(uint32 item_id, float x, float y, float z, float h, uint32 decay_time) {
-	quest_manager.CreateGroundObject(item_id, x, y, z, h, decay_time);
+	quest_manager.CreateGroundObject(item_id, glm::vec4(x, y, z, h), decay_time);
 }
 
 void lua_create_ground_object_from_model(const char *model, float x, float y, float z, float h) {
-	quest_manager.CreateGroundObjectFromModel(model, x, y, z, h);
+	quest_manager.CreateGroundObjectFromModel(model, glm::vec4(x, y, z, h));
 }
 
 void lua_create_ground_object_from_model(const char *model, float x, float y, float z, float h, int type) {
-	quest_manager.CreateGroundObjectFromModel(model, x, y, z, h, type);
+	quest_manager.CreateGroundObjectFromModel(model, glm::vec4(x, y, z, h), type);
 }
 
 void lua_create_ground_object_from_model(const char *model, float x, float y, float z, float h, int type, uint32 decay_time) {
-	quest_manager.CreateGroundObjectFromModel(model, x, y, z, h, type, decay_time);
+	quest_manager.CreateGroundObjectFromModel(model, glm::vec4(x, y, z, h), type, decay_time);
 }
 
 void lua_create_door(const char *model, float x, float y, float z, float h, int open_type, int size) {
@@ -864,7 +868,7 @@ void lua_add_spawn_point(luabind::adl::object table) {
 		int condition_min_value = 0;
 		bool enabled = true;
 		int animation = 0;
-		
+
 		auto cur = table["spawn2_id"];
 		if(luabind::type(cur) != LUA_TNIL) {
 			try {
@@ -1049,6 +1053,10 @@ std::string lua_get_encounter() {
 	return quest_manager.GetEncounter();
 }
 
+void lua_debug(std::string message, int level)
+{
+	quest_manager.SendDebug(message, level);
+}
 
 void lua_map_opcodes() {
 	MapOpcodes();
@@ -1068,6 +1076,10 @@ bool lua_disable_recipe(uint32 recipe_id) {
 
 void lua_clear_npctype_cache(int npctype_id) {
 	quest_manager.ClearNPCTypeCache(npctype_id);
+}
+
+void lua_reloadzonestaticdata() {
+	quest_manager.ReloadZoneStaticData();
 }
 
 double lua_clock() {
@@ -1112,7 +1124,7 @@ void lua_create_npc(luabind::adl::object table, float x, float y, float z, float
 	if(luabind::type(table) != LUA_TTABLE) {
 		return;
 	}
-	
+
 	NPCType* npc_type = new NPCType;
 	memset(npc_type, 0, sizeof(NPCType));
 
@@ -1123,7 +1135,7 @@ void lua_create_npc(luabind::adl::object table, float x, float y, float z, float
 	LuaCreateNPCParse(cur_hp, int32, 30);
 	LuaCreateNPCParse(max_hp, int32, 30);
 	LuaCreateNPCParse(size, float, 6.0f);
-	LuaCreateNPCParse(runspeed, float, 1.25f);
+	LuaCreateNPCParse(runspeed, float, 1.3f);
 	LuaCreateNPCParse(gender, uint8, 0);
 	LuaCreateNPCParse(race, uint16, 1);
 	LuaCreateNPCParse(class_, uint8, WARRIOR);
@@ -1164,9 +1176,6 @@ void lua_create_npc(luabind::adl::object table, float x, float y, float z, float
 	LuaCreateNPCParse(hairstyle, uint8, 0);
 	LuaCreateNPCParse(luclinface, uint8, 0);
 	LuaCreateNPCParse(beard, uint8, 0);
-	LuaCreateNPCParse(drakkin_heritage, uint32, 0);
-	LuaCreateNPCParse(drakkin_tattoo, uint32, 0);
-	LuaCreateNPCParse(drakkin_details, uint32, 0);
 	LuaCreateNPCParse(armor_tint[0], uint32, 0);
 	LuaCreateNPCParse(armor_tint[1], uint32, 0);
 	LuaCreateNPCParse(armor_tint[2], uint32, 0);
@@ -1180,9 +1189,9 @@ void lua_create_npc(luabind::adl::object table, float x, float y, float z, float
 	LuaCreateNPCParse(max_dmg, uint32, 4);
 	LuaCreateNPCParse(attack_count, int16, 0);
 	LuaCreateNPCParseString(special_abilities, 512, "");
-	LuaCreateNPCParse(d_meele_texture1, uint16, 0);
-	LuaCreateNPCParse(d_meele_texture2, uint16, 0);
-	LuaCreateNPCParseString(ammo_idfile, 32, "");
+	LuaCreateNPCParse(d_melee_texture1, uint16, 0);
+	LuaCreateNPCParse(d_melee_texture2, uint16, 0);
+	LuaCreateNPCParseString(ammo_idfile, 30, "");
 	LuaCreateNPCParse(prim_melee_type, uint8, 0);
 	LuaCreateNPCParse(sec_melee_type, uint8, 0);
 	LuaCreateNPCParse(ranged_type, uint8, 0);
@@ -1198,7 +1207,6 @@ void lua_create_npc(luabind::adl::object table, float x, float y, float z, float
 	LuaCreateNPCParse(npc_aggro, bool, false);
 	LuaCreateNPCParse(spawn_limit, uint8, false);
 	LuaCreateNPCParse(mount_color, uint8, false);
-	LuaCreateNPCParse(attack_speed, float, 0);
 	LuaCreateNPCParse(attack_delay, uint8, 30);
 	LuaCreateNPCParse(accuracy_rating, int, 0);
 	LuaCreateNPCParse(avoidance_rating, int, 0);
@@ -1217,7 +1225,7 @@ void lua_create_npc(luabind::adl::object table, float x, float y, float z, float
 	LuaCreateNPCParse(raid_target, bool, false);
 	LuaCreateNPCParse(probability, uint8, 0);
 
-	NPC* npc = new NPC(npc_type, nullptr, x, y, z, heading, FlyMode3);
+	NPC* npc = new NPC(npc_type, nullptr, glm::vec4(x, y, z, heading), FlyMode3);
 	npc->GiveNPCTypeData(npc_type);
 	entity_list.AddNPC(npc);
 }
@@ -1279,6 +1287,7 @@ luabind::scope lua_register_general() {
 		luabind::def("set_guild", &lua_set_guild),
 		luabind::def("create_guild", &lua_create_guild),
 		luabind::def("set_time", &lua_set_time),
+		luabind::def("signal", (void(*)(int))&lua_signal),
 		luabind::def("signal", (void(*)(int,int))&lua_signal),
 		luabind::def("signal", (void(*)(int,int,int))&lua_signal),
 		luabind::def("set_global", &lua_set_global),
@@ -1366,9 +1375,9 @@ luabind::scope lua_register_general() {
 		luabind::def("clear_areas", &lua_clear_areas),
 		luabind::def("add_spawn_point", &lua_add_spawn_point),
 		luabind::def("remove_spawn_point", &lua_remove_spawn_point),
-		luabind::def("attack", &lua_attack),
-		luabind::def("attack_npc", &lua_attack_npc),
-		luabind::def("attack_npc_type", &lua_attack_npc_type),
+		luabind::def("attack", (void(*)(const char*))&lua_attack),
+		luabind::def("attack_npc", (void(*)(int))&lua_attack_npc),
+		luabind::def("attack_npc_type", (void(*)(int))&lua_attack_npc_type),
 		luabind::def("follow", (void(*)(int))&lua_follow),
 		luabind::def("follow", (void(*)(int,int))&lua_follow),
 		luabind::def("stop_follow", &lua_stop_follow),
@@ -1381,8 +1390,10 @@ luabind::scope lua_register_general() {
 		luabind::def("enable_recipe", &lua_enable_recipe),
 		luabind::def("disable_recipe", &lua_disable_recipe),
 		luabind::def("clear_npctype_cache", &lua_clear_npctype_cache),
+		luabind::def("reloadzonestaticdata", &lua_reloadzonestaticdata),
 		luabind::def("clock", &lua_clock),
-		luabind::def("create_npc", &lua_create_npc)
+		luabind::def("create_npc", &lua_create_npc),
+		luabind::def("debug", (void(*)(std::string, int))&lua_debug)
 	];
 }
 
@@ -1410,6 +1421,8 @@ luabind::scope lua_register_events() {
 			luabind::value("level_up", static_cast<int>(EVENT_LEVEL_UP)),
 			luabind::value("killed_merit ", static_cast<int>(EVENT_KILLED_MERIT )),
 			luabind::value("cast_on", static_cast<int>(EVENT_CAST_ON)),
+
+			luabind::value("environmental_damage", static_cast<int>(EVENT_ENVIRONMENTAL_DAMAGE)),
 			luabind::value("aggro_say", static_cast<int>(EVENT_AGGRO_SAY)),
 			luabind::value("player_pickup", static_cast<int>(EVENT_PLAYER_PICKUP)),
 			luabind::value("proximity_say", static_cast<int>(EVENT_PROXIMITY_SAY)),
@@ -1521,7 +1534,6 @@ luabind::scope lua_register_slot() {
 			luabind::value("GeneralEnd", static_cast<int>(EmuConstants::GENERAL_END)),
 			luabind::value("CursorEnd", 0xFFFE), // deprecated
 			luabind::value("Tradeskill", static_cast<int>(legacy::SLOT_TRADESKILL)), // deprecated
-			luabind::value("Augment", static_cast<int>(legacy::SLOT_AUGMENT)), // deprecated
 			luabind::value("Invalid", INVALID_INDEX)
 		];
 }

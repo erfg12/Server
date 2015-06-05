@@ -15,22 +15,25 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include <iostream>
-#include <string.h>
-#include <stdio.h>
-#include <iomanip>
-#include <time.h>
-#include <stdlib.h>
-#include <stdarg.h>
 
-#include "../common/servertalk.h"
-#include "worldserver.h"
-#include "queryservconfig.h"
-#include "database.h"
-#include "../common/packet_functions.h"
+
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include "../common/md5.h"
 #include "../common/packet_dump.h"
+#include "../common/packet_functions.h"
+#include "../common/servertalk.h"
+
+#include "database.h"
+#include "queryservconfig.h"
+#include "worldserver.h"
+#include <iomanip>
+#include <iostream>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 extern WorldServer worldserver;
 extern const queryservconfig *Config;
@@ -48,7 +51,7 @@ WorldServer::~WorldServer()
 
 void WorldServer::OnConnected()
 {
-	_log(QUERYSERV__INIT, "Connected to World.");
+	Log.Out(Logs::Detail, Logs::QS_Server, "Connected to World.");
 	WorldConnection::OnConnected();
 }
 
@@ -61,7 +64,7 @@ void WorldServer::Process()
 	ServerPacket *pack = 0; 
 	while((pack = tcpc.PopPacket()))
 	{
-		_log(QUERYSERV__TRACE, "Received Opcode: %4X", pack->opcode); 
+		Log.Out(Logs::Detail, Logs::QS_Server, "Received Opcode: %4X", pack->opcode); 
 		switch(pack->opcode) {
 			case 0: {
 				break;
@@ -133,7 +136,7 @@ void WorldServer::Process()
 				switch(Type)
 				{
 					default:
-						_log(QUERYSERV__ERROR, "Received unhandled ServerOP_QueryServGeneric", Type);
+						Log.Out(Logs::Detail, Logs::QS_Server, "Received unhandled ServerOP_QueryServGeneric", Type);
 						break;
 				}
 				break;

@@ -20,9 +20,10 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-#include "../common/seperator.h"
-#include "../common/eq_stream.h"
-#include "client.h"
+class Client;
+class Seperator;
+
+#include "../common/types.h"
 
 #define	COMMAND_CHAR	'#'
 #define CMDALIASES	5
@@ -63,15 +64,16 @@ void command_logcommand(Client *c, const char *message);
 
 //commands
 void command_resetaa(Client* c,const Seperator *sep);
-void command_resetboat(Client* c,const Seperator *sep);
-void command_bind(Client* c,const Seperator *sep);
+void command_resetboat(Client* c, const Seperator *sep);
+void command_bind(Client* c, const Seperator *sep);
+void command_bug(Client* c, const Seperator *sep);
 void command_sendop(Client *c, const Seperator *sep);
 void command_optest(Client *c, const Seperator *sep);
 void command_help(Client *c, const Seperator *sep);
 void command_version(Client *c, const Seperator *sep);
-void command_dbversion(Client *c, const Seperator *sep);
 void command_setfaction(Client *c, const Seperator *sep);
 void command_serversidename(Client *c, const Seperator *sep);
+void command_testcopy(Client *c, const Seperator *sep);
 void command_testspawnkill(Client *c, const Seperator *sep);
 void command_testspawn(Client *c, const Seperator *sep);
 void command_wc(Client *c, const Seperator *sep);
@@ -85,7 +87,6 @@ void command_chat(Client *c, const Seperator *sep);
 void command_showpetspell(Client *c, const Seperator *sep);
 void command_ipc(Client *c, const Seperator *sep);
 void command_npcloot(Client *c, const Seperator *sep);
-void command_log(Client *c, const Seperator *sep);
 void command_gm(Client *c, const Seperator *sep);
 void command_summon(Client *c, const Seperator *sep);
 void command_zone(Client *c, const Seperator *sep);
@@ -93,9 +94,7 @@ void command_zone_instance(Client *c, const Seperator *sep);
 void command_peqzone(Client *c, const Seperator *sep);
 void command_showbuffs(Client *c, const Seperator *sep);
 void command_movechar(Client *c, const Seperator *sep);
-void command_viewpetition(Client *c, const Seperator *sep);
-void command_petitioninfo(Client *c, const Seperator *sep);
-void command_delpetition(Client *c, const Seperator *sep);
+void command_petition(Client *c, const Seperator *sep);
 void command_listnpcs(Client *c, const Seperator *sep);
 void command_date(Client *c, const Seperator *sep);
 void command_timezone(Client *c, const Seperator *sep);
@@ -166,7 +165,6 @@ void command_attack(Client *c, const Seperator *sep);
 void command_lock(Client *c, const Seperator *sep);
 void command_unlock(Client *c, const Seperator *sep);
 void command_motd(Client *c, const Seperator *sep);
-void command_listpetition(Client *c, const Seperator *sep);
 void command_equipitem(Client *c, const Seperator *sep);
 void command_zonelock(Client *c, const Seperator *sep);
 void command_corpse(Client *c, const Seperator *sep);
@@ -218,6 +216,7 @@ void command_manaburn(Client *c, const Seperator *sep);
 void command_doanim(Client *c, const Seperator *sep);
 void command_randomfeatures(Client *c, const Seperator *sep);
 void command_face(Client *c, const Seperator *sep);
+void command_falltest(Client *c, const Seperator *sep);
 void command_helm(Client *c, const Seperator *sep);
 void command_hair(Client *c, const Seperator *sep);
 void command_haircolor(Client *c, const Seperator *sep);
@@ -254,9 +253,6 @@ void command_undye(Client *c, const Seperator *sep);
 void command_undyeme(Client *c, const Seperator *sep);
 void command_hp(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
-void command_logs(Client *c, const Seperator *sep);
-void command_nologs(Client *c, const Seperator *sep);
-void command_logsql(Client *c, const Seperator *sep);
 void command_qglobal(Client *c, const Seperator *sep);
 void command_path(Client *c, const Seperator *sep);
 void command_ginfo(Client *c, const Seperator *sep);
@@ -267,7 +263,6 @@ void command_aggrozone(Client *c, const Seperator *sep);
 void command_reloadstatic(Client *c, const Seperator *sep);
 void command_flags(Client *c, const Seperator *sep);
 void command_flagedit(Client *c, const Seperator *sep);
-void command_mlog(Client *c, const Seperator *sep);
 void command_serverrules(Client *c, const Seperator *sep);
 void command_acceptrules(Client *c, const Seperator *sep);
 void command_guildcreate(Client *c, const Seperator *sep);
@@ -280,9 +275,9 @@ void command_refundaa(Client *c, const Seperator *sep);
 void command_traindisc(Client *c, const Seperator *sep);
 void command_deletegraveyard(Client *c, const Seperator *sep);
 void command_setgraveyard(Client *c, const Seperator *sep);
-void command_getplayerburriedcorpsecount(Client *c, const Seperator *sep);
-void command_summonburriedplayercorpse(Client *c, const Seperator *sep);
 void command_unscribespell(Client *c, const Seperator *sep);
+void command_unmemspell(Client *c, const Seperator *sep);
+void command_unmemspells(Client *c, const Seperator *sep);
 void command_scribespell(Client *c, const Seperator *sep);
 void command_refreshgroup(Client *c, const Seperator *sep);
 void command_advnpcspawn(Client *c, const Seperator *sep);
@@ -302,7 +297,6 @@ void command_showbonusstats(Client *c, const Seperator *sep);
 void command_reloadallrules(Client *c, const Seperator *sep);
 void command_reloadworldrules(Client *c, const Seperator *sep);
 void command_reloadlevelmods(Client *c, const Seperator *sep);
-void command_camerashake(Client *c, const Seperator *sep);
 void command_disarmtrap(Client *c, const Seperator *sep);
 void command_sensetrap(Client *c, const Seperator *sep);
 void command_picklock(Client *c, const Seperator *sep);
@@ -317,7 +311,16 @@ void command_npctype_cache(Client *c, const Seperator *sep);
 void command_starve(Client *c, const Seperator *sep);
 void command_merchantopenshop(Client *c, const Seperator *sep);
 void command_merchantcloseshop(Client *c, const Seperator *sep);
-
+void command_update(Client *c, const Seperator *sep);
+void command_coredump(Client *c, const Seperator *sep);
+void command_push(Client *c, const Seperator *sep);
+void command_xpinfo(Client *c, const Seperator *sep);
+void command_tune(Client *c, const Seperator *sep);
+void command_logtest(Client *c, const Seperator *sep);
+void command_mysqltest(Client *c, const Seperator *sep);
+void command_chattest(Client *c, const Seperator *sep);
+void command_logs(Client *c, const Seperator *sep);
+ 
 #ifdef EQPROFILE
 void command_profiledump(Client *c, const Seperator *sep);
 void command_profilereset(Client *c, const Seperator *sep);

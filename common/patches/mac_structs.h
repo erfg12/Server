@@ -12,86 +12,6 @@ namespace Mac {
 */
 #pragma pack(1)
 
-// Valus of weapon types
-enum SKILLTYPE : uint8
-{
-	SKILLTYPE_1HSLASHING = 0x00,
-	SKILLTYPE_2HSLASHING = 0x01,
-	SKILLTYPE_PIERCING = 0x02,
-	SKILLTYPE_1HBLUNT = 0x03,
-	SKILLTYPE_2HBLUNT = 0x04,
-	SKILLTYPE_2HPIERCING = 0x23
-};
-
-enum TSpawnAppearanceType : uint16
-{
-	SAT_SendToBind			= 0,	// Comment: 0=send to bind, >0 = kill them
-	SAT_LevelChange			= 1,	// Comment: the level that shows up on /who
-	SAT_Invis				= 3,	// Comment: 0=visable, 1=invisable
-	SAT_PvP					= 4,	// Comment:	0=disable, 1=enable
-	SAT_Light				= 5,	// Comment:	
-	SAT_Position_Update		= 14,	// Comment: 100=standing, 102=lose control (fear, mez, charm), 110=sitting, 111=ducking, 115=feigned, 105=looting
-	SAT_Sneaking			= 15,	// Comment:
-	SAT_Camp				= 16,	// Comment:
-	SAT_HP_Regen			= 17,	// Comment: Client->Server, my HP has changed (like regen tic)
-	SAT_LD					= 18,	// Comment:
-	SAT_Levitate			= 19,	// Comment: 0=off, 1=flymode, 2=levitate
-	SAT_GM_Tag				= 20,
-	SAT_NameColor			= 21,	// Comment:	AT_PVP[0=green,1=dark red,2=light red] or !AT_PVP[0=green,1=blue,2=purple]
-	SAT_Guild_ID			= 22,	// Comment: Joins player to the specified guild id param.
-	SAT_Guild_Rank			= 23,	// Comment: 0=member, 1=officer, 2=leader
-	SAT_AFK					= 24,	// Comment: 0=off, 1=on
-	SAT_Autosplit			= 28,
-	SAT_Size				= 29,	// Comment: spawn's size (0=smallest)
-	SAT_NPC_Name			= 30	// Comment: change PC's name's color to NPC color (unreversable)
-};
-
-enum TBodyType : uint16
-{	
-	BT_Humanoid			= 1,
-	BT_Lycanthrope		= 2,
-	BT_Undead			= 3,
-	BT_Giant			= 4,
-	BT_Construct		= 5,
-	BT_Extraplanar		= 6,
-	BT_Magical			= 7,	//this name might be a bit off, 
-	BT_SummonedUndead	= 8,
-	BT_NoTarget			= 11,	// can't target this bodytype
-	BT_Vampire			= 12,
-	BT_Atenha_Ra		= 13,
-	BT_Greater_Akheva	= 14,
-	BT_Khati_Sha		= 15,
-	BT_Zek				= 19,
-	BT_Luggald			= 20,
-	BT_Animal			= 21,
-	BT_Insect			= 22,
-	BT_Monster			= 23,
-	BT_Summoned			= 24,	//Elemental?
-	BT_Plant			= 25,
-	BT_Dragon			= 26,
-	BT_Summoned2		= 27,
-	BT_Summoned3		= 28,
-	BT_VeliousDragon	= 30,	//might not be a tight set
-	BT_Dragon3			= 32,
-	BT_Boxes			= 33,
-	BT_Muramite			= 34,	//tribal dudes
-	BT_NoTarget2		= 60,
-	BT_SwarmPet			= 63,	//is this valid, or made up?
-	BT_Trigger			= 65,   //Body type to completely hide the spawn
-	BT_InvisMan			= 66,	//seen on 'InvisMan'
-	BT_Special			= 67
-};
-
-enum TSpawnAppearancePositionParameter : uint32
-{
-	SAPP_Sitting_To_Standing	= 100,
-	SAPP_Lose_Control			= 102,
-	SAPP_Looting				= 105,
-	SAPP_Standing_To_Sitting	= 110,
-	SAPP_Ducking				= 111,
-	SAPP_Unconscious			= 115
-};
-
 struct CharacterSelect_Struct
 {
 	/*0000*/	char	name[10][64];		// Characters Names
@@ -113,14 +33,6 @@ struct CharacterSelect_Struct
 	/*1600*/	uint8	hairstyle[10]; 
 	/*1610*/	uint8	beard[10];
 	/*1620*/
-};
-
-//This is used to show weapons on char select screen
-struct CharWeapon_Struct
-{
-	/*000*/	uint16 righthand[10];
-	/*020*/ uint16 lefthand[10];
-	/*040*/
 };
 
 struct ServerZoneEntry_Struct 
@@ -178,7 +90,7 @@ struct ServerZoneEntry_Struct
 	/*0280*/	uint8	anon;				// Anon. Flag
 	/*0281*/	uint16	avatar;
 	/*0283*/	uint8	AFK;
-	/*0284*/	uint8	summoned;
+	/*0284*/	uint8	summoned_pc;
 	/*0285*/	uint8	title;
 	/*0286*/	uint8	extra[18];	// ***Placeholder (At least one flag in here disables a zone point or all)
 	/*0304*/	char	Surname[32];		// Lastname (This has to be wrong.. but 70 is to big =/..)
@@ -225,7 +137,11 @@ struct NewZone_Struct
 	/*0457*/	uint8	specialcodes[16];
 	/*0473*/	uint8	timezone;
 	/*0474*/	uint8	sky;					// Sky Type
-	/*0475*/	uint8	unknown331[9];			// Music work out positions.
+	/*0475*/	uint8   unknown0475;
+	/*0476*/	uint16  water_music;
+	/*0478*/	uint16  normal_music_day;
+	/*0480*/	uint16  normal_music_night;
+	/*0482*/	uint8	unknown0482[2];
 	/*0484*/	float	zone_exp_multiplier;	// Experience Multiplier
 	/*0488*/	float	safe_y;					// Zone Safe Y
 	/*0492*/	float	safe_x;					// Zone Safe X
@@ -268,9 +184,9 @@ struct CombatDamage_Struct
 	/*005*/	uint8   unknown;
 	/*006*/	uint16	spellid;
 	/*008*/	int32	damage;
-	/*012*/	uint8	unknown12[4];
-	/*016*/	uint32	sequence;
-	/*020*/	uint8	unknown20[4];
+	/*012*/	float	force;
+	/*016*/	float	sequence;
+	/*020*/	float	pushup_angle;
 	/*024*/
 };
 
@@ -282,11 +198,10 @@ struct Action_Struct
 	/*05*/	uint8	unknown5;
 	/*06*/	uint8   unknown6;  //0x41
 	/*07*/	uint8	unknown7;		// Comment: Unknown -> needs confirming 
-	/*08*/	uint8	instrument_mod;
-	/*09*/	uint32  bard_focus_id; //Seriously doubt this client uses it
-	/*13*/	uint8	unknown_zero1[3];	// Comment: Unknown -> needs confirming -> (orginal comment: lol) <- lol 
+	/*08*/	int32	instrument_mod;
+	/*12*/	float	force;
 	/*16*/	uint32	sequence;			// Comment: Heading of Who? Caster or Target? Needs confirming
-	/*20*/	uint8	unknown_zero2[4];	// Comment: Unknown -> needs confirming
+	/*20*/	float	pushup_angle;
 	/*24*/	uint8	type;				// Comment: Unknown -> needs confirming -> Which action target or caster does maybe?
 	/*25*/	uint8	unknown28[5];			// Comment: Spell ID of the Spell being casted? Needs Confirming
 	/*30*/	uint16	spell;		// Comment: Unknown -> needs confirming
@@ -295,27 +210,12 @@ struct Action_Struct
 	/*34*/	uint16  unknown34;
 };
 
-struct InterruptCast_Struct
-{
-	/*00*/	uint16	messageid;		// Comment: ID of Spell Caster
-	/*02*/	uint16	spawnid;		// Comment: Unknown -> needs confirming -> placeholder?
-	/*04*/	char	message[0];		// Comment: Unknown -> needs confirming -> Message of what? the spell cast text?
-	/*05*/
-};
-
 struct ManaChange_Struct
 {
 	/*00*/	uint16 new_mana;	// Comment:  New Mana AMount
 	/*02*/	uint16 spell_id;	// Comment:  Last Spell Cast
 	/*04*/
 };
-
-struct SwapSpell_Struct 
-{ 
-	/*00*/	uint32 from_slot;	// Comment: Moving Spells around?
-	/*04*/	uint32 to_slot;		// Comment: Moving Spells Around?
-	/*08*/
-}; 
 
 struct BeginCast_Struct
 {
@@ -337,7 +237,6 @@ struct Buff_Struct
 	/*020*/
 };
 
-#define SLOT_ITEMSPELL		10		// we right clicked into a clickable item which allow us casting some spell.
 struct CastSpell_Struct
 {
 	/*000*/	uint16	slot;
@@ -375,7 +274,7 @@ struct SpellBuffFade_Struct
 /*
 ** client changes target struct
 ** Length: 2 Bytes
-** OpCode: 6221
+** OpCode: 6241
 */
 struct ClientTarget_Struct
 {
@@ -427,7 +326,7 @@ struct Spawn_Struct
 	/*0094*/	uint8	light;				// Light emitting
 	/*0095*/	uint8	anon;				// 0=normal, 1=anon, 2=RP
 	/*0096*/	uint8	AFK;				// 0=off, 1=on
-	/*0097*/	uint8	summoned;
+	/*0097*/	uint8	summoned_pc;
 	/*0098*/	uint8	LD;					// 0=NotLD, 1=LD
 	/*0099*/	uint8	GM;					// 0=NotGM, 1=GM
 	/*0100*/	uint8	flymode;				
@@ -442,13 +341,6 @@ struct Spawn_Struct
 	/*0191*/	char	Surname[32];		// Last Name of player
 	/*0223*/	uint8	void_;		
 	/*0224*/
-};
-
-struct NewSpawn_Struct
-{
-	/*000*/	uint32  ns_unknown1;            // Comment: ***Placeholder
-	/*004*/	struct Spawn_Struct spawn;     // Comment: Spawn Information
-	/*228*/	
 };
 
 struct DeleteSpawn_Struct
@@ -469,14 +361,6 @@ struct ChannelMessage_Struct
 	/*136*/	char	message[0];			// Variable length message
 };
 
-struct FormattedMessage_Struct
-{
-	/*000*/	uint16	unknown0;
-	/*002*/	uint16	string_id;
-	/*004*/	uint16	type;
-	/*006*/	char	message[0];
-};
-
 struct WearChange_Struct
 {
 	/*000*/ uint16 spawn_id;
@@ -488,25 +372,6 @@ struct WearChange_Struct
 	/*010*/	uint8  red;
 	/*011*/	uint8  use_tint;	// if there's a tint this is FF
 	/*012*/	
-};
-
-struct BindWound_Struct	
-{									
-	/*000*/	uint16	to;	
-	/*002*/	uint16	unknown2;
-	/*004*/	uint16	type;
-	/*006*/	uint16	unknown6;
-	/*008*/	
-};
-
-struct Object_Data_Struct
-{
-	/*000*/	uint8	max_charges;	//Max stack or charges. (Confirmed Sp0tter).
-	/*001*/	uint8	stack_size;		//Current stack size or current charges.
-	/*002*/	uint8	has_effect;		// 1 for has effect?  (not sure)
-	/*003*/	uint16	click_effect;	//ID of click effect.	(Confirmed Sp0tter).
-	/*005*/	uint8	unknown[5];
-	/*010*/	
 };
 
 struct Object_Struct 
@@ -535,14 +400,6 @@ struct Object_Struct
 	/*224*/
 };
 
-struct ClickObject_Struct
-{
-	/*000*/	uint32	objectID;
-	/*004*/	uint16	PlayerID;
-	/*006*/	uint16	unknown;
-	/*008*/	
-};
-
 struct ClickObjectAction_Struct
 {
 	/*000*/	uint32	player_id;		// Comment: Entity Id of player who clicked object
@@ -558,40 +415,6 @@ struct ClickObjectAction_Struct
 	/*020*/	
 };
 
-struct DropCoins_Struct
-{
-	/*000*/ uint8	unknown0002[8];		    // Comment: Always 00's
-	/*008*/ uint32  platinumPieces;         // Comment: Number of PP dropped
-	/*012*/ uint32  goldPieces;				// Comment: Number of GP dropped
-	/*016*/ uint32  silverPieces;			// Comment: Number of SP dropped
-	/*020*/ uint32  copperPieces;			// Comment: Number of CP dropped
-	/*024*/ uint8	unknown0024[4];         // Comment: ***Placeholder
-	/*028*/ uint32	always34;				// Comment: Always 0x34
-	/*032*/ uint8	unknown0028[16];		// Comment: ***Placeholder
-	/*048*/ uint32	amount;					// Comment: Total Dropped
-	/*052*/ uint16  test1;                  // Comment: ***Placeholder
-	/*054*/ uint16	test2;					// Comment: ***Placeholder
-	/*056*/ float	yPos;					// Comment: Y Position
-	/*060*/ float	xPos;					// Comment: X Position
-	/*064*/ float	zPos;					// Comment: Z Position
-	/*068*/ uint8	unknown0070[12];		// Comment: ***Placeholder
-	/*080*/ char	coinName[16];			// Comment: Texture file name; ie, PLAT_ACTORDEF
-	/*096*/ uint8	unknown0097[16];		// Comment: ***Placeholder
-	/*112*/	
-};
-
-struct Beg_Struct
-{
-	/*000*/	uint16	target;		// The player's target at time of beg.
-	/*002*/	uint16	begger;		// The player making the coin request.
-	/*004*/	uint8	skill;		// The player's begging skill level.
-	/*005*/	uint8	success;	// -1 = request | 0 = failure | 1 = plat | 2 = gold | 3 = silver | 4 = copper
-	/*006*/	uint16	unknown1;		// This is the time since player logged in.
-	/*008*/	uint32	coins;		// The number of coins.  Whatever success is set to.
-	/*012*/	uint8	unknown3[6];	// Not sure.  Maybe we'll find out one day.
-	/*018*/	
-};
-
 struct Charm_Struct 
 {
 	/*000*/	uint16	owner_id;
@@ -600,12 +423,6 @@ struct Charm_Struct
 	/*006*/
 };
 
-#define ZONE_ERROR_NOMSG 0
-#define ZONE_ERROR_NOTREADY -1
-#define ZONE_ERROR_VALIDPC -2
-#define ZONE_ERROR_STORYZONE -3
-#define ZONE_ERROR_NOEXPANSION -6
-#define ZONE_ERROR_NOEXPERIENCE -7
 struct ZoneChange_Struct
 {
 	/*000*/	char	char_name[64];     // Character Name
@@ -615,14 +432,6 @@ struct ZoneChange_Struct
 	/*072*/	int8	success;		// =0 client->server, =1 server->client, -X=specific error
 	/*073*/	uint8	error[3]; // =0 ok, =ffffff error
 	/*076*/	
-};
-
-struct Animation_Struct
-{
-	/*000*/ uint32   spawnid;		// Comment: Spawn ID
-	/*004*/ uint8    action;			// Comment: 
-	/*005*/ uint8    a_unknown[7];	// Comment: ***Placeholder};
-	/*012*/	
 };
 
 struct Consider_Struct
@@ -636,20 +445,6 @@ struct Consider_Struct
 	/*020*/ uint8	pvpcon;			// Pvp con flag 0/1
 	/*021*/ uint8	unknown3[3];
 	/*024*/	
-};
-
-struct ConsentRequest_Struct
-{
-	/*000*/	char name[1];				//Comment: Name of player who consent is being given to.
-};
-
-struct ConsentResponse_Struct
-{
-	/*000*/ char consentee[32];        // Name of player who was consented
-	/*032*/ char consenter[32];        // Name of player who consented
-	/*064*/ uint8   allow;             // 00 = deny, 01 = allow
-	/*065*/ char corpseZoneName[32];   // Zone where the corpse is
-	/*097*/
 };
 
 struct Death_Struct
@@ -668,30 +463,6 @@ struct Death_Struct
 	/*020*/
 };
 
-struct SpawnPositionUpdate_Struct
-{
-	/*0000*/ uint16  spawn_id;               // Id of spawn to update
-	/*0002*/ uint8   anim_type; // ??
-	/*0003*/ uint8	 heading;                // Heading
-	/*0004*/ int8    delta_heading;          // Heading Change
-	/*0005*/ int16   x_pos;                  // New X position of spawn
-	/*0007*/ int16   y_pos;                  // New Y position of spawn
-	/*0009*/ int16   z_pos;                  // New Z position of spawn
-	/*0011*/ uint32  delta_y:10,             // Y Velocity
-						spacer1:1,              // ***Placeholder
-						delta_z:10,             // Z Velocity
-						spacer2:1,              // ***Placeholder
-						delta_x:10;             // Z Velocity
-	/*015*/
-};
-
-struct SpawnPositionUpdates_Struct
-{
-	/*0000*/ uint32  num_updates;               // Number of SpawnUpdates
-	/*0004*/ struct SpawnPositionUpdate_Struct // Spawn Position Update
-						spawn_update[0];
-};
-
 struct SpawnHPUpdate_Struct
 {
 	/*000*/ uint32  spawn_id;		// Comment: Id of spawn to update
@@ -700,53 +471,10 @@ struct SpawnHPUpdate_Struct
 	/*012*/	
 };
 
-struct Stamina_Struct 
-{
-	/*000*/ uint16 food;		// Comment: low more hungry 127-0
-	/*002*/ uint16 water;		// Comment: low more thirsty 127-0
-	/*004*/ uint16 fatigue;	// Comment: high more fatigued 0-100
-	/*006*/	
-};
-
-struct Resurrect_Struct	
-{            
-	/*000*/	uint32	corpseEntityID; // Client do not use any bytes till 52
-	/*004*/	char	zoneName[16]; 
-	/*020*/	char	unknown20[16]; 
-	/*036*/	float	y; 
-	/*040*/	float	x; 
-	/*044*/	float	z; 
-	/*048*/	uint32	fullGMRez;
-	/*052*/	char	targetName[28]; // Client uses this !!! If its wrong you wont see any window
-	/*080*/ char	unknown82[8];
-	/*088*/	char	casterName[28]; // Caster name (Confirmed)
-	/*116*/ uint32	unknown118;
-	/*120*/	uint16	spellID; // ID of the spell (Confirmed)
-	/*122*/	char	corpseName[28];
-	/*150*/	char	unknown[6];
-	/*156*/	uint32	action; // Action => player clicked yes = 1 or no = 0 (Confirmed)
-	/*160*/	
-};
-
-struct Sacrifice_Struct
-{
-	/*000*/	uint32 casterID;	// Caster who sends the request (Confirmed)
-	/*004*/	uint32 targetID; // Player who recieves the request (Confirmed)
-	/*008*/	uint32 action; // Action => player clicked yes = 1 or no = 0 (Confirmed)
-	/*012*/	
-};
-
 struct SpecialMesg_Struct
 {
 	/*0000*/ uint32 msg_type;		// Comment: Type of message
 	/*0004*/ char  message[0];		// Comment: Message, followed by four bytes?
-};
-
-struct LevelUpdate_Struct
-{
-	/*000*/	uint8	level;			// Comment: Target Level of character
-	/*001*/	uint8	can_delevel;	// Comment: If zero, don't delevel (clientside)
-	/*002*/	
 };
 
 struct ExpUpdate_Struct
@@ -913,30 +641,6 @@ struct MerchantItems_Struct
 	/*002*/	struct MerchantItemsPacket_Struct packets[0];
 };
 
-struct SummonedItem_Struct
-{
-	/*0000*/ struct Item_Struct item;        // Comment: Refer to itemStruct for members
-};
-
-struct SummonedItemWaiting_Struct
-{
-	/*000*/ uint16 itemID;
-	/*002*/ uint8  charge;
-	/*003*/	
-};
-
-enum CONSUMETYPE : uint8
-{
-	CONSUMEFOOD = 0x01,						// Comment: Food
-	CONSUMEDRINK = 0x02						// Comment: Drink
-};
-
-enum HOWCONSUMEDTYPE: uint32
-{
-	AUTO = 0xffffffff,				// Comment: Auto Consumed by the client as food/drink is needed
-	RIGHTCLICKED = 222				// Comment: User has right clicked on food/drink to force eating/drinking
-};
-
 struct Consume_Struct
 {
 	/*000*/ uint32 slot;
@@ -953,51 +657,6 @@ struct MoveItem_Struct
 	/*004*/ uint32 to_slot;
 	/*008*/ uint32 number_in_stack;
 	/*012*/	
-};
-
-struct MoveCoin_Struct
-{
-	/*000*/ uint32 from_slot;
-	/*004*/ uint32 to_slot;
-	/*008*/ uint32 cointype1;
-	/*012*/ uint32 cointype2;
-	/*016*/ uint32 amount;	
-	/*020*/	
-};
-
-struct Split_Struct
-{
-	/*000*/	uint32	platinum;
-	/*004*/	uint32	gold;
-	/*008*/	uint32	silver;
-	/*012*/	uint32	copper;
-	/*016*/	
-};
-
-struct Surname_Struct
-{
-	/*000*/	char name[16];				// Comment: Player's first name
-	/*016*/	uint8 s_unknown1[20];		// Comment: put 1 in this in order to accept the surname  ^^
-	/*036*/	char Surname[30];			// Comment: Player's Surname (max size 20 limited by client)
-	/*066*/	
-};
-
-struct MoneyOnCorpse_Struct
-{
-	/*000*/ uint8	response;		// Comment: 0 = someone else is, 1 = OK, 2 = not at this time
-	/*001*/ uint8	unknown1;		// Comment: = 0x5a
-	/*002*/ uint8	unknown2;		// Comment: = 0x40
-	/*003*/ uint8	unknown3;		// Comment: = 0
-	/*004*/ uint32	platinum;		// Comment: Platinum Pieces
-	/*008*/ uint32	gold;			// Comment: Gold Pieces
-	/*012*/ uint32	silver;			// Comment: Silver Pieces
-	/*016*/ uint32	copper;			// Comment: Copper Pieces
-	/*020*/	
-};
-
-struct ItemOnCorpse_Struct 
-{
-	/*000*/	Item_Struct item;	
 };
 
 struct LootingItem_Struct 
@@ -1021,67 +680,6 @@ struct RequestClientZoneChange_Struct
 	/*024*/	
 };
 
-struct GMZoneRequest_Struct 
-{
-	/*000*/	char	charname[64];
-	/*064*/	uint32	zoneID;
-	/*068*/	uint8	unknown1[16];
-	/*084*/	uint8	success; // 0 if command failed, 1 if succeeded?
-	/*085*/	uint8	unknown2[3]; // 0x00
-	/*088*/	
-};
-
-struct GMSummon_Struct
-{
-	/*000*/	char    charname[64];
-	/*064*/	char    gmname[64];
-	/*128*/ uint32	success;
-	/*132*/	uint32	zoneID;
-	/*136*/	int32	x;
-	/*140*/	int32	y;
-	/*144*/ int32	z;
-	/*148*/	uint8 unknown2[4]; // E0 E0 56 00
-	/*152*/	
-};
-
-
-struct GMGoto_Struct
-{ // x,y is swapped as compared to summon and makes sense as own packet
-	/*000*/ char    char_name[64];
-	/*064*/ char    gm_name[64];
-	/*128*/ uint32	success;
-	/*132*/ uint32  zone_id;
-	/*136*/ int32	x;
-	/*140*/ int32	y;
-	/*144*/ int32	z;
-	/*148*/ uint32	zone_reason; // E0 E0 56 00
-	/*152*/	
-};
-		
-struct GMSurname_Struct 
-{
-	/*000*/	char name[64];			// Comment: 
-	/*064*/	char gmname[64];		// Comment: 
-	/*128*/	char Surname[32];		// Comment: 
-	/*160*/	uint8 unknown[2];		// Comment: 0x00, 0x00, 0x01, 0x00 = Update the clients
-	/*162*/	
-};
-
-struct Duel_Struct
-{
-	/*000*/	int32 duel_initiator;
-	/*004*/	int32 duel_target;
-	/*008*/	
-};
-
-struct DuelResponse_Struct
-{
-	/*000*/	int32 target_id;
-	/*004*/	int32 entity_id;
-	/*008*/	int8 response[2];
-	/*010*/	
-};
-
 struct CombatAbility_Struct
 {
 	/*000*/	uint16 m_target;		//the ID of the target mob
@@ -1091,81 +689,11 @@ struct CombatAbility_Struct
 	/*012*/	
 };
 
-//Instill Doubt
-struct Instill_Doubt_Struct 
-{
-	/*000*/	uint8 i_id;			// Comment: 
-	/*001*/	uint8 ia_unknown;	// Comment: 
-	/*002*/	uint8 ib_unknown;	// Comment: 
-	/*003*/	uint8 ic_unknown;	// Comment: 
-	/*004*/	uint8 i_atk;			// Comment: 
-	/*005*/	uint8 id_unknown;	// Comment: 
-	/*006*/	uint8 ie_unknown;	// Comment: 
-	/*007*/	uint8 if_unknown;	// Comment: 
-	/*008*/	uint8 i_type;		// Comment: 
-	/*009*/	uint8 ig_unknown;	// Comment: 
-	/*010*/	uint8 ih_unknown;	// Comment: 
-	/*011*/	uint8 ii_unknown;	// Comment: 
-	/*012*/	
-};
-
-struct PickPockets_Struct
-{
-	/*000*/	uint16 to;
-	/*002*/	uint16 from;
-	/*004*/	uint8 myskill;
-	/*005*/	uint8 unknown0;
-	/*006*/	uint8 type; // -1 you are being picked, 0 failed , 1 = plat, 2 = gold, 3 = silver, 4 = copper, 5 = item
-	/*007*/	uint8 unknown1; // 0 for response, unknown for input
-	/*008*/	uint32 coin;
-	/*012*/	uint8 lastsix[6];
-	/*018*/	
-};
-
-struct UseAbility_Struct 
-{
-	/*000*/	uint16 player_id;	// Comment: Entity ID
-	/*002*/	uint8  unkown[10];	// Comment: Only two of these bytesever have values.  Guessing lore and skill.
-	/*012*/	
-};
-
-struct GiveItem_Struct 
-{
-	/*000*/	uint16 to_entity;		// Comment: 
-	/*002*/	int16 to_equipSlot;	// Comment: 
-	/*004*/	uint16 from_entity;		// Comment: 
-	/*006*/	int16 from_equipSlot;	// Comment: 
-	/*008*/	
-};
-
 struct CancelTrade_Struct 
 { 
 	/*000*/	uint16 fromid;
 	/*002*/	uint16 action;
 	/*004*/	
-};
-
-
-struct Random_Struct 
-{
-	/*000*/	uint32 low;		// Comment: 
-	/*004*/	uint32 high;		// Comment: 
-	/*008*/	
-};
-
-//Old LFG_Struct (DO NOT DELETE)
-//struct LFG_Struct 
-//{
-//	char	name[64];	// Comment: 
-//	uint32	value;		// Comment: 
-//};
-
-//New LFG_Struct
-struct LFG_Struct 
-{
-	/*000*/	char	name[64 + 2];	// Comment: 
-	/*066*/	uint32	value;		// Comment: 
-	/*070*/	
 };
 
 // EverQuest Time Information:
@@ -1192,26 +720,6 @@ struct Merchant_Click_Struct
 	/*008*/ float   rate;
 	/*012*/	
 };
-
-/*
-0 is e7 from 01 to // MAYBE SLOT IN PURCHASE
-1 is 03
-2 is 00
-3 is 00
-4 is ??
-5 is ??
-6 is 00 from a0 to
-7 is 00 from 3f to */
-/*
-0 is F6 to 01
-1 is CE CE
-4A 4A
-00 00
-00 E0
-00 CB
-00 90
-00 3F
-*/
 	
 struct Merchant_Sell_Struct
 {
@@ -1235,12 +743,6 @@ struct Merchant_Purchase_Struct
 	/*008*/	uint8	quantity;
 	/*009*/ uint8   unknown_void[7];
 	/*016*/	
-};
-
-struct Item_Shop_Struct
-{
-	/*000*/	uint8 itemtype;
-	/*001*/	Item_Struct item;
 };
 
 struct Merchant_DelItem_Struct
@@ -1270,79 +772,12 @@ struct Illusion_Struct
 	/*020*/	
 };
 
-struct CPlayerItems_packet_Struct 
-{
-	/*000*/	uint16		opcode;		// Comment: OP_ItemTradeIn
-	/*002*/	Item_Struct	item;		// Comment: 
-};
-
-struct CPlayerItems_Struct 
-{
-	/*000*/	uint16		count;							// Comment: 
-	/*002*/	CPlayerItems_packet_Struct	packets[0];		// Comment: 
-};
-
-struct SkillUpdate_Struct 
-{
-	/*000*/	uint8 skillId;			// Comment: 
-	/*001*/	uint8 unknown1[3];		// Comment: 
-	/*004*/	uint8 value;			// Comment: 
-	/*005*/	uint8 unknown2[3];		// Comment: 
-	/*008*/	
-};
-
-struct ZoneUnavail_Struct 
-{
-	//This actually varies, but...
-	/*000*/	char zonename[16];		// Comment: 
-	/*016*/	short int unknown[4];	// Comment: 
-};
-
 struct GroupInvite_Struct 
 {
 	/*000*/	char invitee_name[64];		// Comment: 
 	/*064*/	char inviter_name[64];		// Comment: 
 	/*128*/	char unknown[65];		// Comment: 
 	/*193*/	
-};
-
-
-/* Do not touch this please.  Used to add and 
-	* remove group members from a group. Maybe more.*/
-struct GroupUpdate_Struct
-{
-	/*000*/	char	receiverName[32];	//Member who needs new info;
-	/*032*/	char	senderName[32];		//Member with new info;
-	/*064*/	char	senderName2[32];	//? testing, but not working yet
-	/*096*/	uint8	unknown01[128];		
-	/*224*/	uint8	action;				//0: Player joins the group; 1: ?? 2: ?? 3: Player leaves the group 4: You leave the group;	
-	/*225*/	
-};
-
-struct GroupFollow_Struct
-{
-	/*000*/	char leader[64];		// Comment: 
-	/*064*/	char invited[64];		// Comment: 
-	/*128*/	
-};
-
-/* Sent when player clicks disband after receiving an invite 
-	* or if a player is already grouped and gets an invite it 
-	* is sent automaticaly. */
-struct GroupInviteDecline_Struct{
-	/*000*/	char leader[64];		//Player1 who invited another Player2;
-	/*064*/	char leaver[64];		//Player2 who is declining/unable to accept invite from Player1;
-	/*128*/	uint8 action;			//Type of decline: 1: 'leaver' is considering another group invite; 2: 'leaver' already grouped; 3: 'leaver' rejects your offer to join the group;
-	/*129*/	
-};
-
-struct GroupDisband_Struct 
-{
-	/*000*/	char member[15];		// Comment: 
-	/*015*/	char unknown1[41];		// Comment: 
-	/*056*/	uint8 framecounter;		// A frame counter that increments by 32 each time same client sends this code;
- 	/*057*/	char unknown2[3];
-	/*060*/	
 };
 
 struct FaceChange_Struct 
@@ -1362,22 +797,6 @@ struct TradeRequest_Struct
 	/*000*/	uint16 to_mob_id;	
 	/*002*/	uint16 from_mob_id;	
 	/*004*/	
-};
-
-struct TradeAccept_Struct
-{
-	/*000*/	uint16 from_mob_id;
-	/*002*/	uint16 to_mob_id;	
-	/*004*/
-};
-
-struct TradeMoneyUpdate_Struct
-{
-	/*000*/	uint16	trader;			
-	/*002*/	uint8	type;	
- 	/*003*/	uint8   unknown;	//0x06
-	/*004*/	uint32	amount;	
-	/*008*/	
 };
 
 struct TradeCoin_Struct
@@ -1455,19 +874,6 @@ struct BazaarSearch_Struct
 	/*088*/
 };
 
-struct BazaarSearchResults_Struct
-{
-	/*000*/	BazaarWindowStart_Struct Beginning;
-	/*002*/	uint16  NumItems;
-	/*004*/	uint16	SerialNumber;
-	/*006*/	uint16	SellerID;
-	/*008*/	uint16	Cost;
-	/*010*/	uint16	ItemStat;
-	/*012*/	char	ItemName[64];
-	/*076*/
-
-};
-
 struct TraderBuy_Struct
 {
 	/*000*/	uint16 Action;
@@ -1489,157 +895,6 @@ struct TraderPriceUpdate_Struct
 	/*012*/	
 };
 
-struct Give_Struct 
-{
-	/*000*/	uint16 unknown[2];		// Comment: 
-	/*004*/	
-};
-
-struct PetitionClientUpdate_Struct 
-{
-	/*000*/	uint32 petnumber;		// Comment: Petition Number
-	/*004*/	uint32 color;			// Comment: 0x00 = green, 0x01 = yellow, 0x02 = red
-	/*008*/	uint32 senttime;			// Comment: 
-	/*012*/	uint8 unknown[4];		// Comment: 4 has to be 0x1F
-	/*016*/	char accountid[32];		// Comment: 
-	/*048*/	char gmsenttoo[32];		// Comment: 
-	/*080*/	uint32 something;		// Comment: 
-	/*084*/	char charname[64];		// Comment: 
-	/*148*/	
-};
-
-struct Petition_Struct 
-{
-	/*0000*/	uint32 petnumber;			// Comment: 
-	/*0004*/	uint32 urgency;				// Comment: 
-	/*0008*/	char accountid[32];			// Comment: 
-	/*0040*/	char lastgm[32];			// Comment: 
-	/*0072*/	char zone[32];				// Comment: 
-	/*0104*/	char charname[64];			// Comment: 
-	/*0168*/	uint32 charlevel;			// Comment: 
-	/*0172*/	uint32 charclass;			// Comment: 
-	/*0176*/	uint32 charrace;				// Comment: 
-	/*0180*/	time_t senttime;			// Comment: Time?
-	/*0188*/	uint32 checkouts;			// Comment: 
-	/*0192*/	uint32 unavail;				// Comment: 
-	/*0196*/	uint8 unknown5[4];			// Comment: 
-	/*0200*/	char petitiontext[1024];	// Comment: 
-	/*1224*/	
-};
-
-//For reference, possibly used by Mac client.
-struct Bug_Report_Struct
-{
-	/*0000*/	char playername[72];		// Comment: Players name
-	/*0072*/	uint8 blankspot1;			// Comment: not used
-	/*0073*/	uint8 cannotuplicate;		// Comment: 1 for cannot duplicate, 0 for can duplicate
-	/*0074*/	uint8 noncrashbug;			// Comment: 1 for does NOT crash, 0 for does cause crash
-	/*0075*/	char bugdescription[1024];	// Comment: The bug description
-	/*1099*/	
-};
-
-struct BugStruct
-{
-	/*0000*/	char	chartype[64];
-	/*0064*/	char	name[96];
-	/*0160*/	float	x;
-	/*0164*/	float	y;
-	/*0168*/	float	z;
-	/*0172*/	float	heading;
-	/*0176*/	char	unknown176[16];
-	/*0192*/	char	target_name[64];
-	/*0256*/	uint32	type;
-	/*0260*/	char	unknown256[2052];
-	/*2312*/	char	bug[1024];
-	/*3336*/	uint32	unknown3336;
-	/*3340*/
-};
-
-struct Who_All_Struct 
-{ 
-	/*000*/	char	whom[64];
-	/*064*/	int16	wrace;		// FF FF = no race
-	/*066*/	int16	wclass;		// FF FF = no class
-	/*068*/	int16	lvllow;		// FF FF = no numbers
-	/*070*/	int16	lvlhigh;	// FF FF = no numbers
-	/*072*/	int16	gmlookup;	// FF FF = not doing /who all gm
-	/*074*/	int16	guildid;
-	/*076*/	int8	unknown076[64];
-	/*140*/
-};
-
-struct WhoAllPlayer
-{
-	/*000*/	uint16	formatstring;
-	/*000*/	uint16	pidstring;
-	/*000*/	char*	name;
-	/*000*/	uint16	rankstring;
-	/*000*/	char*	guild;
-	/*000*/	uint16	unknown80[3];
-	/*000*/	uint16	zonestring;
-	/*000*/	uint32	zone;
-	/*000*/	uint16	class_;
-	/*000*/	uint16	level;
-	/*000*/	uint16	race;
-	/*000*/	char*	account;
-	/*000*/	uint16	ending;
-};
-
-struct WhoAllReturnStruct 
-{
-	/*000*/	uint32	id;
-	/*004*/	uint16	playerineqstring;
-	/*006*/	char	line[27];
-	/*033*/	uint8	unknown35; //0A
-	/*034*/	uint16	unknown36;//0s
-	/*036*/	uint16	playersinzonestring;
-	/*038*/	uint16	unknown44[5]; //0s
-	/*048*/	uint32	unknown52;//1
-	/*052*/	uint32	unknown56;//1
-	/*056*/	uint16	playercount;//1
-	struct WhoAllPlayer player[0];
-};
-
-// The following four structs are the WhoAllPlayer struct above broken down
-// for use in World ClientList::SendFriendsWho to accomodate the user of variable
-// length strings within the struct above.
-
-struct	WhoAllPlayerPart1 
-{
-	/*000*/	uint16	FormatMSGID;
-	/*000*/	uint16	PIDMSGID;
-	/*000*/	char	Name[1];;
-};
-
-struct	WhoAllPlayerPart2
-{
-	/*000*/	uint16	RankMSGID;
-	/*000*/	char	Guild[1];
-};
-
-struct	WhoAllPlayerPart3
-{
-	/*000*/	uint16	Unknown80[3];
-	/*000*/	uint16	ZoneMSGID;
-	/*000*/	uint32	Zone;
-	/*000*/	uint16	Class_;
-	/*000*/	uint16	Level;
-	/*000*/	uint16	Race;
-	/*000*/	char	Account[1];
-};
-
-struct	WhoAllPlayerPart4 
-{
-	/*000*/	uint32	Unknown100;
-};
-
-// Comment: 4 bytes in total
-struct Stun_Struct 
-{
-	/*000*/	uint32 duration;		// Comment: Duration of stun
-	/*004*/	
-};
-
 // Size: 32 Bytes
 struct Combine_Struct 
 { 
@@ -1654,95 +909,10 @@ struct Combine_Struct
 	/*000*/	uint16 containerID;		// Comment: ID of container item
 };
 
-struct Emote_Struct
-{
-	/*000*/	uint16 unknown01;			// Comment: 
-	/*000*/	char message[1024];		// Comment: 
-};
-
-struct Social_Action_Struct 
-{
-	/*000*/	uint8 unknown1[4];	// Comment: 
-	/*004*/	uint8 action;		// Comment: 
-	/*005*/	uint8 unknown2[7];	// Comment: 
-	/*012*/	
-};
-
-//Size: 8  (Request)
-struct InspectRequest_Struct 
-{ 
-	/*000*/	uint32 TargetID;		// Comment: 
-	/*004*/	uint32 PlayerID;		// Comment: 
-	/*008*/	
-}; 
-
-struct InspectAnswer_Struct 
-{ 
-	/*0000*/	uint16 TargetID;			// Comment: ? 
-	/*0002*/	uint16 PlayerID;			// Comment: ?
-	/*0004*/	uint8  unknown[128];
-	/*0132*/	char itemnames[23][64];
-	/*1604*/    char text[140];
-	/*1744*/
-}; 
-
-
 struct SetDataRate_Struct 
 {
 	/*000*/	float newdatarate;	// Comment: 
 	/*004*/	
-};
-
-
-struct SetServerFilter_Struct 
-{
-	/*000*/	uint32 filters[17];	// Comment: 
-	/*068*/	
-};
-
-struct SetServerFilterAck_Struct 
-{
-	/*000*/	uint8 blank[8];		// Comment: 
-	/*008*/	
-};
-
-struct GMName_Struct 
-{
-	/*000*/	char oldname[64];	// Comment: 
-	/*064*/	char gmname[64];	// Comment: 
-	/*128*/	char newname[64];	// Comment: 
-	/*192*/	uint8 badname;		// Comment: 
-	/*193*/	uint8 unknown[3];	// Comment: 
-	/*196*/	
-};
-
-struct GMDelCorpse_Struct 
-{
-	/*000*/	char corpsename[64];	// Comment: 
-	/*064*/	char gmname[64];		// Comment: 
-	/*128*/	uint8 unknown;			// Comment: 
-	/*129*/	
-};
-
-struct GMKick_Struct 
-{
-	/*000*/	char name[64];		// Comment: 
-	/*064*/	char gmname[64];	// Comment: 
-	/*128*/	uint8 unknown;		// Comment: 
-	/*129*/	
-};
-
-struct GMKill_Struct 
-{
-	/*000*/	char name[64];		// Comment: 
-	/*064*/	char gmname[64];	// Comment: 
-	/*128*/	uint8 unknown;		// Comment: 
-	/*129*/	
-};
-
-struct GMEmoteZone_Struct 
-{
-	/*000*/	char text[512];		// Comment: 
 };
 
 // This is where the Text is sent to the client.
@@ -1763,87 +933,11 @@ struct BookRequest_Struct
 	/*001*/	char txtfile[1]; // Variable
 };
 
-struct GMTrainee_Struct
-{
-		//       uint16 unknown0; //Always seems to be 0x9c 0x40
-	/*000*/ uint16 npcid;
-	/*002*/	uint32 playerid;
-	/*006*/ uint16 skills[73];
-	/*079*/ uint8  unknown[52];
-	/*131*/	uint16 unknown1;
-	/*133*/	uint8  unknown2;
-	/*134*/	uint8  ending[37];
-	/*171*/	
-};
-
 struct GMTrainEnd_Struct 
 {
 	/*000*/ int16 npcid;
 	/*002*/ int16 playerid;
 	/*004*/	
-};
-
-struct GMSkillChange_Struct
-{
-	/*000*/	uint16		npcid;
-	/*002*/ uint8		unknown1[2];	// something like PC_ID, but not really. stays the same thru the session though
-	/*004*/ uint16		skillbank;		// 0 if normal skills, 1 if languages
-	/*006*/ uint8		unknown2[2];
-	/*008*/ uint16		skill_id;
-	/*010*/ uint8		unknown3[2];
-	/*012*/	
-};
-
-
-// Struct for Clients Request to Show specific message board
-struct MBRetrieveMessages_Struct
-{
-	uint8 entityID;
-	uint8 unknown[3];
-	uint8 category; // category is the type of board selected by the client
-	/* 00 - OFFICIAL */
-	/* 01 - FOR SALE */
-	/* 02 - GENERAL */
-	/* 03 - HELP WANTED */
-	/* 04 - PERSONALS */
-	/* 05 - GUILDS */
-	uint8 unknown2[3];
-};
-
-// Valids of Guild Rank
-enum GUILDRANK
-{
-	GuildUnknown = -1,		// Comment: Unknown guild rank
-	GuildMember = 0,		// Comment: Guild Leader
-	GuildOffice = 1,		// Comment: Guild Officer
-	GuildLeader = 2,		// Comment: Guild Member
-	NotInaGuild = 3,		// Comment: Char is not in a guild
-	GuildInviteTimeOut = 4, // Comment: Client Invite Window has timed out
-	GuildDeclined = 5		// Comment: User Declined to join Guild
-				
-};
-
-struct GuildRankLevel_Struct 
-{
-	/*000*/	char rankname[101];		// Comment: 
-	/*000*/	bool heargu;			// Comment: 
-	/*000*/	bool speakgu;			// Comment: 
-	/*000*/	bool invite;			// Comment: 
-	/*000*/	bool remove;			// Comment: 
-	/*000*/	bool promote;			// Comment: 
-	/*000*/	bool demote;			// Comment: 
-	/*000*/	bool motd;				// Comment: 
-	/*000*/	bool warpeace;			// Comment: 
-	/*000*/	
-};
-
-struct Guild_Struct
-{
-	/*000*/	char name[32];			// Comment: 
-	/*000*/	uint32 databaseID;		// Comment: 
-	/*000*/	uint32 leader;			// Comment: AccountID of guild leader
-	/*000*/	GuildRankLevel_Struct rank[512+1];	// Comment: 
-	/*000*/	
 };
 
 struct GuildMOTD_Struct{
@@ -1863,225 +957,6 @@ struct GuildInviteAccept_Struct
 	/*136*/	
 };
 
-struct GuildsListEntry_Struct 
-{
-	/*0000*/	uint32 guildID;				// Comment: empty = 0xFFFFFFFF
-	/*0004*/	char name[64];				// Comment: 
-	/*0068*/	uint32 unknown1;			// Comment: = 0xFF
-	/*0072*/	uint16 exists;				// Comment: = 1 if exists, 0 on empty
-	/*0074*/	uint8 unknown2[6];			// Comment: = 0x00
-	/*0080*/	uint32 unknown3;			// Comment: = 0xFF
-	/*0084*/	uint8 unknown4[8];			// Comment: = 0x00
-	/*0092*/	uint32 unknown5;
-	/*0096*/
-};
-
-struct GuildsList_Struct 
-{
-	/*000*/	uint8 head[4];							// Comment: 
-	/*004*/	GuildsListEntry_Struct Guilds[512];		// Comment: 
-};
-
-
-struct GuildUpdate_Struct
-{
-	/*000*/	uint32	guildID;				// Comment: 
-	/*004*/	GuildsListEntry_Struct entry;	// Comment: 
-};
-
-// Guild invite, remove
-struct GuildCommand_Struct
-{
-	/*000*/	char Invitee[30];			// Comment: Person who is being invited
-	/*030*/	char Inviter[30];			// Comment: Person who did /guildinvite
-	/*060*/	uint16 guildeqid;			// Comment: 
-	/*062*/	uint8 unknown[2];			// Comment: for guildinvite all 0's, for remove 0=0x56, 2=0x02
-	/*064*/	uint32 rank;					// rank
-	/*068*/	
-};
-
-struct GuildInvite_Struct
-{
-	/*000*/	char Invitee[64];
-	/*064*/	char Inviter[64];
-	/*128*/	uint16 guildeqid;
-	/*130*/	uint8 unknown[2];
-	/*132*/	uint32 rank;
-	/*136*/	
-};
-
-struct GuildRemove_Struct
-{
-	/*000*/	char Remover[64];
-	/*064*/	char Removee[64];
-	/*128*/	uint16 guildeqid;
-	/*130*/	uint8 unknown[2];
-	/*132*/	uint32 rank;
-	/*136*/	
-};
-
-// struct for deleting a specific message
-struct MBEraseMessage_Struct
-{
-	/*000*/ uint32 entityID;	
-	/*004*/ uint32 id; /* id of the message	
-	/*008*/ uint8 category;
-	/*009*/ uint8 unknown3[3];
-	/*012*/	
-}; 
-
-// struct for retrieving a specific message
-struct MBRetrieveMessage_Struct
-{
-	/*000*/ uint32 entityID;	
-	/*004*/ uint32 id; /* id of the message	
-	/*008*/ uint8 category;
-	/*009*/ uint8 unknown3[3];
-	/*012*/	
-}; 
-
-
-// Struct for of a message
-struct MBMessage_Struct
-{		
-	/*0000*/ uint32 id; 
-	/*0004*/ char date[10]; /* char year[2]; char month[2]; char day[2];
-	/*0014*/ uint8 unknown2[6];
-	/*0020*/ char author[64];
-	/*0084*/ uint8 unknown3[2];
-	/*0086*/ uint8 language;
-	/*0087*/ uint8 unknown4;
-	/*0088*/ char subject[29];
-	/*0117*/ uint8 unknown5[3];
-	/*0120*/ uint8 category;
-	/*0121*/ uint8 unknown6;
-	/*0122*/ char message[2048]; // see eqgame function at .text:0047D4E5
-	/*2170*/	
-}; 
-
-
-// Filter Types for Message Board
-enum MESSAGEBOARD_CATEGORY
-{
-	OFFICIAL, 
-	FOR_SALE, 
-	GENERAL, 
-	HELP_WANTED,
-	PERSONALS, 
-	GUILDS 
-};
-
-struct Door_Struct
-{
-	/*000*/ char    name[16];            // Filename of Door // Was 10char long before... added the 6 in the next unknown to it: Daeken M. BlackBlade
-	/*016*/ float   yPos;               // y loc
-	/*020*/ float   xPos;               // x loc
-	/*024*/ float   zPos;               // z loc
-	/*028*/ float	heading;
-	/*032*/ uint16  incline;
-	/*034*/ uint16	size;
-	/*036*/ uint8	unknown[2];
-	/*038*/ uint8	doorid;             // door's id #
-	/*039*/ uint8	opentype;
-	/*040*/ uint8	doorIsOpen;
-	/*041*/ uint8	inverted;
-	/*042*/ uint16	parameter; 
-	/*044*/	
-};
-
-/******Useful Open Types*******/
-//53: Spell Particle Effect
-//55: Bulletin Board
-/******************************/
-
-/****OpenType '53' accompanied by the 'inverted' flag results in a static spell effect, which are listed below:
-1:   Healing orb (blue sphere)
-2:   Buff aura (lots of color moving towards the center)
-3:   Rain of fire (Orange flames)
-4:   Summon item (green cone)
-5:   Vision buff (White small effects)
-6:   Healing cone (blue cone)
-7:   Misc buff (blue particles spreading from center)
-8:   Misc buff (large orange explosions)
-9:   Invis/Gate (blue/white balls)
-10:  Poison debuff (Large green balls and small green balls)
-11:  ?? (Fast moving gold balls and a gold ball aura)
-12:  Dispell (Slow moving blue balls and blue sphere)
-13:  ?? (Fast moving orange balls on 2 planes, moving from center)
-14:  Bind (Very slow moving blue balls and blue sphere)
-15:  Stun (Very fast moving red effects on two planes)
-16:  Root (Green circles moving outward from center)
-17:  ?? (Three different blue effects in static positions from center)
-18:  Rain of fire (Small orange flames)
-19:  Cannabalize (Blue clouds moving to center)
-20:  Lifetap Cast (Green balls moving to center)
-21:  ?? (Lots going on here: Sphere of blue crystals, small blue balls moving outward, big blue balls moving outward slowly)
-22:  ?? (Medium size white balls moving slowly outward, almost makes a sphere)
-23:  ?? (Blue crystals)
-24:  Lifetap or Poison (Green balls spewing everywhere)
-25:  Stun (Red sphere and red balls moving outward
-26:  ?? (Small blue balls rising strait up and small blue balls moving away from center)
-27:  ?? (Green balls raining down from center on a plane, small blue balls rising from center on a plane and yellow balls forming a sphere from center)
-28:  ?? (Green circle raining green balls towards center)
-29:  ?? (Small orange balls forming a ring in center with orange puffs moving to center)
-30:  Healing cone (Blue healing cone flipped on axis)
-31:  Fire (Fire with orange balls)
-32:  ?? (Blue crystals with blue balls moving upwards from center with blue smoke moving upwards)
-33:  ?? (Small teal balls raining from center with static blue buffs forming a sphere)
-34:  Poison debuff (Small green balls raining down fast from center)
-35:  Harvest (Many blue balls moving away in two directions from center forming large walls)
-40:  ?? (Very few blue blues flashing and a blue ring)
-41:  ?? (Small orange flames flickering in a sphere with a ring of orange buffs in center)
-42:  ?? (Gold star forming a sphere and random gold dots moving updwards from center)
-43:  ?? (Small white balls raining from center with very very small blue dots appearing randomly)
-44:  ?? (A sun type effect with orange dots raining from it)
-45:  ?? (A sphere a blue dots raining downwards)
-46:  ?? (A sphere of green dots raining outwards)
-47:  ?? (A sphere of whote dots raining outwards with small blue dots mixed in)
-48:  ?? (Orange dots on a flat plane running outwards from center (disc like))
-49:  Jboots (Red effects moving towards center quickly)
-50:  ?? (Blue dots forming a sphere and flickering)
-51:  Manastone (Green skulls forming a sphere
-66:  ?? (A small pale-green sprinkler)
-67:  ?? (same as above)
-68:  ?? (same as above)
-69:  ?? (same as above)
-105: Smoke stack
-110: Flame (single orange flame)
-111: Flames (8ish orange flames)
-112: Flames (15ish orange flames)
-113: ?? (Sphere of orange flames)
-114: ?? (Large sphere of orange flames)
-115: Smoke stack (GIGANTIC smoke stack, can be seen for miles)
-116: ?? (Pale blue sprinkler)
-117: ?? (same as 116)
-118: ?? (Pale blue sprinkler, little different from 116)
-120: ?? (Sphere of red sparkles)
-121: ?? (Sphere of orange sparkles)
-122: ?? (Sphere of few blue dots)
-123: ?? (Sphere of blue sparkles)
-124: Sprinkler (blue sparkles rushing out of a single hole)
-125: Sprinkler (orange sparkles rushing out of a single hole)
-126: Sprinkler (smaller blue sparkles rushing out of a single hole)
-127: Sprinkler (pale red sparkles rushing out of a single hole)
-128: Water fall (Blob of steam)
-129: Water fall (Steam rushing from a single hole)
-130: Fire ("Realistic" fire effect)
-131: Pulsing HUGE white star
-132: Sprinkler (large steam puffs)
-133: Water fall (same as 128)
-134: Water fall (same as 129)
-143: Water fall (same as 128)
-144: Water fall (same as 128)
-145: ?? (Blue sparkles raining down randomly)
-146: ?? (Same as 145 but smaller)*/
-
-struct DoorSpawns_Struct	//SEQ
-{
-	/*000*/	uint16 count;            
-	/*002*/	struct Door_Struct doors[0];
-};
-
 struct ClickDoor_Struct 
 {
 	/*000*/	uint8	doorid;
@@ -2089,24 +964,6 @@ struct ClickDoor_Struct
 	/*002*/	uint16	item_id;
 	/*004*/	uint16	player_id;
 	/*008*/	
-};
-
-struct DoorOpen_Struct
-{
-	/*000*/	uint8	doorid;
-	/*001*/	uint8	action;
-	/*002*/	
-};
-
-struct LSAuth_Struct
-{
-	/*000*/	uint32	lsaccount_id;
-	/*004*/	char	name[19];
-	/*023*/	char	key[16];
-	/*039*/	bool	stale;
-	/*040*/	bool	inuse;
-	/*041*/	bool	firstconnect;
-	/*042*/	
 };
 
 // Added this struct for eqemu and started eimplimentation ProcessOP_SendLoginInfo
@@ -2124,205 +981,6 @@ struct LoginInfo_Struct
 struct EnterWorld_Struct
 {
 	/*000*/	char	charname[64];
-};
-
-struct NameApproval_Struct
-{
-	/*000*/	char charname[64];
-	/*064*/	uint32 race;
-	/*068*/	uint32 class_;
-	/*072*/	uint32 deity;
-	/*076*/	
-};
-
-struct ConsumeItem_Struct
-{
-	/*000*/	uint16 slot;			//The slot id of the item consumed
-	/*002*/	uint8 other[2];		//These are all 0x00.
-	/*004*/	uint32 filler[2];	//These are both always 0xFFFFFFFF.
-	/*0012*/	
-};
-
-struct ServerMOTD_Struct
-{
-	/*000*/	char motd[500];
-};
-
-struct ChangeWeather_Struct
-{
-	/*000*/	uint32 type;
-	/*004*/	uint32 intensity;
-	/*008*/	
-};
-
-struct BackSlashTarget_Struct
-{
-	/*000*/	uint16  bst_target;              // Target ID
-	/*002*/	uint16  bst_unknown1;             // ***Placeholder
-	/*004*/	
-};
-
-struct BackSlashAssist_Struct
-{
-	/*000*/	uint16 bsa_target;
-	/*002*/	uint16 bsa_unknown1;
-	/*004*/	
-};
-
-struct Make_Pet_Struct { //Simple struct for getting pet info 01/06/08
-	/*000*/	uint8 level;
-	/*001*/	uint8 class_;
-	/*002*/	uint16 race;
-	/*004*/	uint8 texture;
-	/*005*/	uint8 pettype;
-	/*006*/	float size;
-	/*010*/	uint8 type;
-	/*011*/	uint32 min_dmg;
-	/*015*/	uint32 max_dmg;
-	/*019*/	int32  max_hp;
-	/*023*/	
-};
-
-struct Boat_Struct
-{
-	/*000*/	char boatname[64]; //Changed the lenght of the name
-};
-
-struct ControlBoat_Struct
-{
-	/*000*/	uint16	boatId;			// entitylist id of the boat
-	/*002*/	bool	TakeControl;	// 01 if taking control, 00 if releasing it
-	/*003*/ uint8   unknown5;	// no idea what these last byte represent
-	/*004*/							
-};
-
-// this is the generic teleport struct
-// used to teleport a player
-struct TeleportPC_Struct
-{
-	/*0000*/ char zone[16];
-	/*0016*/ uint8 unknown2[16];			
-	/*0032*/ float   yPos;          // y loc
-	/*0036*/ float   xPos;          // x loc			
-	/*0040*/ float   zPos;          // z loc
-	/*0044*/ float	 heading;		// will be divided by 2 by the client
-};
-
-// 
-// This is sent to the client for translocate requests
-// This is sent back from the client to the server if the request was either confirmed or denied
-struct Translocate_Struct
-{
-	/*0000*/ char zone[16];
-	/*0016*/ uint8 unknown[16];
-	/*0032*/ uint16 spellID; // ID of the translocate spell being cast, Client will popup "..translocated to your bind point?" if it is translocate 1422 or group translocate 1334
-	/*0034*/ uint8 unknown1[6];
-	/*0040*/ char caster[16];
-	/*0056*/ uint8 unknown2[16];
-	/*0072*/ float y;		// translocate to this Y pos - the client will set this in the local playerProfile to have up2date values for save client request i think
-	/*0076*/ float x;		// translocate to this X pos - the client will set this in the local playerProfile to have up2date values for save client request i think
-	/*0080*/ float z;		// translocate to this Z pos - the client will set this in the local playerProfile to have up2date values for save client request i think			
-	/*0084*/ uint32 confirmed; // Step 1 the server sents the initial request to the client, should be 0 = Confirmation box to player
-	/*0088*/				   // Step 2 the client will response with this struct, if confirmed it will be 1 
-								// Step 3 the server will response with the actual translocate this time confirmed is again 1
-};
-
-// 0x8c21, 8
-struct BecomeNPC_Struct 
-{
-	/*000*/ uint32 entityID;
-	/*004*/ uint8 attackLevel;
-	/*005*/ uint8 unknown[3];
-	/*007*/
-};
-
-//Struct for NPC roam boxes
-struct RoamBox_Struct
-{
-	uint16 id;
-	float max_x;
-	float min_x;
-	float max_y;
-	float min_y;
-};
-//Boat Commands
-enum BOATCOMMANDS
-{
-	CHECK_FAMILY, // Check others boats before departing
-	SPAWN, // Spawn the boat
-	TELEPORT_PLAYERS, // Teleport player to the other zone
-	GOTO, // Move boat to node number numnode
-	WAIT, // Wait at zone/dock for timeneeded
-	ROTATE, // Rotate the boat
-};
-//Struct for Boats routes
-struct WorldBoatCommand_Struct
-{
-	BOATCOMMANDS cmd;
-	std::string zonename;
-	union {
-		struct 
-		{
-			float x;
-			float y;
-			float z;
-			float heading;
-		}position;
-		struct
-		{
-			uint32 from_node; // -1 means that we keep the old one
-			uint32 to_node;
-			uint32 timeneeded;
-		}go_to;
-	};
-
-};
-
-//Struct for Boats routes
-struct ZoneBoatCommand_Struct
-{
-	BOATCOMMANDS cmd;
-	float x;
-	float y;
-	union 
-	{
-		struct 
-		{
-			float speed;
-		}go_to;
-		struct
-		{
-			float heading;
-		}rotate;
-	};
-
-};
-
-//Struct for the zone to communicate its status with World
-struct ZoneStatus_Struct
-{
-	uint16 zoneID;
-};
-
-//           No idea what this is used for, but it creates a
-//           perminent object that no client may interact with.
-//			 It also accepts spell sprites (i.e., GENC00), but 
-//			 they do not currently display. I guess we could use 
-//			 this for GM events?
-//
-//Opcode: 0xF620
-struct ObjectDisplayOnly_Struct
-{
-	/*0000*/ char test1[32];
-	/*0032*/ char modelName[16];	
-	/*0048*/ char test2[12];
-	/*0060*/ float size;			
-	/*0064*/ float y;				
-	/*0068*/ float x;				
-	/*0072*/ float z;				
-	/*0076*/ float heading;			
-	/*0080*/ float tilt;
-	/*0084*/ char test4[40];
 };
 
 struct Arrow_Struct 
@@ -2356,42 +1014,6 @@ struct Arrow_Struct
 	/*081*/ char   model_name[16];
 	/*097*/ char   buffer[15];
 };
-
-//			Size: 116 (0x74u)
-//           OpCode: 0x4520
-struct SpawnProjectile_Struct
-{
-	/*0000*/ uint32 always1;				// Comment: ASM claims that this member should always be a value of 1
-	/*0004*/ uint32 always0;				// Comment: ASM claims that this member should always be a value of 0
-	/*0008*/ uint32 test1;				// Comment: Unknown (ASM claims that this member is defined by the client and size uint32)
-	/*0012*/ float y;					// Comment: Object's y coordinate (Verified to be float)
-	/*0016*/ float x;					// Comment: Object's x coordinate (Verified to be float)
-	/*0020*/ float z;					// Comment: Object's z coordinate (Verified to be float)
-	/*0024*/ float heading;				// Comment: Object's heading (Verified to be float)
-	/*0028*/ float tilt;				// Comment: Object's tilt (Verified to be float)
-	/*0032*/ float velocity;			// Comment: Object's velocity (Verified to be float)
-	/*0036*/ float burstVelocity;		// Comment: Incremental velocity on the object during its first second of travel (Verified to be float)
-	/*0040*/ float burstHorizontal;		// Comment: Shoves the object along the horizontal plane during its first second of travel (Verified to be float)
-	/*0044*/ float burstVertical;		// Comment: Shoves the object along the vertical plane during its first second of travel (Verified to be float)
-	/*0048*/ float yaw;					// Comment: Rotation around the z-axis (Verified to be float)
-	/*0052*/ float pitch;				// Comment: Rotation around the x-axis (Verified to be float)
-	/*0056*/ float arc;					// Comment: Applies a gravitational arc on the object (Verified to be float)
-	/*0060*/ uint8 test5[4];				// Comment: Unknown (ASM claims that this member is defined by the client)
-	/*0064*/ uint32 sourceID;			// Comment: Entity ID of the projectile's inflictor (Verified to be uint32)
-	/*0068*/ uint32 targetID;			// Comment: Entity ID of the projectile's inflictee (Verified to be uint32)
-	/*0072*/ uint16 test6;				// Comment: Unknown (ASM claims that this member is defined by the client and size uint16)
-	/*0074*/ uint16 test7;				// Comment: Unknown (ASM claims that this member is defined by the client and size uint16)
-	/*0076*/ uint32 spellID;				// Comment: Spell ID of the projectile (ASM claims uint32)
-	/*0080*/ uint8 lightSource;			// Comment: Light source on the object (ASM claims uint8)
-	/*0081*/ uint8 test9;				// Comment: Unknown (ASM claims uint8)
-	/*0082*/ uint8 spawnBehavior;		// Comment: Boolean flag to enable the attack animation and spawn of the arrow projectile (See 0x11/0x1B below)
-										//                     OR used to grant extended life to a spell projectile (See 0x09 below) (ASM claims uint8)
-	/*0083*/ uint8 projectileType;		// Comment: 0x09 - Spell bolt, 0x11 - Arrow, 0x1B - Arrow, 0x1C - Under water attack? (Verified to be uint8)
-	/*0084*/ uint8 sourceAnimation;		// Comment: Attack animation of the inflictor (Verified to be uint8)
-	/*0085*/ char texture[16];			// Comment: Object's texture filename (Must be set to "GENC00" or the like when using spell bolt projectiles)
-	/*0101*/ char spacer[15];			// Comment: ASM makes no reference to any bytes after the 85th, so these must be padding
-};
-
 
 // struct sent by client when using /discp
 struct UseDiscipline_Struct
@@ -2552,10 +1174,11 @@ struct PlayerProfile_Struct
 	/*3393*/	uint8	unknown3393[51];
 	/*3444*/	uint32	current_zone;		// 
 	/*3448*/	uint8	unknown3448[336];	// Lots of data on fake PP struct, none in normal decoded packet.
-	/*3784*/	uint32	bind_point_zone;	// Lyenu: Bind zone is saved as a int32 now
-	/*3788*/	uint32	start_point_zone[4];	// Lyenu: Start Point Zones are saved as int32s now
-	/*3804*/	OldBindStruct	bind_location[5];	// Player Bind Location (5 different X,Y,Z - Multiple bind points?)
-	/*3864*/	uint8	unknown3656[20];	// ***Placeholder
+	/*3784*/	uint32	bind_point_zone[5];	
+	/*3804*/	float	bind_y[5];
+	/*3824*/	float	bind_x[5];
+	/*3844*/	float	bind_z[5];
+	/*3864*/	float	bind_heading[5];
 	/*3884*/	OldItemProperties_Struct	bankinvitemproperties[8];
 	/*3964*/	OldItemProperties_Struct	bankbagitemproperties[80];
 	/*4764*/	uint32	login_time;
@@ -2581,17 +1204,18 @@ struct PlayerProfile_Struct
 	/*5004*/	uint32	unknown5003;
 	/*5008*/	uint32	abilitySlotRefresh;
 	/*5012*/	char	groupMembers[6][64];	// Group Members
-	/*5396*/	uint8	unknown5124[24];	// ***Placeholder 
-	/*5420*/	uint32	expAA;			
-	/*5424*/    uint8	unknown5424;
+	/*5396*/	uint8	unknown5396[20];	
+	/*5416*/	uint32	groupdat;
+	/*5420*/	uint32	expAA;				// Not working? client has this as Post60Exp
+	/*5424*/    uint8	title;
 	/*5425*/	uint8	perAA;			    // Player AA Percent
 	/*5426*/	uint8	haircolor;			// Player Hair Color
 	/*5427*/	uint8	beardcolor;			// Player Beard Color
 	/*5428*/	uint8	eyecolor1;			// Player Left Eye Color
 	/*5429*/	uint8	eyecolor2;			// Player Right Eye Color
 	/*5430*/	uint8	hairstyle;			// Player Hair Style
-	/*5431*/	uint8	beard;			// T7g: Beard Type, formerly title - I have no clue why, Title moved a few lines below this one
-	/*5432*/	uint8	face;			// Player Face Type (Is that right?)
+	/*5431*/	uint8	beard;				// Player Beard Type
+	/*5432*/	uint8	face;				// Player Face Type
 	/*5433*/	uint32	item_material[_MaterialCount];
 	/*5469*/	uint8	unknown5469[143]; //item_tint is in here somewhere.
 	/*5612*/	AA_Array aa_array[MAX_PP_AA_ARRAY];
@@ -2610,9 +1234,9 @@ struct PlayerProfile_Struct
 	/*5900*/    uint16  air_remaining;
 	/*5902*/    uint16  aapoints;
 	/*5904*/	uint32	MGBTimer;
-	/*5908*/	uint8   unknown5908[90];
-	/*5998*/	uint8	mBitFlags[6];
-	/*6004*/	uint8	Unknown6004[708];
+	/*5908*/	uint8   unknown5908[91];
+	/*5999*/	int8	mBitFlags[6];
+	/*6005*/	uint8	Unknown6004[707];
 	/*6712*/	uint32	WrathWildTimer;
 	/*6716*/	uint32	UnknownTimer;
 	/*6720*/	uint32	HarmTouchTimer;
@@ -2626,28 +1250,12 @@ struct PlayerProfile_Struct
 */
 struct CharCreate_Struct
 {
-	#define pp_inventory_size 30
-	#define pp_containerinv_size 80
-	#define pp_cursorbaginventory_size 10
-	#define pp_bank_inv_size 8
-	#define pp_bank_cont_inv_size 80
-	/* ***************** */
-	/*0000*/	uint8	unknown0004[2];		// ***Placeholder
-	/*0002*/	char	name[64];			// Player First Name
-	/*0066*/	char	Surname[66];		// Surname OR title.
-	/*0132*/	uint32	uniqueGuildID;
+	/*0000*/	uint8	unknown0004[136];	
 	/*0136*/	uint8	gender;				// Player Gender
-	/*0137*/	char	genderchar[1];		// ***Placeholder
-	/*0138*/	uint16	race;				// Player Race (Lyenu: Changed to an int16, since races can be over 255)
+	/*0137*/	char	unknown137[1];		
+	/*0138*/	uint16	race;				// Player Race
 	/*0140*/	uint16	class_;				// Player Class
-	/*0142*/	uint16	bodytype;
-	/*0144*/	uint8	level;				// Player Level
-	/*0145*/	char	levelchar[3];		// ***Placeholder
-	/*0148*/	uint32	exp;				// Current Experience
-	/*0152*/	uint16	trainingpoints;				// Players Points
-	/*0154*/	uint16	mana;				// Player Mana
-	/*0156*/	uint16	cur_hp;				// Player Health
-	/*0158*/	uint16	status;				
+	/*0142*/	uint8	unknown0142[18];
 	/*0160*/	uint16	STR;				// Player Strength
 	/*0162*/	uint16	STA;				// Player Stamina
 	/*0164*/	uint16	CHA;				// Player Charisma
@@ -2655,99 +1263,21 @@ struct CharCreate_Struct
 	/*0168*/	uint16	INT;				// Player Intelligence
 	/*0170*/	uint16	AGI;				// Player Agility
 	/*0172*/	uint16	WIS;				// Player Wisdom
-	/*0174*/	uint8	oldface;               //
-	/*0175*/    int8    EquipType[9];       // i think its the visible parts of the body armor
-	/*0184*/    int32   EquipColor[9];      //
-	/*0220*/	uint16	inventory[30];		// Player Inventory Item Numbers
-	/*0280*/	uint8	languages[26];		// Player Languages
-	/*0306*/	uint8	unknown0310[6];		// ***Placeholder
-	/*0312*/	struct	OldItemProperties_Struct	invItemProprieties[30];	// These correlate with inventory[30]
-	/*0612*/	struct	OldSpellBuff_Struct	buffs[15];	// Player Buffs Currently On
-	/*0762*/	uint16	containerinv[pp_containerinv_size];	// Player Items In "Bags" -- If a bag is in slot 0, this is where the bag's items are
-	/*0922*/	uint16   cursorbaginventory[10];
-	/*0942*/	struct	OldItemProperties_Struct	bagItemProprieties[pp_containerinv_size];	// Just like InvItemProperties
-	/*1742*/    struct  OldItemProperties_Struct	cursorItemProprieties[10];	  //just like invitemprops[]
-	/*1842*/	int16	spell_book[256];	// Player spells scribed in their book
-	/*2354*/	uint8	unknown2374[512];	// 0xFF
-	/*2866*/	int16	mem_spells[8];	// Player spells memorized
-	/*2882*/	uint8	unknown2886[16];	// 0xFF
-	/*2898*/	uint16	available_slots;
-	/*2900*/	float	y;					// Player Y
-	/*2904*/	float	x;					// Player X
-	/*2908*/	float	z;					// Player Z
-	/*2912*/	float	heading;			// Player Heading
-	/*2916*/	uint32	position;		// ***Placeholder
-	/*2920*/	uint32	platinum;			// Player Platinum (Character)
-	/*2924*/	uint32	gold;				// Player Gold (Character)
-	/*2928*/	uint32	silver;				// Player Silver (Character)
-	/*2932*/	uint32	copper;				// Player Copper (Character)
-	/*2936*/	uint32	platinum_bank;		// Player Platinum (Bank)
-	/*2940*/	uint32	gold_bank;			// Player Gold (Bank)
-	/*2944*/	uint32	silver_bank;		// Player Silver (Bank)
-	/*2948*/	uint32	copper_bank;		// Player Copper (Bank)
-	/*2952*/	uint32	platinum_cursor;
-	/*2956*/	uint32	gold_cursor;
-	/*2960*/	uint32	silver_cursor;
-	/*2964*/	uint32	copper_cursor;
-	/*2968*/	uint8	currency[16];	    //Unused currency?
-	/*2984*/	uint16	skills[75];			// Player Skills
-	/*3134*/	uint8	innate[99];
-	/*3233*/    uint16  air_supply;
-	/*3235*/    uint8   texture;
-	/*3236*/	float   height;
-	/*3240*/	float	width;
-	/*3244*/	float   length;
-	/*3248*/	float   view_height;
-	/*3252*/    uint8   boat_name[16];
-	/*3268*/    uint8   unknown[76];
-	/*3344*/	uint8	autosplit;
-	/*3345*/	uint8	unknown3449[95];
-	/*3440*/	uint32	start_zone;		// 
-	/*3444*/	uint8	unknown3448[336];	// Lots of data on fake PP struct, none in normal decoded packet.
-	/*3780*/	uint32	bind_point_zone;	// Lyenu: Bind zone is saved as a int32 now
-	/*3784*/	uint32	start_point_zone[4];	// Lyenu: Start Point Zones are saved as int32s now
-	/*3800*/	OldBindStruct	bind_location[5];	// Player Bind Location (5 different X,Y,Z - Multiple bind points?)
-	/*3860*/	uint8	unknown3656[20];	// ***Placeholder
-	/*3880*/	OldItemProperties_Struct	bankinvitemproperties[8];
-	/*3960*/	OldItemProperties_Struct	bankbagitemproperties[80];
-	/*4760*/	uint32	login_time;
-	/*4764*/	uint16	bank_inv[8];		// Player Bank Inventory Item Numbers
-	/*4780*/	uint16	bank_cont_inv[80];	// Player Bank Inventory Item Numbers (Bags)
-	/*4940*/	uint16	deity;		// ***Placeholder
-	/*4942*/	uint16	guild_id;			// Player Guild ID Number
-	/*4944*/	uint32  birthday;
-	/*4948*/	uint32  lastlogin;
-	/*4952*/	uint32  timePlayedMin;
-	/*4956*/	int8    thirst_level;
-	/*4957*/    int8    hunger_level;
-	/*4958*/	uint8   fatigue;
-	/*4959*/	uint8	pvp;				// Player PVP Flag
-	/*4960*/	uint8	level2;		// ***Placeholder
-	/*4961*/	uint8	anon;				// Player Anon. Flag
-	/*4962*/	uint8	gm;					// Player GM Flag
-	/*4963*/	uint8	guildrank;			// Player Guild Rank (0=member, 1=officer, 2=leader)
-	/*4964*/    uint8   intoxication;
-	/*4965*/	uint8	unknown4760[43];
-	/*5008*/	char	groupMembers[6][64];	// Group Members
-	/*5392*/	uint8	unknown5124[24];	// ***Placeholder 
-	/*5416*/	uint32	expAA;			
-	/*5420*/    uint8	unknown5424;
-	/*5421*/	uint8	perAA;			    // Player AA Percent
+	/*0174*/	uint8	oldface;            
+	/*0175*/	uint8	unknown0175[3265];
+	/*3440*/	uint32	start_zone;	
+	/*3444*/	uint8	unknown3444[1496];
+	/*4940*/	uint16	deity;
+	/*4942*/	uint8	unknown4946[480];
 	/*5422*/	uint8	haircolor;			// Player Hair Color
 	/*5423*/	uint8	beardcolor;			// Player Beard Color
 	/*5424*/	uint8	eyecolor1;			// Player Left Eye Color
 	/*5425*/	uint8	eyecolor2;			// Player Right Eye Color
 	/*5426*/	uint8	hairstyle;			// Player Hair Style
-	/*5427*/	uint8	beard;			// T7g: Beard Type, formerly title - I have no clue why, Title moved a few lines below this one
-	/*5428*/	uint8	face;			// Player Face Type (Is that right?)
-	/*5429*/	uint8	unknown5225[3023];	// ***Placeholder
+	/*5427*/	uint8	beard;				// Player Beard Type
+	/*5428*/	uint8	face;				// Player Face Type
+	/*5429*/	uint8	unknown5429[3023];
 	/*8452*/
-};
-
-struct Weather_Struct
-{
-	/*000*/	uint32 type;
-	/*004*/	uint32 intensity;
 };
 
 struct AltAdvStats_Struct 
@@ -2757,19 +1287,6 @@ struct AltAdvStats_Struct
 	/*006*/	int8	percentage;
 	/*007*/	int8	unknown_void;
 	/*008*/	
-};
-
-struct AA_Skills
-{
-	/*000*/	uint8 aa_value;
-	/*001*/	
-};
-
-struct AATable_Struct
-{
-	/*000*/	uint8 unknown;
-	/*001*/	structs::AA_Skills aa_list[MAX_PP_AA_ARRAY];
-	/*121*/	
 };
 
 //Server sends this packet for reuse timers
@@ -2839,6 +1356,29 @@ struct QuestReward_Struct
 	/*032*/	uint16	item_id;
 	/*034*/	uint8	unknown[14];
 	/*048*/	
+};
+
+/*Not Implemented*/
+
+//           No idea what this is used for, but it creates a
+//           perminent object that no client may interact with.
+//			 It also accepts spell sprites (i.e., GENC00), but 
+//			 they do not currently display. I guess we could use 
+//			 this for GM events?
+//
+//Opcode: 0xF640 MSG_ADD_OBJECT
+struct ObjectDisplayOnly_Struct
+{
+	/*0000*/ char test1[32];
+	/*0032*/ char modelName[16];	
+	/*0048*/ char test2[12];
+	/*0060*/ float size;			
+	/*0064*/ float y;				
+	/*0068*/ float x;				
+	/*0072*/ float z;				
+	/*0076*/ float heading;			
+	/*0080*/ float tilt;
+	/*0084*/ char test4[40];
 };
 
 	};	//end namespace structs

@@ -20,12 +20,13 @@
 
 #include "../common/timer.h"
 
-#include <string>
 #include <list>
 #include <stack>
 
-class NPC;
 class Client;
+class ItemInst;
+class Mob;
+class NPC;
 
 class QuestManager {
 	struct running_quest {
@@ -55,8 +56,8 @@ public:
 	void me(const char *str);
 	void summonitem(uint32 itemid, int16 charges = -1);
 	void write(const char *file, const char *str);
-	Mob* spawn2(int npc_type, int grid, int unused, float x, float y, float z, float heading);
-	Mob* unique_spawn(int npc_type, int grid, int unused, float x, float y, float z, float heading = 0);
+	Mob* spawn2(int npc_type, int grid, int unused, const glm::vec4& position);
+	Mob* unique_spawn(int npc_type, int grid, int unused, const glm::vec4& position);
 	Mob* spawn_from_spawn2(uint32 spawn2_id);
 	void enable_spawn2(uint32 spawn2_id);
 	void disable_spawn2(uint32 spawn2_id);
@@ -128,16 +129,16 @@ public:
 	void targlobal(const char *varname, const char *value, const char *duration, int npcid, int charid, int zoneid);
 	void delglobal(const char *varname);
 	void ding();
-	void rebind(int zoneid, float x, float y, float z);
+	void rebind(int zoneid, const glm::vec3& location);
 	void start(int wp);
 	void stop();
 	void pause(int duration);
-	void moveto(float x, float y, float z, float h, bool saveguardspot);
+	void moveto(const glm::vec4& position, bool saveguardspot);
 	void resume();
 	void setnexthpevent(int at);
 	void setnextinchpevent(int at);
 	void respawn(int npc_type, int grid);
-	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=-999999, float maxz=999999);
+	void set_proximity(float minx, float maxx, float miny, float maxy, float minz=BEST_Z_INVALID, float maxz=-BEST_Z_INVALID);
 	void clear_proximity();
 	void enable_proximity_say();
 	void disable_proximity_say();
@@ -150,8 +151,8 @@ public:
 	void set_zone_flag(int zone_id);
 	void clear_zone_flag(int zone_id);
 	void sethp(int hpperc);
-	bool summonburriedplayercorpse(uint32 char_id, float dest_x, float dest_y, float dest_z, float dest_heading);
-	bool summonallplayercorpses(uint32 char_id, float dest_x, float dest_y, float dest_z, float dest_heading);
+	bool summonburriedplayercorpse(uint32 char_id, const glm::vec4& position);
+	bool summonallplayercorpses(uint32 char_id, const glm::vec4& position);
 	uint32 getplayerburriedcorpsecount(uint32 char_id);
 	bool buryplayercorpse(uint32 char_id);
 	void forcedooropen(uint32 doorid, bool altmode);
@@ -176,8 +177,8 @@ public:
     void enabletitle(int titleset);
    	bool checktitle(int titlecheck);
    	void removetitle(int titlecheck);
-	uint16 CreateGroundObject(uint32 itemid, float x, float y, float z, float heading, uint32 decay_time = 300000);
-	uint16 CreateGroundObjectFromModel(const char* model, float x, float y, float z, float heading, uint8 type = 0x00, uint32 decay_time = 0);
+	uint16 CreateGroundObject(uint32 itemid, const glm::vec4& position, uint32 decay_time = 300000);
+	uint16 CreateGroundObjectFromModel(const char* model, const glm::vec4& position, uint8 type = 0x00, uint32 decay_time = 0);
 	void ModifyNPCStat(const char *identifier, const char *newValue);
 	void UpdateSpawnTimer(uint32 id, uint32 newTime);
 	void MerchantSetItem(uint32 NPCid, uint32 itemid, uint32 quantity = 0);
@@ -192,7 +193,7 @@ public:
 	//void RemoveGroupFromInstance(uint16 instance_id);	//potentially useful but not implmented at this time.
 	//void RemoveRaidFromInstance(uint16 instance_id);	//potentially useful but not implmented at this time.
 	void RemoveAllFromInstance(uint16 instance_id);
-	void MovePCInstance(int zone_id, int instance_id, float x, float y, float z, float heading);
+	void MovePCInstance(int zone_id, int instance_id, const glm::vec4& position);
 	void FlagInstanceByGroupLeader(uint32 zone, int16 version);
 	void FlagInstanceByRaidLeader(uint32 zone, int16 version);
 	const char* varlink(char* perltext, int item_id);
@@ -208,7 +209,7 @@ public:
 	uint16 CreateDoor( const char* model, float x, float y, float z, float heading, uint8 opentype, uint16 size);
     int32 GetZoneID(const char *zone);
     const char *GetZoneLongName(const char *zone);
-	void CrossZoneSignalPlayerByCharID(int charid, uint32 data); 
+	void CrossZoneSignalPlayerByCharID(int charid, uint32 data);
 	void CrossZoneSignalNPCByNPCTypeID(uint32 npctype_id, uint32 data);
 	void CrossZoneSignalPlayerByName(const char *CharName, uint32 data);
 	void CrossZoneSetEntityVariableByNPCTypeID(uint32 npctype_id, const char *id, const char *m_var);
@@ -216,6 +217,8 @@ public:
 	bool EnableRecipe(uint32 recipe_id);
 	bool DisableRecipe(uint32 recipe_id);
 	void ClearNPCTypeCache(int npctype_id);
+	void SendDebug(std::string message, int level);
+	void ReloadZoneStaticData();
 
 	Client *GetInitiator() const;
 	NPC *GetNPC() const;

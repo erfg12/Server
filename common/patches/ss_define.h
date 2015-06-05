@@ -64,16 +64,14 @@
 //check length of packet before decoding. Call before setup.
 #define ENCODE_LENGTH_EXACT(struct_) \
 	if((*p)->size != sizeof(struct_)) { \
-		_log(NET__STRUCTS, "Wrong size on outbound %s (" #struct_ "): Got %d, expected %d", opcodes->EmuToName((*p)->GetOpcode()), (*p)->size, sizeof(struct_)); \
-		_hex(NET__STRUCT_HEX, (*p)->pBuffer, (*p)->size); \
+		Log.Out(Logs::Detail, Logs::Netcode, "Wrong size on outbound %s (" #struct_ "): Got %d, expected %d", opcodes->EmuToName((*p)->GetOpcode()), (*p)->size, sizeof(struct_)); \
 		delete *p; \
 		*p = nullptr; \
 		return; \
 	}
 #define ENCODE_LENGTH_ATLEAST(struct_) \
 	if((*p)->size < sizeof(struct_)) { \
-		_log(NET__STRUCTS, "Wrong size on outbound %s (" #struct_ "): Got %d, expected at least %d", opcodes->EmuToName((*p)->GetOpcode()), (*p)->size, sizeof(struct_)); \
-		_hex(NET__STRUCT_HEX, (*p)->pBuffer, (*p)->size); \
+		Log.Out(Logs::Detail, Logs::Netcode, "Wrong size on outbound %s (" #struct_ "): Got %d, expected at least %d", opcodes->EmuToName((*p)->GetOpcode()), (*p)->size, sizeof(struct_)); \
 		delete *p; \
 		*p = nullptr; \
 		return; \
@@ -98,9 +96,25 @@
  *
  */
 
+
+//Just checks to make sure the extra data is actually there. EQ clients could previously send 0-sized packets that require a decode and crash the server.
+#define CHECK_DECODE_NULLPTR(eq_struct) \
+	if(eq_struct == nullptr) { return; }
+
+//Sanity checking to make sure the sizeof a struct is exactly a struct. This should be done on EVERY decode.
+#define DECODE_LENGTH_ATLEAST(struct_) \
+	if(__packet->size < sizeof(struct_)) { \
+		__packet->SetOpcode(OP_Unknown); /* invalidate the packet */ \
+		_log(NET__STRUCTS, "Wrong size on incoming %s (" #struct_ "): Got %d, expected at least %d", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(struct_)); \
+		_hex(NET__STRUCT_HEX, __packet->pBuffer, __packet->size); \
+		return; \
+	}
+
 //simple buffer-to-buffer movement for fixed length packets
 //the eq packet is mapped into `eq`, the emu packet into `emu`
 #define SETUP_DIRECT_DECODE(emu_struct, eq_struct) \
+	CHECK_DECODE_NULLPTR(__packet->pBuffer); \
+	DECODE_LENGTH_ATLEAST(eq_struct); \
 	unsigned char *__eq_buffer = __packet->pBuffer; \
 	__packet->size = sizeof(emu_struct); \
 	__packet->pBuffer = new unsigned char[__packet->size]; \
@@ -109,6 +123,7 @@
 
 #define MEMSET_IN(emu_struct) \
 	memset(__packet->pBuffer, 0, sizeof(emu_struct));
+
 
 //a shorter assignment for direct mode
 #undef IN
@@ -127,15 +142,13 @@
 #define DECODE_LENGTH_EXACT(struct_) \
 	if(__packet->size != sizeof(struct_)) { \
 		__packet->SetOpcode(OP_Unknown); /* invalidate the packet */ \
-		_log(NET__STRUCTS, "Wrong size on incoming %s (" #struct_ "): Got %d, expected %d", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(struct_)); \
-		_hex(NET__STRUCT_HEX, __packet->pBuffer, __packet->size); \
+		Log.Out(Logs::Detail, Logs::Netcode, "Wrong size on incoming %s (" #struct_ "): Got %d, expected %d", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(struct_)); \
 		return; \
 	}
 #define DECODE_LENGTH_ATLEAST(struct_) \
 	if(__packet->size < sizeof(struct_)) { \
 		__packet->SetOpcode(OP_Unknown); /* invalidate the packet */ \
-		_log(NET__STRUCTS, "Wrong size on incoming %s (" #struct_ "): Got %d, expected at least %d", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(struct_)); \
-		_hex(NET__STRUCT_HEX, __packet->pBuffer, __packet->size); \
+		Log.Out(Logs::Detail, Logs::Netcode, "Wrong size on incoming %s (" #struct_ "): Got %d, expected at least %d", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(struct_)); \
 		return; \
 	}
 

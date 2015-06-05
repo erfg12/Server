@@ -97,17 +97,13 @@ int callback_eqemu(libwebsocket_context *context, libwebsocket *wsi, libwebsocke
 		break;
 	}
 	case LWS_CALLBACK_SERVER_WRITEABLE: {
-		//send messages here
-		char out_message[MAX_MESSAGE_LENGTH + LWS_SEND_BUFFER_PRE_PADDING + LWS_SEND_BUFFER_POST_PADDING + 1];
+		std::vector<char> out_message;
 		for (auto iter = session->send_queue->begin(); iter != session->send_queue->end(); ++iter) {
-
-			//out_message
-			size_t sz = LWS_SEND_BUFFER_PRE_PADDING + LWS_SEND_BUFFER_POST_PADDING + (*iter).size();
-			memset(out_message, 0, sz);
+			out_message.resize((*iter).size() + LWS_SEND_BUFFER_PRE_PADDING + LWS_SEND_BUFFER_POST_PADDING + 1);
+			memset(&out_message[0], 0, (*iter).size() + LWS_SEND_BUFFER_PRE_PADDING + LWS_SEND_BUFFER_POST_PADDING + 1);
 			memcpy(&out_message[LWS_SEND_BUFFER_PRE_PADDING], &(*iter)[0], (*iter).size());
-			auto n = libwebsocket_write(wsi, (unsigned char*)&out_message[LWS_SEND_BUFFER_PRE_PADDING], (*iter).size(), LWS_WRITE_TEXT);
-			if (n < (*iter).size()) {
-				//couldn't write the message
+			int n = libwebsocket_write(wsi, (unsigned char*)&out_message[LWS_SEND_BUFFER_PRE_PADDING], (*iter).size(), LWS_WRITE_TEXT);
+			if(n < (*iter).size()) {
 				return -1;
 			}
 		}
@@ -142,15 +138,15 @@ int main() {
 	set_exception_handler();
 	register_methods();
 	Timer InterserverTimer(INTERSERVER_TIMER); // does auto-reconnect
-	_log(WEB_INTERFACE__INIT, "Starting EQEmu Web Server.");
+	Log.Out(Logs::Detail, Logs::WebInterface_Server, "Starting EQEmu Web Server.");
 	
 	if (signal(SIGINT, CatchSignal) == SIG_ERR)	{
-		_log(WEB_INTERFACE__ERROR, "Could not set signal handler");
+		Log.Out(Logs::Detail, Logs::WebInterface_Server, "Could not set signal handler");
 		return 1;
 	}
 	
 	if (signal(SIGTERM, CatchSignal) == SIG_ERR)	{
-		_log(WEB_INTERFACE__ERROR, "Could not set signal handler");
+		Log.Out(Logs::Detail, Logs::WebInterface_Server, "Could not set signal handler");
 		return 1;
 	}
 
@@ -166,15 +162,15 @@ int main() {
 
 	context = libwebsocket_create_context(&info);
 	if (context == NULL) {
-		_log(WEB_INTERFACE__ERROR, "Could not create websocket handler.");
+		Log.Out(Logs::Detail, Logs::WebInterface_Server, "Could not create websocket handler.");
 		return 1;
 	}
 
 	db = new SharedDatabase();
-	_log(WEB_INTERFACE__TRACE, "Connecting to database...");
+	Log.Out(Logs::Detail, Logs::WebInterface_Server, "Connecting to database...");
 	if(!db->Connect(config->DatabaseHost.c_str(), config->DatabaseUsername.c_str(),
 		config->DatabasePassword.c_str(), config->DatabaseDB.c_str(), config->DatabasePort)) {
-		_log(WEB_INTERFACE__TRACE, "Unable to connect to the database, cannot continue without a database connection");
+		Log.Out(Logs::Detail, Logs::WebInterface_Server, "Unable to connect to the database, cannot continue without a database connection");
 		return 1;
 	}
 
@@ -207,5 +203,3 @@ int main() {
 
 	return 0;
 }
-
-

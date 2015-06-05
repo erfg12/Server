@@ -15,20 +15,17 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include "masterentity.h"
 #include "npc_ai.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "../common/string_util.h"
 #include "worldserver.h"
+
 extern EntityList entity_list;
 extern WorldServer worldserver;
-
-//
-// Xorlac: This will need proper synchronization to make it work correctly.
-//			Also, should investigate client ack for packet to ensure proper synch.
-//
 
 /*
 
@@ -57,6 +54,11 @@ Group::Group(uint32 gid)
 	if(gid != 0) {
 		if(!LearnMembers())
 			SetID(0);
+
+		if(GetLeader() != nullptr)
+		{
+			SetOldLeaderName(GetLeaderName());
+		}
 	}
 }
 
@@ -68,6 +70,8 @@ Group::Group(Mob* leader)
 	members[0] = leader;
 	leader->SetGrouped(true);
 	SetLeader(leader);
+	SetOldLeaderName(leader->GetName());
+	Log.Out(Logs::Detail, Logs::Group, "Group:Group() Setting OldLeader to: %s and Leader to: %s", GetOldLeaderName(), leader->GetName());
 	uint32 i;
 	for(i=0;i<MAX_GROUP_MEMBERS;i++)
 	{
@@ -304,11 +308,15 @@ void Group::QueuePacket(const EQApplicationPacket *app, bool ack_req)
 {
 	uint32 i;
 	for(i = 0; i < MAX_GROUP_MEMBERS; i++)
+	{
 		if(members[i] && members[i]->IsClient())
+		{
 			members[i]->CastToClient()->QueuePacket(app, ack_req);
+		}
+	}
 }
 
-// solar: sends the rest of the group's hps to member. this is useful when
+// sends the rest of the group's hps to member. this is useful when
 // someone first joins a group, but otherwise there shouldn't be a need to
 // call it
 void Group::SendHPPacketsTo(Mob *member)
@@ -346,7 +354,7 @@ void Group::SendHPPacketsFrom(Mob *member)
 }
 
 //updates a group member's client pointer when they zone in
-//if the group was in the zone allready
+//if the group was in the zone already
 bool Group::UpdatePlayer(Mob* update){
 
 	VerifyGroup();
@@ -418,23 +426,53 @@ void Group::SendGroupJoinOOZ(Mob* NewMember) {
 
 }
 
-bool Group::DelMemberOOZ(const char *Name) {
+bool Group::DelMemberOOZ(const char *Name, bool checkleader) {
 
 	if(!Name) return false;
 
+	bool removed = false;
 	// If a member out of zone has disbanded, clear out their name.
-	//
-	for(unsigned int i = 0; i < MAX_GROUP_MEMBERS; i++) {
+	for(unsigned int i = 0; i < MAX_GROUP_MEMBERS; i++) 
+	{
 		if(!strcasecmp(Name, membername[i]))
+		{
 			// This shouldn't be called if the member is in this zone.
 			if(!members[i]) {
 				memset(membername[i], 0, 64);
 				MemberRoles[i] = 0;
-				return true;
+				removed = true;
+				Log.Out(Logs::Detail, Logs::Group, "DelMemberOOZ: Removed Member: %s", Name);
+				break;
 			}
+		}
 	}
 
-	return false;
+	if(GroupCount() < 2)
+	{
+		DisbandGroup();
+		return true;
+	}
+
+	if(checkleader)
+	{
+		Log.Out(Logs::Detail, Logs::Group, "DelMemberOOZ: Checking leader...");
+		if (strcmp(GetOldLeaderName(),Name) == 0 && GroupCount() >= 2)
+		{
+			for(uint32 nl = 0; nl < MAX_GROUP_MEMBERS; nl++)
+			{
+				if(members[nl]) 
+				{
+					if (members[nl]->IsClient())
+					{
+						ChangeLeader(members[nl]);
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	return removed;
 }
 
 bool Group::DelMember(Mob* oldmember,bool ignoresender)
@@ -452,25 +490,22 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender)
 			membername[i][0] = '\0';
 			memset(membername[i],0,64);
 			MemberRoles[i] = 0;
+			Log.Out(Logs::Detail, Logs::Group, "DelMember: Removed Member: %s", oldmember->GetCleanName());
 			break;
 		}
 	}
 
-	/* This may seem pointless but the case above does not cover the following situation:
-	 * Group has Leader a, member b, member c
-	 * b and c are out of zone
-	 * a disconnects/quits
-	 * b or c zone back in and disconnects/quits
-	 * a is still "leader" from GetLeader()'s perspective and will crash the zone when we DelMember(b)
-	 * Ultimately we should think up a better solution to this.
-	 */
-	if(oldmember == GetLeader())
+	if(GroupCount() < 2)
 	{
-		SetLeader(nullptr);
+		DisbandGroup();
+		return true;
 	}
 
-	//handle leader quitting group gracefully
-	if (oldmember == GetLeader() && GroupCount() >= 2)
+	// If the leader has quit and we have 2 or more players left in group, we want to first check the zone the old leader was in for a new leader. 
+	// If a suitable replacement cannot be found, we need to go out of zone. If checkleader remains true after this method completes, another
+	// loop will be run in DelMemberOOZ.
+	bool checkleader = true;
+	if (strcmp(GetOldLeaderName(),oldmember->GetCleanName()) == 0 && GroupCount() >= 2)
 	{
 		for(uint32 nl = 0; nl < MAX_GROUP_MEMBERS; nl++)
 		{
@@ -479,36 +514,32 @@ bool Group::DelMember(Mob* oldmember,bool ignoresender)
 				if (members[nl]->IsClient())
 				{
 					ChangeLeader(members[nl]);
+					checkleader = false;
 					break;
 				}
 			}
 		}
 	}
-	
-	if (GetLeader() == nullptr)
-	{
-		DisbandGroup();
-		return true;
-	}
-
+			
 	ServerPacket* pack = new ServerPacket(ServerOP_GroupLeave, sizeof(ServerGroupLeave_Struct));
 	ServerGroupLeave_Struct* gl = (ServerGroupLeave_Struct*)pack->pBuffer;
 	gl->gid = GetID();
 	gl->zoneid = zone->GetZoneID();
 	gl->instance_id = zone->GetInstanceID();
 	strcpy(gl->member_name, oldmember->GetName());
+	gl->checkleader = checkleader;
 	worldserver.SendPacket(pack);
 	safe_delete(pack);
 
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupLeader_Struct));
-	GroupLeader_Struct* gu = (GroupLeader_Struct*) outapp->pBuffer;
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate, sizeof(GroupJoin_Struct));
+	GroupJoin_Struct* gu = (GroupJoin_Struct*)outapp->pBuffer;
 	gu->action = groupActLeave;
 	strcpy(gu->membername, oldmember->GetCleanName());
 	strcpy(gu->yourname, oldmember->GetCleanName());
 
 	for (uint32 i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] == nullptr) {
-			//if (DEBUG>=5) LogFile->write(EQEMuLog::Debug, "Group::DelMember() null member at slot %i", i);
+			//if (DEBUG>=5) Log.Out(Logs::Detail, Logs::Group, "Group::DelMember() null member at slot %i", i);
 			continue;
 		}
 		if (members[i] != oldmember) {
@@ -568,7 +599,7 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id) {
 		}
 		else if(members[z] != nullptr)
 		{
-			distance = caster->DistNoRoot(*members[z]);
+			distance = DistanceSquared(caster->GetPosition(), members[z]->GetPosition());
 			if(distance <= range2 && distance >= min_range2) {
 				members[z]->CalcSpellPowerDistanceMod(spell_id, distance);
 				caster->SpellOnTarget(spell_id, members[z]);
@@ -577,7 +608,7 @@ void Group::CastGroupSpell(Mob* caster, uint16 spell_id) {
 					caster->SpellOnTarget(spell_id, members[z]->GetPet());
 #endif
 			} else
-				_log(SPELLS__CASTING, "Group spell: %s is out of range %f at distance %f from %s", members[z]->GetName(), range, distance, caster->GetName());
+				Log.Out(Logs::Detail, Logs::Spells, "Group spell: %s is out of range %f at distance %f from %s", members[z]->GetName(), range, distance, caster->GetName());
 		}
 	}
 
@@ -608,15 +639,20 @@ void Group::GroupBardPulse(Mob* caster, uint16 spell_id) {
 		}
 		else if(members[z] != nullptr)
 		{
-			distance = caster->DistNoRoot(*members[z]);
-			if(distance <= range2) {
+			distance = DistanceSquared(caster->GetPosition(), members[z]->GetPosition());
+			if(distance <= range2) 
+			{
 				members[z]->BardPulse(spell_id, caster);
 #ifdef GROUP_BUFF_PETS
+
 				if(members[z]->GetPet() && members[z]->HasPetAffinity() && !members[z]->GetPet()->IsCharmed())
 					members[z]->GetPet()->BardPulse(spell_id, caster);
 #endif
-			} else
-				_log(SPELLS__BARDS, "Group bard pulse: %s is out of range %f at distance %f from %s", members[z]->GetName(), range, distance, caster->GetName());
+			} 
+			else
+			{
+				Log.Out(Logs::Detail, Logs::Spells, "Group bard pulse: %s is out of range %f at distance %f from %s", members[z]->GetName(), range, distance, caster->GetName());
+			}
 		}
 	}
 }
@@ -742,8 +778,8 @@ void Group::SendUpdate(uint32 type, Mob* member)
 	if(!member->IsClient())
 		return;
 
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate, sizeof(GroupUpdate2_Struct));
-	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate, sizeof(GroupUpdate_Struct));
+	GroupUpdate_Struct* gu = (GroupUpdate_Struct*)outapp->pBuffer;
 	gu->action = type;
 	strcpy(gu->yourname,member->GetName());
 
@@ -828,7 +864,7 @@ bool Group::LearnMembers() {
         return false;
 
     if (results.RowCount() == 0) {
-        LogFile->write(EQEMuLog::Error, "Error getting group members for group %lu: %s", (unsigned long)GetID(), results.ErrorMessage().c_str());
+        Log.Out(Logs::General, Logs::Error, "Error getting group members for group %lu: %s", (unsigned long)GetID(), results.ErrorMessage().c_str());
 			return false;
     }
 
@@ -857,7 +893,7 @@ void Group::VerifyGroup() {
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (membername[i][0] == '\0') {
 #if EQDEBUG >= 7
-LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", (unsigned long)GetID(), i);
+	Log.Out(Logs::General, Logs::Group, "Group %lu: Verify %d: Empty.\n", (unsigned long)GetID(), i);
 #endif
 			members[i] = nullptr;
 			continue;
@@ -868,7 +904,7 @@ LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", (unsigned long
 		Mob *them = entity_list.GetMob(membername[i]);
 		if(them == nullptr && members[i] != nullptr) {	//they arnt here anymore....
 #if EQDEBUG >= 6
-		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' has disappeared!!", (unsigned long)GetID(), membername[i]);
+		Log.Out(Logs::General, Logs::Group, "Member of group %lu named '%s' has disappeared!!", (unsigned long)GetID(), membername[i]);
 #endif
 			membername[i][0] = '\0';
 			members[i] = nullptr;
@@ -877,13 +913,13 @@ LogFile->write(EQEMuLog::Debug, "Group %lu: Verify %d: Empty.\n", (unsigned long
 
 		if(them != nullptr && members[i] != them) {	//our pointer is out of date... not so good.
 #if EQDEBUG >= 5
-		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' had an out of date pointer!!", (unsigned long)GetID(), membername[i]);
+		Log.Out(Logs::General, Logs::Group, "Member of group %lu named '%s' had an out of date pointer!!", (unsigned long)GetID(), membername[i]);
 #endif
 			members[i] = them;
 			continue;
 		}
 #if EQDEBUG >= 8
-		LogFile->write(EQEMuLog::Debug, "Member of group %lu named '%s' is valid.", (unsigned long)GetID(), membername[i]);
+		Log.Out(Logs::General, Logs::Group, "Member of group %lu named '%s' is valid.", (unsigned long)GetID(), membername[i]);
 #endif
 	}
 }
@@ -910,9 +946,7 @@ void Client::LeaveGroup() {
 	if(g)
 	{
 		int32 MemberCount = g->GroupCount();
-		// Account for both client and merc leaving the group
-		
-		if(MemberCount < 3)
+		if(MemberCount <= 2)
 		{
 			g->DisbandGroup();
 		}
@@ -948,7 +982,7 @@ void Group::HealGroup(uint32 heal_amt, Mob* caster, float range)
 	for(; gi < MAX_GROUP_MEMBERS; gi++)
 	{
 		if(members[gi]){
-			distance = caster->DistNoRoot(*members[gi]);
+			distance = DistanceSquared(caster->GetPosition(), members[gi]->GetPosition());
 			if(distance <= range2){
 				numMem += 1;
 			}
@@ -959,7 +993,7 @@ void Group::HealGroup(uint32 heal_amt, Mob* caster, float range)
 	for(gi = 0; gi < MAX_GROUP_MEMBERS; gi++)
 	{
 		if(members[gi]){
-			distance = caster->DistNoRoot(*members[gi]);
+			distance = DistanceSquared(caster->GetPosition(), members[gi]->GetPosition());
 			if(distance <= range2){
 				members[gi]->HealDamage(heal_amt, caster);
 				members[gi]->SendHPUpdate();
@@ -986,7 +1020,7 @@ void Group::BalanceHP(int32 penalty, float range, Mob* caster, int32 limit)
 	for(; gi < MAX_GROUP_MEMBERS; gi++)
 	{
 		if(members[gi]){
-			distance = caster->DistNoRoot(*members[gi]);
+			distance = DistanceSquared(caster->GetPosition(), members[gi]->GetPosition());
 			if(distance <= range2){
 
 				dmgtaken_tmp = members[gi]->GetMaxHP() - members[gi]->GetHP();
@@ -1004,7 +1038,7 @@ void Group::BalanceHP(int32 penalty, float range, Mob* caster, int32 limit)
 	for(gi = 0; gi < MAX_GROUP_MEMBERS; gi++)
 	{
 		if(members[gi]){
-			distance = caster->DistNoRoot(*members[gi]);
+			distance = DistanceSquared(caster->GetPosition(), members[gi]->GetPosition());
 			if(distance <= range2){
 				if((members[gi]->GetMaxHP() - dmgtaken) < 1){ //this way the ability will never kill someone
 					members[gi]->SetHP(1);					//but it will come darn close
@@ -1035,7 +1069,7 @@ void Group::BalanceMana(int32 penalty, float range, Mob* caster, int32 limit)
 	for(; gi < MAX_GROUP_MEMBERS; gi++)
 	{
 		if(members[gi] && (members[gi]->GetMaxMana() > 0)){
-			distance = caster->DistNoRoot(*members[gi]);
+			distance = DistanceSquared(caster->GetPosition(), members[gi]->GetPosition());
 			if(distance <= range2){
 
 				manataken_tmp = members[gi]->GetMaxMana() - members[gi]->GetMana();
@@ -1057,7 +1091,7 @@ void Group::BalanceMana(int32 penalty, float range, Mob* caster, int32 limit)
 	for(gi = 0; gi < MAX_GROUP_MEMBERS; gi++)
 	{
 		if(members[gi]){
-			distance = caster->DistNoRoot(*members[gi]);
+			distance = DistanceSquared(caster->GetPosition(), members[gi]->GetPosition());
 			if(distance <= range2){
 				if((members[gi]->GetMaxMana() - manataken) < 1){
 					members[gi]->SetMana(1);
@@ -1121,23 +1155,35 @@ void Group::ChangeLeader(Mob* newleader)
 	if (!newleader)
 		return;
 
-	Mob* oldleader = GetLeader();
-
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupJoin_Struct));
 	GroupJoin_Struct* gu = (GroupJoin_Struct*) outapp->pBuffer;
 	gu->action = groupActMakeLeader;
 
 	strcpy(gu->membername, newleader->GetName());
-	strcpy(gu->yourname, oldleader->GetName());
+	strcpy(gu->yourname, GetOldLeaderName());
 	SetLeader(newleader);
 	database.SetGroupLeaderName(GetID(), newleader->GetName());
 	for (uint32 i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] && members[i]->IsClient())
 		{
 			members[i]->CastToClient()->QueuePacket(outapp);
+			Log.Out(Logs::Detail, Logs::Group, "ChangeLeader(): Local leader update packet sent to: %s .", members[i]->GetName());
 		}
 	}
 	safe_delete(outapp);
+
+	Log.Out(Logs::Detail, Logs::Group, "ChangeLeader(): Old Leader is: %s New leader is: %s", GetOldLeaderName(), newleader->GetName());
+
+	ServerPacket* pack = new ServerPacket(ServerOP_ChangeGroupLeader, sizeof(ServerGroupLeader_Struct));
+	ServerGroupLeader_Struct* fgu = (ServerGroupLeader_Struct*)pack->pBuffer;
+	fgu->zoneid = zone->GetZoneID();
+	fgu->gid = GetID();
+	strcpy(fgu->leader_name, newleader->GetName());
+	strcpy(fgu->oldleader_name, GetOldLeaderName());
+	worldserver.SendPacket(pack);
+	//safe_delete(pack);
+
+	SetOldLeaderName(newleader->GetName());
 }
 
 const char *Group::GetClientNameByIndex(uint8 index)

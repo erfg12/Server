@@ -18,7 +18,8 @@
 */
 
 
-#include "../common/debug.h"
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,14 +69,14 @@ bool Database::Connect(const char* host, const char* user, const char* passwd, c
 	char errbuf[MYSQL_ERRMSG_SIZE];
 	if (!Open(host, user, passwd, database, port, &errnum, errbuf))
 	{
-		LogFile->write(EQEMuLog::Error, "Failed to connect to database: Error: %s", errbuf);
+		Log.Out(Logs::General, Logs::Error, "Failed to connect to database: Error: %s", errbuf);
 		HandleMysqlError(errnum);
 
 		return false;
 	}
 	else
 	{
-		LogFile->write(EQEMuLog::Status, "Using database '%s' at %s:%d",database,host,port);
+		Log.Out(Logs::General, Logs::Status, "Using database '%s' at %s:%d",database,host,port);
 		return true;
 	}
 }
@@ -110,8 +111,8 @@ void Database::LogPlayerTrade(QSPlayerLogTrade_Struct* QS, uint32 detailCount) {
                                     QS->char2_money.silver, QS->char2_money.copper, QS->char2_count);
     auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed Trade Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed Trade Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	if(detailCount == 0)
@@ -128,8 +129,8 @@ void Database::LogPlayerTrade(QSPlayerLogTrade_Struct* QS, uint32 detailCount) {
                             QS->items[i].charges);
         results = QueryDatabase(query);
         if(!results.Success()) {
-            _log(QUERYSERV__ERROR, "Failed Trade Log Record Entry Insert: %s", results.ErrorMessage().c_str());
-            _log(QUERYSERV__ERROR, "%s", query.c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "Failed Trade Log Record Entry Insert: %s", results.ErrorMessage().c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
         }
 
     }
@@ -151,8 +152,8 @@ void Database::LogPlayerHandin(QSPlayerLogHandin_Struct* QS, uint32 detailCount)
                                     QS->npc_count);
     auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed Handin Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed Handin Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	if(detailCount == 0)
@@ -167,8 +168,8 @@ void Database::LogPlayerHandin(QSPlayerLogHandin_Struct* QS, uint32 detailCount)
                             lastIndex, QS->items[i].action_type, QS->items[i].char_slot,
                             QS->items[i].item_id, QS->items[i].charges);
         if(!results.Success()) {
-            _log(QUERYSERV__ERROR, "Failed Handin Log Record Entry Insert: %s", results.ErrorMessage().c_str());
-            _log(QUERYSERV__ERROR, "%s", query.c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "Failed Handin Log Record Entry Insert: %s", results.ErrorMessage().c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
         }
     }
 
@@ -182,8 +183,8 @@ void Database::LogPlayerNPCKill(QSPlayerLogNPCKill_Struct* QS, uint32 members){
                                     QS->s1.NPCID, QS->s1.Type, QS->s1.ZoneID);
 	auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed NPC Kill Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed NPC Kill Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	if(members == 0)
@@ -197,8 +198,8 @@ void Database::LogPlayerNPCKill(QSPlayerLogNPCKill_Struct* QS, uint32 members){
                             lastIndex, QS->Chars[i].char_id);
 		auto results = QueryDatabase(query);
 		if(!results.Success()) {
-			_log(QUERYSERV__ERROR, "Failed NPC Kill Log Entry Insert: %s", results.ErrorMessage().c_str());
-			_log(QUERYSERV__ERROR, "%s", query.c_str());
+			Log.Out(Logs::Detail, Logs::QS_Server, "Failed NPC Kill Log Entry Insert: %s", results.ErrorMessage().c_str());
+			Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 		}
 
 	}
@@ -212,8 +213,8 @@ void Database::LogPlayerDelete(QSPlayerLogDelete_Struct* QS, uint32 items) {
                                     QS->char_id, QS->stack_size, QS->char_count, QS->char_count);
     auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed Delete Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed Delete Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	if(items == 0)
@@ -227,8 +228,8 @@ void Database::LogPlayerDelete(QSPlayerLogDelete_Struct* QS, uint32 items) {
                             lastIndex, QS->items[i].char_slot, QS->items[i].item_id, QS->items[i].charges);
         results = QueryDatabase(query);
         if(!results.Success()) {
-            _log(QUERYSERV__ERROR, "Failed Delete Log Record Entry Insert: %s", results.ErrorMessage().c_str());
-            _log(QUERYSERV__ERROR, "%s", query.c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "Failed Delete Log Record Entry Insert: %s", results.ErrorMessage().c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
         }
 
     }
@@ -245,8 +246,8 @@ void Database::LogPlayerMove(QSPlayerLogMove_Struct* QS, uint32 items) {
                                     QS->char_count, QS->postaction);
     auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed Move Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed Move Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	if(items == 0)
@@ -261,8 +262,8 @@ void Database::LogPlayerMove(QSPlayerLogMove_Struct* QS, uint32 items) {
                             QS->items[i].charges);
         results = QueryDatabase(query);
         if(!results.Success()) {
-            _log(QUERYSERV__ERROR, "Failed Move Log Record Entry Insert: %s", results.ErrorMessage().c_str());
-            _log(QUERYSERV__ERROR, "%s", query.c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "Failed Move Log Record Entry Insert: %s", results.ErrorMessage().c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
         }
 
     }
@@ -284,8 +285,8 @@ void Database::LogMerchantTransaction(QSMerchantLogTransaction_Struct* QS, uint3
                                     QS->char_money.copper, QS->char_count);
     auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed Transaction Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed Transaction Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	if(items == 0)
@@ -299,8 +300,8 @@ void Database::LogMerchantTransaction(QSMerchantLogTransaction_Struct* QS, uint3
                             lastIndex, QS->items[i].char_slot, QS->items[i].item_id, QS->items[i].charges);
         results = QueryDatabase(query);
         if(!results.Success()) {
-            _log(QUERYSERV__ERROR, "Failed Transaction Log Record Entry Insert: %s", results.ErrorMessage().c_str());
-            _log(QUERYSERV__ERROR, "%s", query.c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "Failed Transaction Log Record Entry Insert: %s", results.ErrorMessage().c_str());
+            Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
         }
 
     }
@@ -317,10 +318,52 @@ void Database::GeneralQueryReceive(ServerPacket *pack) {
 	std::string query(queryBuffer);
 	auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		_log(QUERYSERV__ERROR, "Failed Delete Log Record Insert: %s", results.ErrorMessage().c_str());
-		_log(QUERYSERV__ERROR, "%s", query.c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "Failed Delete Log Record Insert: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::Detail, Logs::QS_Server, "%s", query.c_str());
 	}
 
 	safe_delete(pack);
 	safe_delete(queryBuffer);
+}
+
+void Database::LoadLogSettings(EQEmuLogSys::LogSettings* log_settings){
+	std::string query =
+		"SELECT "
+		"log_category_id, "
+		"log_category_description, "
+		"log_to_console, "
+		"log_to_file, "
+		"log_to_gmsay "
+		"FROM "
+		"logsys_categories "
+		"ORDER BY log_category_id";
+	auto results = QueryDatabase(query);
+
+	int log_category = 0;
+	Log.file_logs_enabled = false;
+
+	for (auto row = results.begin(); row != results.end(); ++row) {
+		log_category = atoi(row[0]);
+		log_settings[log_category].log_to_console = atoi(row[2]);
+		log_settings[log_category].log_to_file = atoi(row[3]);
+		log_settings[log_category].log_to_gmsay = atoi(row[4]);
+
+		/* Determine if any output method is enabled for the category
+			and set it to 1 so it can used to check if category is enabled */
+		const bool log_to_console = log_settings[log_category].log_to_console > 0;
+		const bool log_to_file = log_settings[log_category].log_to_file > 0;
+		const bool log_to_gmsay = log_settings[log_category].log_to_gmsay > 0;
+		const bool is_category_enabled = log_to_console || log_to_file || log_to_gmsay;
+
+		if (is_category_enabled)
+			log_settings[log_category].is_category_enabled = 1;
+
+		/*
+		This determines whether or not the process needs to actually file log anything.
+		If we go through this whole loop and nothing is set to any debug level, there is no point to create a file or keep anything open
+		*/
+		if (log_settings[log_category].log_to_file > 0){
+			Log.file_logs_enabled = true;
+		}
+	}
 }

@@ -307,7 +307,6 @@ luabind::scope lua_register_packet_opcodes() {
 		.enum_("constants")
 		[
 			luabind::value("ExploreUnknown", static_cast<int>(OP_ExploreUnknown)),
-			luabind::value("Dye", static_cast<int>(OP_Dye)),
 			luabind::value("Stamina", static_cast<int>(OP_Stamina)),
 			luabind::value("ControlBoat", static_cast<int>(OP_ControlBoat)),
 			luabind::value("MobUpdate", static_cast<int>(OP_MobUpdate)),
@@ -324,8 +323,6 @@ luabind::scope lua_register_packet_opcodes() {
 			luabind::value("Sneak", static_cast<int>(OP_Sneak)),
 			luabind::value("ExpUpdate", static_cast<int>(OP_ExpUpdate)),
 			luabind::value("RespondAA", static_cast<int>(OP_RespondAA)),
-			luabind::value("UpdateAA", static_cast<int>(OP_UpdateAA)),
-			luabind::value("SendAAStats", static_cast<int>(OP_SendAAStats)),
 			luabind::value("AAAction", static_cast<int>(OP_AAAction)),
 			luabind::value("BoardBoat", static_cast<int>(OP_BoardBoat)),
 			luabind::value("LeaveBoat", static_cast<int>(OP_LeaveBoat)),
@@ -343,7 +340,6 @@ luabind::scope lua_register_packet_opcodes() {
 			luabind::value("GuildDelete", static_cast<int>(OP_GuildDelete)),
 			luabind::value("Trader", static_cast<int>(OP_Trader)),
 			luabind::value("BecomeTrader", static_cast<int>(OP_BecomeTrader)),
-			luabind::value("TraderItemUpdate", static_cast<int>(OP_TraderItemUpdate)),
 			luabind::value("TraderShop", static_cast<int>(OP_TraderShop)),
 			luabind::value("TraderBuy", static_cast<int>(OP_TraderBuy)),
 			luabind::value("PetCommands", static_cast<int>(OP_PetCommands)),
@@ -509,7 +505,6 @@ luabind::scope lua_register_packet_opcodes() {
 			luabind::value("MoneyUpdate", static_cast<int>(OP_MoneyUpdate)),
 			luabind::value("ClickObject", static_cast<int>(OP_ClickObject)),
 			luabind::value("MoveDoor", static_cast<int>(OP_MoveDoor)),
-			luabind::value("TraderDelItem", static_cast<int>(OP_TraderDelItem)),
 			luabind::value("DuelResponse", static_cast<int>(OP_DuelResponse)),
 			luabind::value("RequestDuel", static_cast<int>(OP_RequestDuel)),
 			luabind::value("ClickDoor", static_cast<int>(OP_ClickDoor)),
@@ -551,10 +546,8 @@ luabind::scope lua_register_packet_opcodes() {
 			luabind::value("LoginUnknown1", static_cast<int>(OP_LoginUnknown1)),
 			luabind::value("LoginUnknown2", static_cast<int>(OP_LoginUnknown2)),
 			luabind::value("ManaUpdate", static_cast<int>(OP_ManaUpdate)),
-			luabind::value("SpellEffect", static_cast<int>(OP_SpellEffect)),
 			luabind::value("CorpseDrag", static_cast<int>(OP_CorpseDrag)),
-			luabind::value("RemoveAllDoors", static_cast<int>(OP_RemoveAllDoors)),
-			luabind::value("Untargetable", static_cast<int>(OP_Untargetable))
+			luabind::value("DespawnDoor", static_cast<int>(OP_DespawnDoor))
 		];
 }
 

@@ -38,6 +38,7 @@
 #define FORAGE_NOEAT				154		//You have scrounged up something that doesn't look edible.
 #define FORAGE_FAILED				155		//You fail to locate any food nearby.
 #define ALREADY_FISHING				156		//You are already fishing!
+#define	FISHING_HANDS_FULL			158		//You can't fish while holding something.
 #define FISHING_NO_POLE				160		//You can't fish without a fishing pole, go buy one.
 #define FISHING_EQUIP_POLE			161		//You need to put your fishing pole in your primary hand.
 #define FISHING_NO_BAIT				162		//You can't fish without fishing bait, go buy some.
@@ -68,6 +69,7 @@
 #define CAST_NIGHTTIME              209		//Spell can only be cast during the night.
 #define CANNOT_AFFECT_PC			210		//That spell can not affect this target PC.
 #define SPELL_NEED_TAR				214		//You must first select a target for this spell!
+#define CORPSE_SUMMON_TAR			215		//You must first target a living group member whose corpse you wish to summon.
 #define ONLY_ON_CORPSES				221		//This spell only works on corpses.
 #define CANT_DRAIN_SELF				224		//You can't drain yourself!
 #define CORPSE_NOT_VALID			230		//This corpse is not valid.
@@ -75,6 +77,7 @@
 #define CAST_OUTDOORS				234		//You can only cast this spell in the outdoors.
 #define SPELL_RECAST				236		//Spell recast time not yet met.
 #define SPELL_RECOVERY				237		//Spell recovery time not yet met.
+#define SUCCOR_FAIL					238		//Your Portal fails to open.
 #define CANNOT_MEZ					239		//Your target cannot be mesmerized.
 #define CANNOT_MEZ_WITH_SPELL		240		//Your target cannot be mesmerized (with this spell).
 #define IMMUNE_STUN					241		//Your target is immune to the stun portion of this effect.
@@ -130,7 +133,7 @@
 #define AA_IMPROVE					411		//You have improved %T1 %2 at a cost of %3 ability %T4.
 #define AA_REUSE_MSG				413		//You can use the ability %B1(1) again in %2 hour(s) %3 minute(s) %4 seconds.
 #define AA_REUSE_MSG2				414		//You can use the ability %B1(1) again in %2 minute(s) %3 seconds.
-#define YOU_HEALED					419		//%1 has healed you for %2 points of damage.
+#define YOU_HEALED					419		//You have been healed for %1 points of damage.
 #define BEGINS_TO_GLOW				422		//Your %1 begins to glow.
 #define ALREADY_INVIS				423		//%1 tries to cast an invisibility spell on you, but you are already invisible.
 #define YOU_ARE_PROTECTED			424		//%1 tries to cast a spell on you, but you are protected.
@@ -248,6 +251,7 @@
 #define MEMBER_OF_YOUR_GUILD		1429
 #define OFFICER_OF_YOUR_GUILD		1430
 #define LEADER_OF_YOUR_GUILD		1431
+#define TRADE_CANCELLED				1449	//The trade has been cancelled.
 #define RECEIVED_PLATINUM			1452	//You receive %1 Platinum from %2.
 #define RECEIVED_GOLD				1453	//You receive %1 Gold from %2.
 #define RECEIVED_SILVER				1454	//You receive %1 Silver from %2.
@@ -277,6 +281,10 @@
 #define CORPSEDRAG_STOPALL			4065	//You stop dragging the corpses.
 #define CORPSEDRAG_STOP				4066	//You stop dragging the corpse.
 #define	TARGET_TOO_CLOSE			4602	//You are too close to your target. Get farther away.
+#define	WHOALL_GM					5022	//%T1[ANON (%2 %3)] %4 (%5) %6 %7 %8
+#define WHOALL_ROLE					5023	//%T1[ANONYMOUS] %2 %3 %4
+#define WHOALL_ANON					5024	//%T1[ANONYMOUS] %2 %3
+#define WHOALL_ALL					5025	//%T1[%2 %3] %4 (%5) %6 %7 %8 %9
 #define WHOALL_NO_RESULTS			5029	//There are no players in EverQuest that match those who filters.
 #define TELL_QUEUED_MESSAGE			5045	//You told %1 '%T2. %3'
 #define TOLD_NOT_ONLINE				5046	//%1 is not online at this time.
@@ -285,7 +293,6 @@
 #define ALREADY_IN_RAID				5060	//%1 is already in a raid.
 #define GAIN_RAIDEXP				5085	//You gained raid experience!
 #define DUNGEON_SEALED				5141	//The gateway to the dungeon is sealed off to you.  Perhaps you would be able to enter if you needed to adventure there.
-#define SUCCOR_FAIL					5169	//The portal collapes before you can escape!
 #define PET_ATTACKING				5501	//%1 tells you, 'Attacking %2 Master.'
 #define FATAL_BOW_SHOT				5745	//%1 performs a FATAL BOW SHOT!!
 #define MELEE_SILENCE				5806	//You *CANNOT* use this melee ability, you are suffering from amnesia!
@@ -304,22 +311,13 @@
 #define SENTINEL_TRIG_OTHER			6725	//%1 has triggered your sentinel.
 #define IDENTIFY_SPELL				6765	//Item Lore: %1.
 #define DOORS_NO_PICK				7564	//You must have a lock pick in your inventory to do this.
-#define GAIN_GROUP_LEADERSHIP_POINT	8585	//
-#define GAIN_RAID_LEADERSHIP_POINT	8589	//
-#define MAX_GROUP_LEADERSHIP_POINTS	8584	//
-#define MAX_RAID_LEADERSHIP_POINTS	8591	//
-#define LEADERSHIP_EXP_ON			8653	//
-#define LEADERSHIP_EXP_OFF			8654	//
 #define CURRENT_SPELL_EFFECTS		8757	//%1's current spell effects:
-#define GAIN_GROUP_LEADERSHIP_EXP	8788	//
-#define GAIN_RAID_LEADERSHIP_EXP	8789	//
 #define BUFF_MINUTES_REMAINING		8799	//%1 (%2 minutes remaining)
 #define FEAR_TOO_HIGH				9035	//Your target is too high of a level for your fear spell.
 #define SLOW_MOSTLY_SUCCESSFUL		9029	//Your spell was mostly successful.
 #define SLOW_PARTIALLY_SUCCESSFUL	9030	// Your spell was partially successful.
 #define SLOW_SLIGHTLY_SUCCESSFUL	9031	//Your spell was slightly successful.
 #define SPELL_OPPOSITE_EFFECT		9032	//Your spell may have had the opposite effect of what you desired.
-#define HAS_BEEN_AWAKENED			9037	//%1 has been awakened by %2.
 #define YOU_HEAL					9068	//You have healed %1 for %2 points of damage.
 #define HIT_NON_MELEE				9073	//%1 hit %2 for %3 points of non-melee damage.
 #define SHAKE_OFF_STUN				9077
@@ -358,6 +356,7 @@
 #define NOT_IN_CONTROL				12368	//You do not have control of yourself right now.
 #define TOO_DISTRACTED				12440   //You are too distracted to cast a spell now!
 #define ALREADY_CASTING				12442	//You are already casting a spell!
+#define ABORTED_SCRIBING_SPELL		12044   //Aborting scribing of spell.
 #define SENSE_CORPSE_NOT_NAME		12446	//You don't sense any corpses of that name.
 #define SENSE_CORPSE_NONE			12447	//You don't sense any corpses.
 #define SCREECH_BUFF_BLOCK			12448	//Your immunity buff protected you from the spell %1!

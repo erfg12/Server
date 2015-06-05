@@ -27,7 +27,7 @@
 
 #include "../common/features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "embperl.h"
 
 #ifdef seed
@@ -1615,7 +1615,7 @@ XS(XS_Mob_TypesTempPet)
 		else
 			Perl_croak(aTHX_ "target is not of type Mob");
 
-		
+
 		if (items < 7)
 			sticktarg = false;
 		else {
@@ -1986,84 +1986,6 @@ XS(XS_Mob_GetBeard)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 		RETVAL = THIS->GetBeard();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetDrakkinHeritage); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetDrakkinHeritage)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetDrakkinHeritage(THIS)");
-	{
-		Mob *		THIS;
-		uint8		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->GetDrakkinHeritage();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetDrakkinTattoo); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetDrakkinTattoo)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetDrakkinTattoo(THIS)");
-	{
-		Mob *		THIS;
-		uint8		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->GetDrakkinTattoo();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Mob_GetDrakkinDetails); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_GetDrakkinDetails)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Mob::GetDrakkinDetails(THIS)");
-	{
-		Mob *		THIS;
-		uint8		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->GetDrakkinDetails();
 		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
@@ -3525,7 +3447,7 @@ XS(XS_Mob_GetWaypointX)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetCWPX();
+		RETVAL = THIS->GetCurrentWayPoint().x;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -3551,7 +3473,7 @@ XS(XS_Mob_GetWaypointY)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetCWPY();
+		RETVAL = THIS->GetCurrentWayPoint().y;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -3577,7 +3499,7 @@ XS(XS_Mob_GetWaypointZ)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetCWPZ();
+		RETVAL = THIS->GetCurrentWayPoint().z;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -3603,7 +3525,7 @@ XS(XS_Mob_GetWaypointH)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetCWPH();
+		RETVAL = THIS->GetCurrentWayPoint().w;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -4544,7 +4466,7 @@ XS(XS_Mob_Stun)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->Stun(duration);
+		THIS->Stun(duration, nullptr);
 	}
 	XSRETURN_EMPTY;
 }
@@ -7055,7 +6977,7 @@ XS(XS_Mob_SendIllusion)
 {
 	dXSARGS;
 	if (items < 2 || items > 14)
-		Perl_croak(aTHX_ "Usage: Mob::SendIllusion(THIS,race,gender,texture,helmtexture,face,hairstyle,haircolor,beard,beardcolor,drakkin_heritage,drakkin_tattoo,drakkin_details,size)");
+		Perl_croak(aTHX_ "Usage: Mob::SendIllusion(THIS,race,gender,texture,helmtexture,face,hairstyle,haircolor,beard,beardcolor,size)");
 	{
 		Mob *		THIS;
 		uint16		race = (uint16)SvIV(ST(1));
@@ -7067,9 +6989,6 @@ XS(XS_Mob_SendIllusion)
 		uint8		haircolor = 0xFF;
 		uint8		beard = 0xFF;
 		uint8		beardcolor = 0xFF;
-		uint32		drakkin_heritage = 0xFFFFFFFF;
-		uint32		drakkin_tattoo = 0xFFFFFFFF;
-		uint32		drakkin_details = 0xFFFFFFFF;
 		float		size = -1.0f;
 
 		if (sv_derived_from(ST(0), "Mob")) {
@@ -7089,61 +7008,10 @@ XS(XS_Mob_SendIllusion)
 		if(items > 7) {haircolor = (uint8)SvIV(ST(7));}
 		if(items > 8) {beard = (uint8)SvIV(ST(8));}
 		if(items > 9) {beardcolor = (uint8)SvIV(ST(9));}
-		if(items > 10) {drakkin_heritage = (uint32)SvIV(ST(10));}
-		if(items > 11) {drakkin_tattoo = (uint32)SvIV(ST(11));}
-		if(items > 12) {drakkin_details = (uint32)SvIV(ST(12));}
-		if(items > 13) {size = (float)SvNV(ST(13));}
+		if(items > 10) {size = (float)SvNV(ST(10));}
 
 		THIS->SendIllusionPacket(race,gender,texture,helmtexture,haircolor,beardcolor,0xFF,0xFF,
-			hairstyle,face,beard,0xFF,drakkin_heritage,drakkin_tattoo,drakkin_details,size);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_SpellEffect); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SpellEffect)
-{
-	dXSARGS;
-	if (items < 2 || items > 8)
-		Perl_croak(aTHX_ "Usage: Mob::SpellEffect(THIS, effect, [duration, finish_delay, zone_wide, unk20, perm_effect, client])");
-	{
-		Mob *		THIS;
-		uint32		effect = (uint32)SvUV(ST(1));
-		uint32		duration = 5000;
-		uint32		finish_delay = 0;
-		bool		zone_wide = true;
-		uint32		unk20 = 3000;
-		bool		perm_effect = false;
-		Client*		client = nullptr;
-
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		if (items > 2)	{	duration = (uint32)SvUV(ST(2));	}
-		if (items > 3)	{	finish_delay = (uint32)SvUV(ST(3));	}
-		if (items > 4)	{	zone_wide = (bool)SvTRUE(ST(4));	}
-		if (items > 5)	{	unk20 = (uint32)SvUV(ST(5));	}
-		if (items > 6)	{	perm_effect = (bool)SvTRUE(ST(6));	}
-		if (items > 7)	{
-			if (sv_derived_from(ST(7), "Client")) {
-				IV tmp = SvIV((SV*)SvRV(ST(7)));
-				client = INT2PTR(Client *,tmp);
-			}
-			else
-				Perl_croak(aTHX_ "client is not of type Client");
-			if(client == nullptr)
-				Perl_croak(aTHX_ "client is nullptr, avoiding crash.");
-		}
-
-
-		THIS->SendSpellEffect(effect, duration, finish_delay, zone_wide, unk20, perm_effect, client);
+			hairstyle,face,beard,0xFF,size);
 	}
 	XSRETURN_EMPTY;
 }
@@ -7448,10 +7316,7 @@ XS(XS_Mob_SetDeltas)
 		Perl_croak(aTHX_ "Usage: Mob::SetDeltas(THIS, delta_x, delta_y, delta_z, delta_h)");
 	{
 		Mob *		THIS;
-		float		delta_x = (float)SvNV(ST(1));
-		float		delta_y = (float)SvNV(ST(2));
-		float		delta_z = (float)SvNV(ST(3));
-		float		delta_h = (float)SvNV(ST(4));
+		auto delta = glm::vec4((float)SvNV(ST(1)), (float)SvNV(ST(2)), (float)SvNV(ST(3)), (float)SvNV(ST(4)));
 
 		if (sv_derived_from(ST(0), "Mob")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -7462,7 +7327,7 @@ XS(XS_Mob_SetDeltas)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->SetDeltas(delta_x, delta_y, delta_z, delta_h);
+		THIS->SetDelta(delta);
 	}
 	XSRETURN_EMPTY;
 }
@@ -7511,30 +7376,6 @@ XS(XS_Mob_SetTargetDestSteps)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 		THIS->SetTargetDestSteps(target_steps);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Mob_SetTargetable); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Mob_SetTargetable)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Mob::SetTargetable(THIS, on)");
-	{
-		Mob *		THIS;
-		bool on = (bool)SvTRUE(ST(1));
-
-		if (sv_derived_from(ST(0), "Mob")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Mob *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Mob");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		THIS->SetTargetable(on);
 	}
 	XSRETURN_EMPTY;
 }
@@ -8239,9 +8080,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "GetHairStyle"), XS_Mob_GetHairStyle, file, "$");
 		newXSproto(strcpy(buf, "GetLuclinFace"), XS_Mob_GetLuclinFace, file, "$");
 		newXSproto(strcpy(buf, "GetBeard"), XS_Mob_GetBeard, file, "$");
-		newXSproto(strcpy(buf, "GetDrakkinHeritage"), XS_Mob_GetDrakkinHeritage, file, "$");
-		newXSproto(strcpy(buf, "GetDrakkinTattoo"), XS_Mob_GetDrakkinTattoo, file, "$");
-		newXSproto(strcpy(buf, "GetDrakkinDetails"), XS_Mob_GetDrakkinDetails, file, "$");
 		newXSproto(strcpy(buf, "GetClass"), XS_Mob_GetClass, file, "$");
 		newXSproto(strcpy(buf, "GetLevel"), XS_Mob_GetLevel, file, "$");
 		newXSproto(strcpy(buf, "GetCleanName"), XS_Mob_GetCleanName, file, "$");
@@ -8420,7 +8258,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "SendIllusion"), XS_Mob_SendIllusion, file, "$$;$$$$$$$$$$$$");
 		newXSproto(strcpy(buf, "MakeTempPet"), XS_Mob_MakeTempPet, file, "$$;$$$$");
 		newXSproto(strcpy(buf, "TypesTempPet"), XS_Mob_TypesTempPet, file, "$$;$$$$$");
-		newXSproto(strcpy(buf, "SpellEffect"), XS_Mob_SpellEffect, file, "$$;$$$$$$");
 		newXSproto(strcpy(buf, "GetItemStat"), XS_Mob_GetItemStat, file, "$$$");
 		newXSproto(strcpy(buf, "SetGlobal"), XS_Mob_SetGlobal, file, "$$$$$;$");
 		newXSproto(strcpy(buf, "TarGlobal"), XS_Mob_TarGlobal, file, "$$$$$$$");
@@ -8434,7 +8271,6 @@ XS(boot_Mob)
 		newXSproto(strcpy(buf, "SetDeltas"), XS_Mob_SetDeltas, file, "$$$$$");
 		newXSproto(strcpy(buf, "SetLD"), XS_Mob_SetLD, file, "$$");
 		newXSproto(strcpy(buf, "SetTargetDestSteps"), XS_Mob_SetTargetDestSteps, file, "$$");
-		newXSproto(strcpy(buf, "SetTargetable"), XS_Mob_SetTargetable, file, "$$");
 		newXSproto(strcpy(buf, "ModSkillDmgTaken"), XS_Mob_ModSkillDmgTaken, file, "$$$");
 		newXSproto(strcpy(buf, "GetModSkillDmgTaken"), XS_Mob_GetModSkillDmgTaken, file, "$$");
 		newXSproto(strcpy(buf, "GetSkillDmgTaken"), XS_Mob_GetSkillDmgTaken, file, "$$");

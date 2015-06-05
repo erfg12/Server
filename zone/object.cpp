@@ -16,21 +16,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/debug.h"
-#include <iostream>
-#include <stdlib.h>
-
-#include "masterentity.h"
-#include "zonedb.h"
-#include "../common/packet_functions.h"
-#include "../common/packet_dump_file.h"
-#include "../common/packet_dump.h"
-#include "../common/misc_functions.h"
+#include "../common/global_define.h"
 #include "../common/string_util.h"
-#include "../common/features.h"
-#include "string_ids.h"
+
+#include "client.h"
+#include "entity.h"
+#include "mob.h"
+#include "object.h"
 
 #include "quest_parser_collection.h"
+#include "zonedb.h"
+
+#include <iostream>
 
 const char DEFAULT_OBJECT_NAME[] = "IT63_ACTORDEF";
 const char DEFAULT_OBJECT_NAME_SUFFIX[] = "_ACTORDEF";
@@ -41,7 +38,7 @@ extern EntityList entity_list;
 
 // Loading object from database
 Object::Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& object, const ItemInst* inst)
- : respawn_timer(0), decay_timer(300000)
+ : respawn_timer(0), decay_timer(RuleI(Groundspawns, DecayTime))
 {
 
 	user = nullptr;
@@ -70,7 +67,7 @@ Object::Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& object,
 
 //creating a re-ocurring ground spawn.
 Object::Object(const ItemInst* inst, char* name,float max_x,float min_x,float max_y,float min_y,float z,float heading,uint32 respawntimer)
- : respawn_timer(respawntimer), decay_timer(300000)
+ : respawn_timer(respawntimer), decay_timer(RuleI(Groundspawns, DecayTime))
 {
 
 	user = nullptr;
@@ -89,7 +86,6 @@ Object::Object(const ItemInst* inst, char* name,float max_x,float min_x,float ma
 	// Set as much struct data as we can
 	memset(&m_data, 0, sizeof(Object_Struct));
 	m_data.heading = heading;
-	//printf("Spawning object %s at %f,%f,%f\n",name,m_data.x,m_data.y,m_data.z);
 	m_data.z = z;
 	m_data.zone_id = zone->GetZoneID();
 	respawn_timer.Disable();
@@ -99,7 +95,7 @@ Object::Object(const ItemInst* inst, char* name,float max_x,float min_x,float ma
 
 // Loading object from client dropping item on ground
 Object::Object(Client* client, const ItemInst* inst)
- : respawn_timer(0), decay_timer(300000)
+ : respawn_timer(0), decay_timer(RuleI(Groundspawns, DecayTime))
 {
 	user = nullptr;
 	last_user = nullptr;
@@ -311,7 +307,7 @@ const ItemInst* Object::GetItem(uint8 index) {
 void Object::PutItem(uint8 index, const ItemInst* inst)
 {
 	if (index > 9) {
-		LogFile->write(EQEMuLog::Error, "Object::PutItem: Invalid index specified (%i)", index);
+		Log.Out(Logs::General, Logs::Error, "Object::PutItem: Invalid index specified (%i)", index);
 		return;
 	}
 
@@ -333,21 +329,7 @@ void Object::Close() {
 	if(user != nullptr)
 	{
 		last_user = user;
-		// put any remaining items from the world container back into the player's inventory to avoid item loss
-		// if they close the container without removing all items
-		ItemInst* container = this->m_inst;
-		if(container != nullptr)
-		{
-			for (uint8 i = SUB_BEGIN; i < EmuConstants::ITEM_CONTAINER_SIZE; i++)
-			{
-				ItemInst* inst = container->PopItem(i);
-				if(inst != nullptr)
-				{
-					user->MoveItemToInventory(inst, true);
-				}
-			}
-		}
-
+		database.SaveWorldContainer(zone->GetZoneID(),m_id,m_inst);
 		user->SetTradeskillObject(nullptr);
 	}
 	user = nullptr;
@@ -414,6 +396,9 @@ bool Object::Process(){
 
 	if(m_ground_spawn && respawn_timer.Check()){
 		RandomSpawn(true);
+		// We only want to check groundspawns that randomly spawn.
+		if(!RuleB(Groundspawns, RandomSpawn) || m_min_x == m_max_x || m_min_y == m_max_y)
+			respawn_timer.Disable();
 	}
 	return true;
 }
@@ -422,20 +407,24 @@ void Object::RandomSpawn(bool send_packet) {
 	if(!m_ground_spawn)
 		return;
 
-	m_data.x = MakeRandomFloat(m_min_x, m_max_x);
-	m_data.y = MakeRandomFloat(m_min_y, m_max_y);
+	m_data.x = zone->random.Real(m_min_x, m_max_x);
+	m_data.y = zone->random.Real(m_min_y, m_max_y);
 	respawn_timer.Disable();
+	respawn_timer.Start();
 
 	if(send_packet) {
-		EQApplicationPacket app;
-		CreateSpawnPacket(&app);
-		entity_list.QueueClients(nullptr, &app, true);
+		EQApplicationPacket app1;
+		CreateDeSpawnPacket(&app1);
+		entity_list.QueueClients(nullptr, &app1, true);
+		EQApplicationPacket app2;
+		CreateSpawnPacket(&app2);
+		entity_list.QueueClients(nullptr, &app2, true);
 	}
 }
 
 bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 {
-	if(m_ground_spawn){//This is a Cool Groundspawn
+	if(m_ground_spawn){
 		respawn_timer.Start();
 	}
 	if (m_type == OT_DROPPEDITEM) {
@@ -458,10 +447,18 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 			args.push_back(m_inst);
 			parse->EventPlayer(EVENT_PLAYER_PICKUP, sender, buf, 0, &args);
 
-				int charges = m_inst->GetCharges();
-				if(charges < 1)
-					charges = 1;
-				sender->SummonItem(m_inst->GetItem()->ID,charges);
+			int charges = m_inst->GetCharges();
+			int16 item_id = m_inst->GetItem()->ID;
+			if(database.ItemQuantityType(item_id) != Quantity_Charges && charges < 1)
+				charges = 1;
+			if(sender->SummonItem(item_id,charges,false,0,true))
+			{
+				ItemInst* curitem = sender->GetInv().GetItem(MainCursor);
+				if(curitem && curitem->IsType(ItemClassContainer))
+				{
+					database.LoadWorldContainer(m_id, curitem);
+				}
+			}
 
 			if(cursordelete)	// delete the item if it's a duplicate lore. We have to do this because the client expects the item packet
 				sender->DeleteItemInInventory(MainCursor);
@@ -495,7 +492,7 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 			coa->open		= 0x01;
 		else {
 			coa->open		= 0x00;
-			//sender->Message(13, "Somebody is allready using that container.");
+			//sender->Message(CC_Red, "Somebody is allready using that container.");
 		}
 		m_inuse			= true;
 		coa->type		= m_type;
@@ -530,15 +527,14 @@ bool Object::HandleClick(Client* sender, const ClickObject_Struct* click_object)
 			//Clear out no-drop and no-rent items first if different player opens it
 			if(user != last_user)
 				m_inst->ClearByFlags(byFlagSet, byFlagSet);
+			else
+				m_inst->ClearByFlags(byFlagIgnore, byFlagSet);
 
 			uint8 i = 0;
-			int trade_slot = i + IDX_TRADESKILL;
 			for (i=0; i<10; i++) {
 				const ItemInst* inst = m_inst->GetItem(i);
 				if (inst) {
-					//sender->GetInv().RefPutItem(i+4000,inst);
-					//sender->SendItemPacket(i+4000, inst, ItemPacketLoot);
-					//sender->PutItemInInventory(trade_slot, *inst, true);
+					sender->SendItemPacket(i, inst, ItemPacketWorldContainer);
 				}
 			}
 		}
@@ -564,17 +560,33 @@ uint32 ZoneDatabase::AddObject(uint32 type, uint32 icon, const Object_Struct& ob
 	char* object_name = new char[len];
 	DoEscapeString(object_name, object.object_name, strlen(object.object_name));
 
-    // Save new record for object
-	std::string query = StringFormat("INSERT INTO object "
-                                    "(zoneid, xpos, ypos, zpos, heading, "
-                                    "itemid, charges, objectname, type, icon) "
-                                    "values (%i, %f, %f, %f, %f, %i, %i, '%s', %i, %i)",
-                                    object.zone_id, object.x, object.y, object.z, object.heading,
-                                    item_id, charges, object_name, type, icon);
-    safe_delete_array(object_name);
+	std::string query = StringFormat("SELECT MAX(id) FROM object");
 	auto results = QueryDatabase(query);
+	if (results.Success()) {
+		if (results.RowCount() != 0)
+		{
+			auto row = results.begin();
+			database_id = atoi(row[0]) + 1;
+		}
+        else
+		{
+			Log.Out(Logs::Detail, Logs::Error, "Unable to get new object id: %s", results.ErrorMessage().c_str());   
+			return 0;
+        }
+	}
+
+    // Save new record for object
+	query = StringFormat("INSERT INTO object "
+		"(id, zoneid, xpos, ypos, zpos, heading, "
+		"itemid, charges, objectname, type, icon) "
+		"values (%i, %i, %f, %f, %f, %f, %i, %i, '%s', %i, %i)",
+		database_id, object.zone_id, object.x, object.y, object.z, object.heading,
+		item_id, charges, object_name, type, icon);
+
+    safe_delete_array(object_name);
+	results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "Unable to insert object: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "Unable to insert object: %s", results.ErrorMessage().c_str());
 		return 0;
 	}
 
@@ -611,7 +623,7 @@ void ZoneDatabase::UpdateObject(uint32 id, uint32 type, uint32 icon, const Objec
     safe_delete_array(object_name);
     auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "Unable to update object: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "Unable to update object: %s", results.ErrorMessage().c_str());
 		return;
 	}
 
@@ -630,7 +642,6 @@ Ground_Spawns* ZoneDatabase::LoadGroundSpawns(uint32 zone_id, int16 version, Gro
                                     "LIMIT 50", zone_id, version);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
-        std::cerr << "Error in LoadGroundSpawns query '" << query << "' " << results.ErrorMessage() << std::endl;
 		return gs;
 	}
 
@@ -656,7 +667,11 @@ void ZoneDatabase::DeleteObject(uint32 id)
 	std::string query = StringFormat("DELETE FROM object WHERE id = %i", id);
 	auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "Unable to delete object: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "Unable to delete object: %s", results.ErrorMessage().c_str());
+	}
+	else
+	{
+		DeleteWorldContainer(id,zone->GetZoneID());
 	}
 }
 

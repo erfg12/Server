@@ -18,14 +18,14 @@
 #ifndef GROUPS_H
 #define GROUPS_H
 
-#include "../common/types.h"
-#include "../common/linked_list.h"
-#include "../common/emu_opcodes.h"
 #include "../common/eq_packet_structs.h"
-#include "entity.h"
+#include "../common/types.h"
+
 #include "mob.h"
-#include "../common/features.h"
-#include "../common/servertalk.h"
+
+class Client;
+class EQApplicationPacket;
+class Mob;
 
 #define MAX_MARKED_NPCS 3
 
@@ -36,6 +36,8 @@ public:
 	GroupIDConsumer() { id = 0; }
 	GroupIDConsumer(uint32 gid) { id = gid; }
 	inline const uint32 GetID()	const { return id; }
+	void	SetOldLeaderName(const char* oldleader) { strcpy(oldleadername, oldleader); }
+	char*	GetOldLeaderName() { return oldleadername; }
 
 protected:
 	friend class EntityList;
@@ -43,6 +45,7 @@ protected:
 	inline void SetID(uint32 set_id) { id = set_id; }
 private:
 	uint32 id;
+	char	oldleadername[64]; // Keeps the previous leader name, so when the entity is destroyed we can still tranfser leadership.
 };
 
 class Group : public GroupIDConsumer {
@@ -55,7 +58,7 @@ public:
 	void	AddMember(const char* NewMemberName);
 	void	SendUpdate(uint32 type,Mob* member);
 	void	SendWorldGroup(uint32 zone_id,Mob* zoningmember);
-	bool	DelMemberOOZ(const char *Name);
+	bool	DelMemberOOZ(const char *Name, bool checkleader);
 	bool	DelMember(Mob* oldmember,bool ignoresender = false);
 	void	DisbandGroup();
 	bool	IsGroupMember(Mob* client);

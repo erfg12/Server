@@ -68,6 +68,7 @@ public:
 	void AddEXP(uint32 add_exp, int conlevel, bool resexp);
 	void SetEXP(uint32 set_exp, uint32 set_aaxp);
 	void SetEXP(uint32 set_exp, uint32 set_aaxp, bool resexp);
+	void AddEXPPercent(uint8 percent, uint8 level);
 	void SetBindPoint();
 	void SetBindPoint(int to_zone);
 	void SetBindPoint(int to_zone, int to_instance);
@@ -157,15 +158,8 @@ public:
 	void DeleteItemInInventory(int slot_id, int quantity, bool update_client);
 	void SummonItem(uint32 item_id);
 	void SummonItem(uint32 item_id, int charges);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, 
-		bool attuned);
-	void SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, 
-		bool attuned, int to_slot);
+	void SummonItem(uint32 item_id, int charges, bool attuned);
+	void SummonItem(uint32 item_id, int charges, bool attuned, int to_slot);
 	void DropItem(int slot_id);
 	void BreakInvis();
 	void LeaveGroup();
@@ -198,11 +192,7 @@ public:
 	void RefundAA();
 	int GetModCharacterFactionLevel(int faction);
 	int GetStartZone();
-	void KeyRingAdd(uint32 item);
-	bool KeyRingCheck(uint32 item);
 	void QuestReadBook(const char *text, int type);
-	uint32 GetGroupPoints();
-	uint32 GetRaidPoints();
 	void LearnRecipe(uint32 recipe);
 	int GetEndurance();
 	int GetMaxEndurance();
@@ -244,7 +234,6 @@ public:
 	void SetHunger(int in_hunger);
 	void SetThirst(int in_thirst);
 	void SetConsumption(int in_hunger, int in_thirst);
-	void SendMarqueeMessage(uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, std::string msg);
 	int GetBoatID();
 	void SetBoatID(uint32 in_boatid);
 	char* GetBoatName();

@@ -15,26 +15,23 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
+
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
+
+#include "../common/rulesys.h"
+#include "../common/spdat.h"
+
+#include "client.h"
+#include "mob.h"
+
+#ifdef BOTS
+#include "bot.h"
+#endif
+
 #include <algorithm>
 
-#include "../common/debug.h"
-#include "../common/spdat.h"
-#include "../common/packet_dump.h"
-#include "../common/packet_functions.h"
-#include "../common/serverinfo.h"
-#include "../common/zone_numbers.h"
-#include "../common/moremath.h"
-#include "../common/guilds.h"
-#include "../common/logsys.h"
-#include "masterentity.h"
-#include "worldserver.h"
-#include "zonedb.h"
-#include "petitions.h"
-#include "string_ids.h"
-#include "npc_ai.h"
 
-
-// Return max stat value for level
 int32 Client::GetMaxStat() const {
 
 	if((RuleI(Character, StatCap)) > 0)
@@ -805,9 +802,9 @@ int32 Client::acmod() {
 		//seems about 21 agil per extra AC pt over 300...
 	return (65 + ((agility-300) / 21));
 	}
-#if EQDEBUG >= 11
-	LogFile->write(EQEMuLog::Error, "Error in Client::acmod(): Agility: %i, Level: %i",agility,level);
-#endif
+
+	Log.Out(Logs::Detail, Logs::Error, "Error in Client::acmod(): Agility: %i, Level: %i", agility, level);
+
 	return 0;
 };
 
@@ -915,7 +912,7 @@ int32 Client::CalcMaxMana()
 			break;
 		}
 		default: {
-			LogFile->write(EQEMuLog::Debug, "Invalid Class '%c' in CalcMaxMana", GetCasterClass());
+			Log.Out(Logs::Detail, Logs::Spells, "Invalid Class '%c' in CalcMaxMana", GetCasterClass());
 			max_mana = 0;
 			break;
 		}
@@ -935,9 +932,7 @@ int32 Client::CalcMaxMana()
 			cur_mana = curMana_cap;
 	}
 
-#if EQDEBUG >= 11
-	LogFile->write(EQEMuLog::Debug, "Client::CalcMaxMana() called for %s - returning %d", GetName(), max_mana);
-#endif
+	Log.Out(Logs::Detail, Logs::Spells, "Client::CalcMaxMana() called for %s - returning %d", GetName(), max_mana);
 	return max_mana;
 }
 
@@ -987,14 +982,14 @@ int32 Client::CalcBaseMana()
 			break;
 		}
 		default: {
-			LogFile->write(EQEMuLog::Debug, "Invalid Class '%c' in CalcMaxMana", GetCasterClass());
+			Log.Out(Logs::General, Logs::None, "Invalid Class '%c' in CalcMaxMana", GetCasterClass());
 			max_m = 0;
 			break;
 		}
 	}
 
 #if EQDEBUG >= 11
-	LogFile->write(EQEMuLog::Debug, "Client::CalcBaseMana() called for %s - returning %d", GetName(), max_m);
+	Log.Out(Logs::General, Logs::None, "Client::CalcBaseMana() called for %s - returning %d", GetName(), max_m);
 #endif
 	return max_m;
 }
@@ -1148,7 +1143,7 @@ int32 Client::CalcSTR() {
 }
 
 int32 Client::CalcSTA() {
-	int32 val = m_pp.STA + itembonuses.STA + spellbonuses.STA + CalcAlcoholPhysicalEffect();;
+	int32 val = m_pp.STA + itembonuses.STA + spellbonuses.STA + CalcAlcoholPhysicalEffect();
 
 	int32 mod = aabonuses.STA;
 
@@ -1165,7 +1160,7 @@ int32 Client::CalcSTA() {
 }
 
 int32 Client::CalcAGI() {
-	int32 val = m_pp.AGI + itembonuses.AGI + spellbonuses.AGI - CalcAlcoholPhysicalEffect();;
+	int32 val = m_pp.AGI + itembonuses.AGI + spellbonuses.AGI - CalcAlcoholPhysicalEffect();
 	int32 mod = aabonuses.AGI;
 
 	int32 str = GetSTR();
@@ -1190,7 +1185,7 @@ int32 Client::CalcAGI() {
 }
 
 int32 Client::CalcDEX() {
-	int32 val = m_pp.DEX + itembonuses.DEX + spellbonuses.DEX - CalcAlcoholPhysicalEffect();;
+	int32 val = m_pp.DEX + itembonuses.DEX + spellbonuses.DEX - CalcAlcoholPhysicalEffect();
 
 	int32 mod = aabonuses.DEX;
 
@@ -1820,7 +1815,7 @@ uint32 Mob::GetInstrumentMod(uint16 spell_id) const
 	if (effectmod > effectmodcap)
 		effectmod = effectmodcap;
 
-	_log(SPELLS__BARDS, "%s::GetInstrumentMod() spell=%d mod=%d modcap=%d\n",
+	Log.Out(Logs::Detail, Logs::Spells, "%s::GetInstrumentMod() spell=%d mod=%d modcap=%d\n",
 			GetName(), spell_id, effectmod, effectmodcap);
 
 	return effectmod;
@@ -1895,9 +1890,9 @@ int32 Client::CalcEnduranceRegenCap() {
 	return (cap * RuleI(Character, EnduranceRegenMultiplier) / 100);
 }
 
-int Client::GetRawACNoShield(int &shield_ac) const
+int Client::GetRawACNoShield(int &shield_ac, int spell_mod) const
 {
-	int ac = itembonuses.AC + spellbonuses.AC + aabonuses.AC;
+	int ac = itembonuses.AC + spellbonuses.AC / spell_mod + aabonuses.AC;
 	shield_ac = 0;
 	const ItemInst *inst = m_inv.GetItem(MainSecondary);
 	if(inst)

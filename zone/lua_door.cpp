@@ -20,42 +20,50 @@ const char *Lua_Door::GetDoorName() {
 
 float Lua_Door::GetX() {
 	Lua_Safe_Call_Real();
-	return self->GetX();
+	return self->GetPosition().x;
 }
 
 float Lua_Door::GetY() {
 	Lua_Safe_Call_Real();
-	return self->GetY();
+	return self->GetPosition().y;
 }
 
 float Lua_Door::GetZ() {
 	Lua_Safe_Call_Real();
-	return self->GetZ();
+	return self->GetPosition().z;
 }
 
 float Lua_Door::GetHeading() {
 	Lua_Safe_Call_Real();
-	return self->GetHeading();
+	return self->GetPosition().w;
 }
 
 void Lua_Door::SetX(float x) {
 	Lua_Safe_Call_Void();
-	self->SetX(x);
+	auto position = self->GetPosition();
+	position.x = x;
+	self->SetPosition(position);
 }
 
 void Lua_Door::SetY(float y) {
 	Lua_Safe_Call_Void();
-	self->SetY(y);
+	auto position = self->GetPosition();
+	position.y = y;
+	self->SetPosition(position);
 }
 
 void Lua_Door::SetZ(float z) {
 	Lua_Safe_Call_Void();
-	self->SetZ(z);
+	auto position = self->GetPosition();
+	position.z = z;
+	self->SetPosition(position);
 }
 
 void Lua_Door::SetHeading(float h) {
 	Lua_Safe_Call_Void();
-	self->SetHeading(h);
+	auto position = self->GetPosition();
+	position.w = h;
+	self->SetPosition(position);
 }
 
 void Lua_Door::SetLocation(float x, float y, float z) {
@@ -123,16 +131,6 @@ uint32 Lua_Door::GetKeyItem() {
 	return self->GetKeyItem();
 }
 
-void Lua_Door::SetNoKeyring(int type) {
-	Lua_Safe_Call_Void();
-	self->SetNoKeyring(type);
-}
-
-int Lua_Door::GetNoKeyring() {
-	Lua_Safe_Call_Int();
-	return self->GetNoKeyring();
-}
-
 void Lua_Door::CreateDatabaseEntry() {
 	Lua_Safe_Call_Void();
 	self->CreateDatabaseEntry();
@@ -186,8 +184,6 @@ luabind::scope lua_register_door() {
 		.def("GetLockPick", (uint32(Lua_Door::*)(void))&Lua_Door::GetLockPick)
 		.def("SetKeyItem", (void(Lua_Door::*)(uint32))&Lua_Door::SetKeyItem)
 		.def("GetKeyItem", (uint32(Lua_Door::*)(void))&Lua_Door::GetKeyItem)
-		.def("SetNoKeyring", (void(Lua_Door::*)(int))&Lua_Door::SetNoKeyring)
-		.def("GetNoKeyring", (int(Lua_Door::*)(void))&Lua_Door::GetNoKeyring)
 		.def("CreateDatabaseEntry", (void(Lua_Door::*)(void))&Lua_Door::CreateDatabaseEntry)
 		.def("ForceOpen", (void(Lua_Door::*)(Lua_Mob))&Lua_Door::ForceOpen)
 		.def("ForceOpen", (void(Lua_Door::*)(Lua_Mob,bool))&Lua_Door::ForceOpen)

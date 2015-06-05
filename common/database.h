@@ -21,11 +21,14 @@
 #define AUTHENTICATION_TIMEOUT	60
 #define INVALID_ID				0xFFFFFFFF
 
-#include "debug.h"
+#include "global_define.h"
+#include "eqemu_logsys.h"
 #include "types.h"
 #include "dbcore.h"
 #include "linked_list.h"
 #include "eq_packet_structs.h"
+
+#include <cmath>
 #include <string>
 #include <vector>
 #include <map>
@@ -33,21 +36,9 @@
 //atoi is not uint32 or uint32 safe!!!!
 #define atoul(str) strtoul(str, nullptr, 10)
 
-//class Spawn;
-class Corpse;
-class Spawn2;
-class NPC;
-class SpawnGroupList;
-class Petition;
-class Client;
-struct Combine_Struct;
-//struct Faction;
-//struct FactionMods;
-//struct FactionValue;
-struct ZonePoint;
-struct NPCType;
 class Inventory;
-class ItemInst;
+class MySQLRequestResult;
+class Client;
 
 struct EventLogDetails_Struct {
 	uint32	id;
@@ -62,34 +53,23 @@ struct EventLogDetails_Struct {
 };
 
 struct CharacterEventLog_Struct {
-uint32	count;
-uint8	eventid;
-EventLogDetails_Struct eld[255];
+	uint32	count;
+	uint8	eventid;
+	EventLogDetails_Struct eld[255];
 };
 
-
-// Added By Hogie
-// INSERT into variables (varname,value) values('decaytime [minlevel] [maxlevel]','[number of seconds]');
-// IE: decaytime 1 54 = Levels 1 through 54
-// decaytime 55 100 = Levels 55 through 100
-// It will always put the LAST time for the level (I think) from the Database
 struct npcDecayTimes_Struct {
 	uint16 minlvl;
 	uint16 maxlvl;
 	uint32 seconds;
 };
-// Added By Hogie -- End
+
 
 struct VarCache_Struct {
-	char varname[26];	// varname is char(25) in database
+	char varname[26];	
 	char value[0];
 };
 
-struct PlayerProfile_Struct;
-struct GuildRankLevel_Struct;
-struct GuildRanks_Struct;
-struct ExtendedProfile_Struct;
-struct GuildMember_Struct;
 class PTimerList;
 
 #pragma pack(1)
@@ -135,93 +115,10 @@ namespace Convert {
 		/*016*/	uint32	player_id;	//'global' ID of the caster, for wearoff messages
 		/*020*/
 	};
-	struct Tribute_Struct {
-		uint32 tribute;
-		uint32 tier;
-	};
 	struct Disciplines_Struct {
 		uint32 values[MAX_PP_DISCIPLINES];
 	};
-	struct GroupLeadershipAA_Struct {
-		union {
-			struct {
-				uint32 groupAAMarkNPC;
-				uint32 groupAANPCHealth;
-				uint32 groupAADelegateMainAssist;
-				uint32 groupAADelegateMarkNPC;
-				uint32 groupAA4;
-				uint32 groupAA5;
-				uint32 groupAAInspectBuffs;
-				uint32 groupAA7;
-				uint32 groupAASpellAwareness;
-				uint32 groupAAOffenseEnhancement;
-				uint32 groupAAManaEnhancement;
-				uint32 groupAAHealthEnhancement;
-				uint32 groupAAHealthRegeneration;
-				uint32 groupAAFindPathToPC;
-				uint32 groupAAHealthOfTargetsTarget;
-				uint32 groupAA15;
-			};
-			uint32 ranks[MAX_GROUP_LEADERSHIP_AA_ARRAY];
-		};
-	};
 
-	struct RaidLeadershipAA_Struct {
-		union {
-			struct {
-				uint32 raidAAMarkNPC;
-				uint32 raidAANPCHealth;
-				uint32 raidAADelegateMainAssist;
-				uint32 raidAADelegateMarkNPC;
-				uint32 raidAA4;
-				uint32 raidAA5;
-				uint32 raidAA6;
-				uint32 raidAASpellAwareness;
-				uint32 raidAAOffenseEnhancement;
-				uint32 raidAAManaEnhancement;
-				uint32 raidAAHealthEnhancement;
-				uint32 raidAAHealthRegeneration;
-				uint32 raidAAFindPathToPC;
-				uint32 raidAAHealthOfTargetsTarget;
-				uint32 raidAA14;
-				uint32 raidAA15;
-			};
-			uint32 ranks[MAX_RAID_LEADERSHIP_AA_ARRAY];
-		};
-	};
-
-	struct LeadershipAA_Struct {
-		union {
-			struct {
-				Convert::GroupLeadershipAA_Struct group;
-				Convert::RaidLeadershipAA_Struct raid;
-			};
-			uint32 ranks[MAX_LEADERSHIP_AA_ARRAY];
-		};
-	};
-	typedef struct
-	{
-		/*00*/ char Name[64];
-		/*64*/ uint32 Level;
-		/*68*/ uint32 Race;
-		/*72*/ uint32 Class;
-		/*76*/ uint32 Zone;
-		/*80*/ uint32 Time;
-		/*84*/ uint32 Points;
-		/*88*/
-	} PVPStatsEntry_Struct;
-	struct BandolierItem_Struct {
-		uint32 item_id;
-		uint32 icon;
-		char item_name[64];
-	};
-	struct Bandolier_Struct {
-		char name[32];
-		Convert::BandolierItem_Struct items[EmuConstants::BANDOLIER_SIZE];
-	};
-	struct PotionBelt_Struct {
-		Convert::BandolierItem_Struct items[EmuConstants::POTION_BELT_SIZE];
-	};
 	struct SuspendedMinion_Struct
 	{
 		/*000*/	uint16 SpellID;
@@ -240,7 +137,6 @@ namespace Convert {
 		/*0100*/	uint32							gender;				// Player Gender - 0 Male, 1 Female
 		/*0104*/	uint32							race;				// Player race
 		/*0108*/	uint32							class_;				// Player class
-		/*0112*/	uint32							unknown0112;		//
 		/*0116*/	uint32							level;				// Level of player (might be one byte)
 		/*0120*/	Convert::BindStruct				binds[5];			// Bind points (primary is first, home city is fifth)
 		/*0220*/	uint32							deity;				// deity
@@ -254,7 +150,6 @@ namespace Convert {
 		/*0243*/	uint8							gm;
 		/*0244*/	uint8							guildrank;
 		/*0245*/	uint8							guildbanker;
-		/*0246*/	uint8							unknown0246[6];		//
 		/*0252*/	uint32							intoxication;
 		/*0256*/	uint32							spellSlotRefresh[MAX_PP_REF_MEMSPELL];	//in ms
 		/*0292*/	uint32							abilitySlotRefresh;
@@ -268,18 +163,14 @@ namespace Convert {
 		/*0303*/	uint8							ability_number;		//ability used
 		/*0304*/	uint8							ability_time_minutes;
 		/*0305*/	uint8							ability_time_hours;	//place holder
-		/*0306*/	uint8							unknown0306[6];		// @bp Spacer/Flag?
 		/*0312*/	uint32							item_material[_MaterialCount];	// Item texture/material of worn/held items
-		/*0348*/	uint8							unknown0348[44];
 		/*0392*/	Convert::Color_Struct			item_tint[_MaterialCount];
 		/*0428*/	Convert::AA_Array				aa_array[MAX_PP_AA_ARRAY];
-		/*2348*/	float							unknown2384;		//seen ~128, ~47
 		/*2352*/	char							servername[32];		// length probably not right
 		/*2384*/	char							title[32];			// length might be wrong
 		/*2416*/	char							suffix[32];			// length might be wrong
 		/*2448*/	uint32							guildid2;			//
 		/*2452*/	uint32							exp;				// Current Experience
-		/*2456*/	uint32							unknown2492;
 		/*2460*/	uint32							points;				// Unspent Practice points
 		/*2464*/	uint32							mana;				// current mana
 		/*2468*/	uint32							cur_hp;				// current hp
@@ -292,18 +183,13 @@ namespace Convert {
 		/*2496*/	uint32							AGI;				// Agility
 		/*2500*/	uint32							WIS;				// Wisdom
 		/*2504*/	uint8							face;				// Player face
-		/*2505*/	uint8							unknown2541[47];	// ?
 		/*2552*/	uint8							languages[MAX_PP_LANGUAGE];
-		/*2580*/	uint8							unknown2616[4];
 		/*2584*/	uint32							spell_book[MAX_PP_REF_SPELLBOOK];
-		/*4504*/	uint8							unknown4540[128];	// Was [428] all 0xff
 		/*4632*/	uint32							mem_spells[MAX_PP_REF_MEMSPELL];
-		/*4668*/	uint8							unknown4704[32];	//
 		/*4700*/	float							y;					// Player y position
 		/*4704*/	float							x;					// Player x position
 		/*4708*/	float							z;					// Player z position
 		/*4712*/	float							heading;			// Direction player is facing
-		/*4716*/	uint8							unknown4752[4];		//
 		/*4720*/	int32							platinum;			// Platinum Pieces on player
 		/*4724*/	int32							gold;				// Gold Pieces on player
 		/*4728*/	int32							silver;				// Silver Pieces on player
@@ -316,105 +202,32 @@ namespace Convert {
 		/*4756*/	int32							gold_cursor;		// Gold on cursor
 		/*4760*/	int32							silver_cursor;		// Silver on cursor
 		/*4764*/	int32							copper_cursor;		// Copper on cursor
-		/*4768*/	int32							platinum_shared;	// Platinum shared between characters
-		/*4772*/	uint8							unknown4808[24];
+		/*4768*/	int32							platinum_shared;	// Platinum shared between characters	
 		/*4796*/	uint32							skills[MAX_PP_SKILL];	// [400] List of skills	// 100 dword buffer
-		/*5196*/	uint8							unknown5132[184];
-		/*5380*/	uint32							pvp2;				//
-		/*5384*/	uint32							unknown5420;		//
-		/*5388*/	uint32							pvptype;			//
-		/*5392*/	uint32							unknown5428;		//
 		/*5396*/	uint32							ability_down;		// Guessing
-		/*5400*/	uint8							unknown5436[8];		//
 		/*5408*/	uint32							autosplit;			//not used right now
-		/*5412*/	uint8							unknown5448[6];
-		/*5418*/	uint16							boatid;
+		/*5418*/	uint16							boatid;				// We use this ID internally for boats.
 		/*5420*/	uint32							zone_change_count;	// Number of times user has zoned in their career (guessing)
-		/*5424*/	char							boat[16];	//
-		/*5440*/	uint32							drakkin_heritage;	//
-		/*5444*/	uint32							drakkin_tattoo;		//
-		/*5448*/	uint32							drakkin_details;	//
 		/*5452*/	uint32							expansions;			// expansion setting, bit field of expansions avaliable
 		/*5456*/	int32							toxicity;			//from drinking potions, seems to increase by 3 each time you drink
-		/*5460*/	char							unknown5496[16];	//
 		/*5476*/	int32							hunger_level;
 		/*5480*/	int32							thirst_level;
 		/*5484*/	uint32							ability_up;
-		/*5488*/	char							unknown5524[16];
 		/*5504*/	uint16							zone_id;			// Current zone of the player
 		/*5506*/	uint16							zoneInstance;		// Instance ID
 		/*5508*/	Convert::SpellBuff_Struct		buffs[BUFF_COUNT];	// Buffs currently on the player
 		/*6008*/	char							groupMembers[6][64];//
-		/*6392*/	char							unknown6428[656];
+					char							boat[20];			// The client uses this string for boats.
 		/*7048*/	uint32							entityid;
-		/*7052*/	uint32							leadAAActive;
-		/*7056*/	uint32							unknown7092;
-		/*7060*/	int32							ldon_points_guk;	//client uses these as signed
-		/*7064*/	int32							ldon_points_mir;
-		/*7068*/	int32							ldon_points_mmc;
-		/*7072*/	int32							ldon_points_ruj;
-		/*7076*/	int32							ldon_points_tak;
-		/*7080*/	int32							ldon_points_available;
-		/*7084*/	int32							ldon_wins_guk;
-		/*7088*/	int32							ldon_wins_mir;
-		/*7092*/	int32							ldon_wins_mmc;
-		/*7096*/	int32							ldon_wins_ruj;
-		/*7100*/	int32							ldon_wins_tak;
-		/*7104*/	int32							ldon_losses_guk;
-		/*7108*/	int32							ldon_losses_mir;
-		/*7112*/	int32							ldon_losses_mmc;
-		/*7116*/	int32							ldon_losses_ruj;
-		/*7120*/	int32							ldon_losses_tak;
-		/*7124*/	uint8							unknown7160[72];
-		/*7196*/	uint32							tribute_time_remaining;	//in miliseconds
-		/*7200*/	uint32							showhelm;
-		/*7204*/	uint32							career_tribute_points;
-		/*7208*/	uint32							unknown7244;
-		/*7212*/	uint32							tribute_points;
-		/*7216*/	uint32							unknown7252;
-		/*7220*/	uint32							tribute_active;		//1=active
-		/*7224*/	Convert::Tribute_Struct			tributes[EmuConstants::TRIBUTE_SIZE];
 		/*7264*/	Convert::Disciplines_Struct		disciplines;
 		/*7664*/	uint32							recastTimers[MAX_RECAST_TYPES];	// Timers (GMT of last use)
-		/*7744*/	char							unknown7780[160];
 		/*7904*/	uint32							endurance;
-		/*7908*/	uint32							group_leadership_exp;	//0-1000
-		/*7912*/	uint32							raid_leadership_exp;	//0-2000
-		/*7916*/	uint32							group_leadership_points;
-		/*7920*/	uint32							raid_leadership_points;
-		/*7924*/	Convert::LeadershipAA_Struct	leader_abilities;
-		/*8052*/	uint8							unknown8088[132];
 		/*8184*/	uint32							air_remaining;
-		/*8188*/	uint32							PVPKills;
-		/*8192*/	uint32							PVPDeaths;
-		/*8196*/	uint32							PVPCurrentPoints;
-		/*8200*/	uint32							PVPCareerPoints;
-		/*8204*/	uint32							PVPBestKillStreak;
-		/*8208*/	uint32							PVPWorstDeathStreak;
-		/*8212*/	uint32							PVPCurrentKillStreak;
-		/*8216*/	Convert::PVPStatsEntry_Struct	PVPLastKill;
-		/*8304*/	Convert::PVPStatsEntry_Struct	PVPLastDeath;
-		/*8392*/	uint32							PVPNumberOfKillsInLast24Hours;
-		/*8396*/	Convert::PVPStatsEntry_Struct	PVPRecentKills[50];
 		/*12796*/	uint32							aapoints_spent;
 		/*12800*/	uint32							expAA;
 		/*12804*/	uint32							aapoints;			//avaliable, unspent
-		/*12808*/	uint8							unknown12844[36];
-		/*12844*/	Convert::Bandolier_Struct		bandoliers[EmuConstants::BANDOLIERS_COUNT];
-		/*14124*/	uint8							unknown14160[4506];
 		/*18630*/	Convert::SuspendedMinion_Struct	SuspendedMinion; // No longer in use
 		/*19240*/	uint32							timeentitledonaccount;
-		/*19244*/	Convert::PotionBelt_Struct		potionbelt;			//there should be 3 more of these
-		/*19532*/	uint8							unknown19568[8];
-		/*19540*/	uint32							currentRadCrystals; // Current count of radiant crystals
-		/*19544*/	uint32							careerRadCrystals;	// Total count of radiant crystals ever
-		/*19548*/	uint32							currentEbonCrystals;// Current count of ebon crystals
-		/*19552*/	uint32							careerEbonCrystals;	// Total count of ebon crystals ever
-		/*19556*/	uint8							groupAutoconsent;	// 0=off, 1=on
-		/*19557*/	uint8							raidAutoconsent;	// 0=off, 1=on
-		/*19558*/	uint8							guildAutoconsent;	// 0=off, 1=on
-		/*19559*/	uint8							unknown19595[5];	// ***Placeholder (6/29/2005)
-		/*19564*/	uint32							RestTimer;
 		/*19568*/
 	};
 	
@@ -426,11 +239,6 @@ namespace Convert {
 			int16	equipSlot;
 			uint8	charges;
 			uint16	lootslot;
-			uint32 aug1;
-			uint32 aug2;
-			uint32 aug3;
-			uint32 aug4;
-			uint32 aug5;
 		};
 	}
 
@@ -459,9 +267,6 @@ namespace Convert {
 		uint8 hairstyle;
 		uint8 face;
 		uint8 beard;
-		uint32 drakkin_heritage;
-		uint32 drakkin_tattoo;
-		uint32 drakkin_details;
 		player_lootitem_temp::ServerLootItem_Struct_temp	items[0];
 	};
 
@@ -507,8 +312,15 @@ public:
 	bool	ThrowDBError(std::string ErrorMessage, std::string query_title, std::string query);
 
 	/*
-	* General Character Related Stuff
+	* General Web page interface related stuff
 	*/
+	
+	bool	CharacterJoin(uint32 char_id, char* char_name);
+	bool	CharacterQuit(uint32 char_id);
+	bool	ZoneConnected(uint32 id, const char* name);
+	bool	ZoneDisconnect(uint32 id);
+	bool	LSConnected(uint32 port);
+	bool	LSDisconnect();
 
 	/* Character Creation */
 	bool	SaveCharacterCreate(uint32 character_id, uint32 account_id, PlayerProfile_Struct* pp);
@@ -525,9 +337,8 @@ public:
 	bool	StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inventory* inv);
 	bool	DeleteCharacter(char* name);
 
-	/*
-	* General Information Getting Queries
-	*/
+	/* General Information Queries */
+
 	bool	CheckNameFilter(const char* name, bool surname = false);
 	bool	CheckUsedName(const char* name);
 	uint32	GetAccountIDByChar(const char* charname, uint32* oCharID = 0);
@@ -543,6 +354,10 @@ public:
 	bool	CheckGMIPs(const char* loginIP, uint32 account_id);
 	bool	AddGMIP(char* ip_address, char* name);
 	void	LoginIP(uint32 AccountID, const char* LoginIP);
+	bool	CheckAccountActive(uint32 AccountID);
+	void	ClearAllActive();
+	void	ClearAccountActive(uint32 AccountID);
+	void	SetAccountActive(uint32 AccountID);
 
 	/*
 	* Instancing Stuff
@@ -600,8 +415,7 @@ public:
 	char*	GetGroupLeaderForLogin(const char* name,char* leaderbuf);
 
 	void	SetGroupLeaderName(uint32 gid, const char* name);
-	char*	GetGroupLeadershipInfo(uint32 gid, char* leaderbuf, char* maintank = nullptr, char* assist = nullptr, char* puller = nullptr, char *marknpc = nullptr,
-						GroupLeadershipAA_Struct* GLAA = nullptr);
+	char*	GetGroupLeadershipInfo(uint32 gid, char* leaderbuf);
 	void	ClearGroupLeader(uint32 gid = 0);
 	
 
@@ -613,10 +427,20 @@ public:
 	uint32	GetRaidID(const char* name);
 	const char *GetRaidLeaderName(uint32 rid);
 
-	/* Database Conversions*/
-	bool	CheckDatabaseConversions();
-	bool	CheckDatabaseConvertPPDeblob();
-	bool	CheckDatabaseConvertCorpseDeblob();
+	/*
+	* Database Setup for boostraps only.
+	*/
+	bool DBSetup();
+	bool DBSetup_webdata_character();
+	bool DBSetup_webdata_servers();
+	bool DBSetup_feedback();
+	bool DBSetup_account_active();
+	bool DBSetup_PlayerCorpseBackup();
+	bool DBSetup_CharacterSoulMarks();
+	bool DBSetup_MessageBoards();
+	bool DBSetup_Rules();
+	bool DBSetup_Logs();
+	bool GITInfo();
 
 	/*
 	* Database Variables
@@ -649,6 +473,10 @@ public:
 	void	AddReport(std::string who, std::string against, std::string lines);
 	struct TimeOfDay_Struct		LoadTime(time_t &realtime);
 	bool	SaveTime(int8 minute, int8 hour, int8 day, int8 month, int16 year);
+	bool	AdjustSpawnTimes();
+
+	/* EQEmuLogSys */
+	void	LoadLogSettings(EQEmuLogSys::LogSettings* log_settings);
 
 private:
 	void DBInitVars();
@@ -660,17 +488,11 @@ private:
 	VarCache_Struct**	varcache_array;
 	uint32				varcache_lastupdate;
 
-
-	/*
-	* Groups, utility methods.
-	*/
+	/* Groups, utility methods. */
 	void    ClearAllGroupLeaders();
 	void    ClearAllGroups();
 
-
-	/*
-	* Raid, utility methods.
-	*/
+	/* Raid, utility methods. */
 	void ClearAllRaids();
 	void ClearAllRaidDetails();
 };

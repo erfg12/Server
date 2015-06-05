@@ -15,20 +15,19 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include "masterentity.h"
+
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
+#include "../common/spdat.h"
+
+#include "client.h"
+#include "entity.h"
+#include "mob.h"
+
+#include "string_ids.h"
 #include "worldserver.h"
 #include "zonedb.h"
-#include "../common/spdat.h"
-#include "../common/packet_dump.h"
-#include "../common/packet_functions.h"
-#include "petitions.h"
-#include "../common/serverinfo.h"
-#include "../common/zone_numbers.h"
-#include "../common/moremath.h"
-#include "../common/guilds.h"
-#include "string_ids.h"
-#include "npc_ai.h"
+#include "position.h"
 
 float Client::GetActSpellRange(uint16 spell_id, float range, bool IsBard)
 {
@@ -55,30 +54,25 @@ int32 NPC::GetActSpellDamage(uint16 spell_id, int32 value,  Mob* target) {
 		else
 			value -= target->GetFcDamageAmtIncoming(this, spell_id)/spells[spell_id].buffduration;
 	 }
-	  	 
-	 value += dmg*GetSpellFocusDMG()/100; 
+
+	 value += dmg*GetSpellFocusDMG()/100;
 
 	if (AI_HasSpellsEffects()){
 		int16 chance = 0;
 		int ratio = 0;
 
 		if (spells[spell_id].buffduration == 0) {
-		
 			chance += spellbonuses.CriticalSpellChance + spellbonuses.FrenziedDevastation;
-		
-			if (chance && MakeRandomInt(1,100) <= chance){
-			
+
+			if (chance && zone->random.Roll(chance)) {
 				ratio += spellbonuses.SpellCritDmgIncrease + spellbonuses.SpellCritDmgIncNoStack;
 				value += (value*ratio)/100;
 				entity_list.MessageClose_StringID(this, true, 100, MT_SpellCrits, OTHER_CRIT_BLAST, GetCleanName(), itoa(-value));
 			}
 		}
 		else {
-			
 			chance += spellbonuses.CriticalDoTChance;
-		
-			if (chance && MakeRandomInt(1,100) <= chance){
-			
+			if (chance && zone->random.Roll(chance)) {
 				ratio += spellbonuses.DotCritDmgIncrease;
 				value += (value*ratio)/100;
 			}
@@ -119,14 +113,14 @@ int32 Client::GetActSpellDamage(uint16 spell_id, int32 value, Mob* target) {
 		 if (spell_id == SPELL_IMP_HARM_TOUCH && (GetAA(aaSpellCastingFury) > 0) && (GetAA(aaUnholyTouch) > 0))
 			 chance = 100;
 
-		 if (MakeRandomInt(1,100) <= chance){
+		 if (zone->random.Roll(chance)) {
 			Critical = true;
 			ratio += itembonuses.SpellCritDmgIncrease + spellbonuses.SpellCritDmgIncrease + aabonuses.SpellCritDmgIncrease;
 			ratio += itembonuses.SpellCritDmgIncNoStack + spellbonuses.SpellCritDmgIncNoStack + aabonuses.SpellCritDmgIncNoStack;
 		}
 
-		else if (GetClass() == WIZARD && (GetLevel() >= RuleI(Spells, WizCritLevel)) && (MakeRandomInt(1,100) <= RuleI(Spells, WizCritChance))) {
-			ratio += MakeRandomInt(20,70); //Wizard innate critical chance is calculated seperately from spell effect and is not a set ratio. (20-70 is parse confirmed)
+		else if (GetClass() == WIZARD && (GetLevel() >= RuleI(Spells, WizCritLevel)) && (zone->random.Roll(RuleI(Spells, WizCritChance)))) {
+			ratio += zone->random.Int(20,70); //Wizard innate critical chance is calculated seperately from spell effect and is not a set ratio. (20-70 is parse confirmed)
 			Critical = true;
 		}
 
@@ -193,22 +187,16 @@ int32 Client::GetActDoTDamage(uint16 spell_id, int32 value, Mob* target) {
 
 	if (spellbonuses.CriticalDotDecay)
 			chance += GetDecayEffectValue(spell_id, SE_CriticalDotDecay);
-	
+
 	value_BaseEffect = value + (value*GetFocusEffect(focusFcBaseEffects, spell_id)/100);
 
-	if (chance > 0 && (MakeRandomInt(1, 100) <= chance)) {
-	
+	if (chance > 0 && (zone->random.Roll(chance))) {
 		int32 ratio = 200;
 		ratio += itembonuses.DotCritDmgIncrease + spellbonuses.DotCritDmgIncrease + aabonuses.DotCritDmgIncrease;
-
-		value = value_BaseEffect*ratio/100;  
-
-		value += int(value_BaseEffect*GetFocusEffect(focusImprovedDamage, spell_id)/100)*ratio/100; 
-
+		value = value_BaseEffect*ratio/100;
+		value += int(value_BaseEffect*GetFocusEffect(focusImprovedDamage, spell_id)/100)*ratio/100;
 		value += int(value_BaseEffect*GetFocusEffect(focusFcDamagePctCrit, spell_id)/100)*ratio/100;
-	
-		value += int(value_BaseEffect*target->GetVulnerability(this, spell_id, 0)/100)*ratio/100; 
-
+		value += int(value_BaseEffect*target->GetVulnerability(this, spell_id, 0)/100)*ratio/100;
 		extra_dmg = target->GetFcDamageAmtIncoming(this, spell_id) + 
 					int(GetFocusEffect(focusFcDamageAmtCrit, spell_id)*ratio/100) +
 					GetFocusEffect(focusFcDamageAmt, spell_id);
@@ -216,7 +204,7 @@ int32 Client::GetActDoTDamage(uint16 spell_id, int32 value, Mob* target) {
 		if (extra_dmg) {
 			int duration = CalcBuffDuration(this, this, spell_id);
 			if (duration > 0)
-				extra_dmg /= duration; 
+				extra_dmg /= duration;
 		}
 
 		value -= extra_dmg;
@@ -224,25 +212,20 @@ int32 Client::GetActDoTDamage(uint16 spell_id, int32 value, Mob* target) {
 		return value;
 	}
 
-
 	value = value_BaseEffect;
-
-	value += value_BaseEffect*GetFocusEffect(focusImprovedDamage, spell_id)/100; 
-
-	value += value_BaseEffect*GetFocusEffect(focusFcDamagePctCrit, spell_id)/100; 
-
-	value += value_BaseEffect*target->GetVulnerability(this, spell_id, 0)/100; 
-	
-	extra_dmg = target->GetFcDamageAmtIncoming(this, spell_id) + 
+	value += value_BaseEffect*GetFocusEffect(focusImprovedDamage, spell_id)/100;
+	value += value_BaseEffect*GetFocusEffect(focusFcDamagePctCrit, spell_id)/100;
+	value += value_BaseEffect*target->GetVulnerability(this, spell_id, 0)/100;
+	extra_dmg = target->GetFcDamageAmtIncoming(this, spell_id) +
 				GetFocusEffect(focusFcDamageAmtCrit, spell_id) +
-				GetFocusEffect(focusFcDamageAmt, spell_id); 
+				GetFocusEffect(focusFcDamageAmt, spell_id);
 
 	if (extra_dmg) {
 		int duration = CalcBuffDuration(this, this, spell_id);
 		if (duration > 0)
-			extra_dmg /= duration; 
-	} 
-	
+			extra_dmg /= duration;
+	}
+
 	value -= extra_dmg;
 
 	return value;
@@ -275,28 +258,26 @@ int32 NPC::GetActSpellHealing(uint16 spell_id, int32 value, Mob* target) {
 
 	//Scale all NPC spell healing via SetSpellFocusHeal(value)
 
-	value += value*GetSpellFocusHeal()/100; 
+	value += value*GetSpellFocusHeal()/100;
 
 	 if (target) {
-		value += target->GetFocusIncoming(focusFcHealAmtIncoming, SE_FcHealAmtIncoming, this, spell_id); 
+		value += target->GetFocusIncoming(focusFcHealAmtIncoming, SE_FcHealAmtIncoming, this, spell_id);
 		value += value*target->GetHealRate(spell_id, this)/100;
 	 }
 
 	 //Allow for critical heal chance if NPC is loading spell effect bonuses.
 	 if (AI_HasSpellsEffects()){
-
 		if(spells[spell_id].buffduration < 1) {
-
-			if(spellbonuses.CriticalHealChance && (MakeRandomInt(0,99) < spellbonuses.CriticalHealChance)) {
-				value = value*2;	 			
+			if(spellbonuses.CriticalHealChance && (zone->random.Roll(spellbonuses.CriticalHealChance))) {
+				value = value*2;
 				entity_list.MessageClose_StringID(this, true, 100, MT_SpellCrits, OTHER_CRIT_HEAL, GetCleanName(), itoa(value));
 			}
 		}
-		else if(spellbonuses.CriticalHealOverTime && (MakeRandomInt(0,99) < spellbonuses.CriticalHealOverTime)) {
-				value = value*2;	 			
+		else if(spellbonuses.CriticalHealOverTime && (zone->random.Roll(spellbonuses.CriticalHealOverTime))) {
+				value = value*2;
 		}
 	 }
-	 
+
 	return value;
 }
 
@@ -326,7 +307,7 @@ int32 Client::GetActSpellHealing(uint16 spell_id, int32 value, Mob* target) {
 		if (spellbonuses.CriticalHealDecay)
 			chance += GetDecayEffectValue(spell_id, SE_CriticalHealDecay);
 
-		if(chance && (MakeRandomInt(0,99) < chance)) {
+		if(chance && (zone->random.Roll(chance))) {
 			Critical = true;
 			modifier = 2; //At present time no critical heal amount modifier SPA exists.
 		}
@@ -360,7 +341,7 @@ int32 Client::GetActSpellHealing(uint16 spell_id, int32 value, Mob* target) {
 		if (spellbonuses.CriticalRegenDecay)
 			chance += GetDecayEffectValue(spell_id, SE_CriticalRegenDecay);
 
-		if(chance && (MakeRandomInt(0,99) < chance))
+		if(chance && zone->random.Roll(chance))
 			return (value * 2);
 	}
 
@@ -374,12 +355,12 @@ int32 Client::GetActSpellCost(uint16 spell_id, int32 cost)
 	int16 FrenziedDevastation = itembonuses.FrenziedDevastation + spellbonuses.FrenziedDevastation + aabonuses.FrenziedDevastation;
 
 	if (FrenziedDevastation && IsPureNukeSpell(spell_id))
-		cost *= 2;	
-	
+		cost *= 2;
+
 	// Formula = Unknown exact, based off a random percent chance up to mana cost(after focuses) of the cast spell
 	if(this->itembonuses.Clairvoyance && spells[spell_id].classes[(GetClass()%16) - 1] >= GetLevel() - 5)
 	{
-		int16 mana_back = this->itembonuses.Clairvoyance * MakeRandomInt(1, 100) / 100;
+		int16 mana_back = this->itembonuses.Clairvoyance * zone->random.Int(1, 100) / 100;
 		// Doesnt generate mana, so best case is a free spell
 		if(mana_back > cost)
 			mana_back = cost;
@@ -392,7 +373,7 @@ int32 Client::GetActSpellCost(uint16 spell_id, int32 cost)
 	// WildcardX
 	float PercentManaReduction = 0;
 	float SpecializeSkill = GetSpecializeSkillValue(spell_id);
-	int SuccessChance = MakeRandomInt(0, 100);
+	int SuccessChance = zone->random.Int(0, 100);
 
 	float bonus = 1.0;
 	switch(GetAA(aaSpellCastingMastery))
@@ -444,7 +425,7 @@ int32 Client::GetActSpellCost(uint16 spell_id, int32 cost)
 
 	if(focus_redux > 0)
 	{
-		PercentManaReduction += MakeRandomFloat(1, (double)focus_redux);
+		PercentManaReduction += zone->random.Real(1, (double)focus_redux);
 	}
 
 	cost -= (cost * (PercentManaReduction / 100));
@@ -519,13 +500,13 @@ bool Client::TrainDiscipline(uint32 itemid) {
 	//get the item info
 	const Item_Struct *item = database.GetItem(itemid);
 	if(item == nullptr) {
-		Message(13, "Unable to find the tome you turned in!");
-		LogFile->write(EQEMuLog::Error, "Unable to find turned in tome id %lu\n", (unsigned long)itemid);
+		Message(CC_Red, "Unable to find the tome you turned in!");
+		Log.Out(Logs::General, Logs::Error, "Unable to find turned in tome id %lu\n", (unsigned long)itemid);
 		return(false);
 	}
 
 	if(item->ItemClass != ItemClassCommon || item->ItemType != ItemTypeSpell) {
-		Message(13, "Invalid item type, you cannot learn from this item.");
+		Message(CC_Red, "Invalid item type, you cannot learn from this item.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -549,7 +530,7 @@ bool Client::TrainDiscipline(uint32 itemid) {
 		item->Name[5] == ':' &&
 		item->Name[6] == ' '
 		)) {
-		Message(13, "This item is not a tome.");
+		Message(CC_Red, "This item is not a tome.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -557,7 +538,7 @@ bool Client::TrainDiscipline(uint32 itemid) {
 
 	int myclass = GetClass();
 	if(myclass == WIZARD || myclass == ENCHANTER || myclass == MAGICIAN || myclass == NECROMANCER) {
-		Message(13, "Your class cannot learn from this tome.");
+		Message(CC_Red, "Your class cannot learn from this tome.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -567,7 +548,7 @@ bool Client::TrainDiscipline(uint32 itemid) {
 	//can we use the item?
 	uint32 cbit = 1 << (myclass-1);
 	if(!(item->Classes & cbit)) {
-		Message(13, "Your class cannot learn from this tome.");
+		Message(CC_Red, "Your class cannot learn from this tome.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -575,7 +556,7 @@ bool Client::TrainDiscipline(uint32 itemid) {
 
 	uint32 spell_id = item->Scroll.Effect;
 	if(!IsValidSpell(spell_id)) {
-		Message(13, "This tome contains invalid knowledge.");
+		Message(CC_Red, "This tome contains invalid knowledge.");
 		return(false);
 	}
 
@@ -583,14 +564,14 @@ bool Client::TrainDiscipline(uint32 itemid) {
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 	uint8 level_to_use = spell.classes[myclass - 1];
 	if(level_to_use == 255) {
-		Message(13, "Your class cannot learn from this tome.");
+		Message(CC_Red, "Your class cannot learn from this tome.");
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
 	}
 
 	if(level_to_use > GetLevel()) {
-		Message(13, "You must be at least level %d to learn this discipline.", level_to_use);
+		Message(CC_Red, "You must be at least level %d to learn this discipline.", level_to_use);
 		//summon them the item back...
 		SummonItem(itemid);
 		return(false);
@@ -600,7 +581,7 @@ bool Client::TrainDiscipline(uint32 itemid) {
 	int r;
 	for(r = 0; r < MAX_PP_DISCIPLINES; r++) {
 		if(m_pp.disciplines.values[r] == spell_id) {
-			Message(13, "You already know this discipline.");
+			Message(CC_Red, "You already know this discipline.");
 			//summon them the item back...
 			SummonItem(itemid);
 			return(false);
@@ -612,7 +593,7 @@ bool Client::TrainDiscipline(uint32 itemid) {
 			return(true);
 		}
 	}
-	Message(13, "You have learned too many disciplines and can learn no more.");
+	Message(CC_Red, "You have learned too many disciplines and can learn no more.");
 	return(false);
 }
 
@@ -643,7 +624,7 @@ bool Client::UseDiscipline(uint32 spell_id, uint32 target) {
 
 	//make sure we can use it..
 	if(!IsValidSpell(spell_id)) {
-		Message(13, "This tome contains invalid knowledge.");
+		Message(CC_Red, "This tome contains invalid knowledge.");
 		return(false);
 	}
 
@@ -651,7 +632,7 @@ bool Client::UseDiscipline(uint32 spell_id, uint32 target) {
 	const SPDat_Spell_Struct &spell = spells[spell_id];
 	uint8 level_to_use = spell.classes[GetClass() - 1];
 	if(level_to_use == 255) {
-		Message(13, "Your class cannot learn from this tome.");
+		Message(CC_Red, "Your class cannot learn from this tome.");
 		//should summon them a new one...
 		return(false);
 	}
@@ -724,7 +705,7 @@ void EntityList::AETaunt(Client* taunter, float range)
 			zdiff *= -1;
 		if (zdiff < 10
 				&& taunter->IsAttackAllowed(them)
-				&& taunter->DistNoRootNoZ(*them) <= range) {
+				&& DistanceSquaredNoZ(taunter->GetPosition(), them->GetPosition()) <= range) {
 			if (taunter->CheckLosFN(them)) {
 				taunter->Taunt(them, true);
 			}
@@ -760,7 +741,7 @@ void EntityList::AESpell(Mob *caster, Mob *center, uint16 spell_id, bool affect_
 		if (curmob == caster && !affect_caster)	//watch for caster too
 			continue;
 
-		dist_targ = center->DistNoRoot(*curmob);
+		dist_targ = DistanceSquared(curmob->GetPosition(), center->GetPosition());
 
 		if (dist_targ > dist2)	//make sure they are in range
 			continue;
@@ -783,7 +764,11 @@ void EntityList::AESpell(Mob *caster, Mob *center, uint16 spell_id, bool affect_
 		//finally, make sure they are within range
 		if (bad) {
 			if (!caster->IsAttackAllowed(curmob, true))
+			{
+				Log.Out(Logs::Detail, Logs::Spells, "Attempting to cast a detrimental AE spell/song on a player.");
+				caster->Message_StringID(MT_SpellFailure, SPELL_NO_HOLD);
 				continue;
+			}
 			if (!center->CheckLosFN(curmob))
 				continue;
 		}
@@ -792,7 +777,11 @@ void EntityList::AESpell(Mob *caster, Mob *center, uint16 spell_id, bool affect_
 			// I've tested for spells that I can find without problem, but a faction-based
 			// check may still be needed. Any changes here should also reflect in BardAEPulse() -U
 			if (caster->IsAttackAllowed(curmob, true))
+			{
+				Log.Out(Logs::Detail, Logs::Spells, "Attempting to cast a beneficial AE spell/song on a NPC.");
+				caster->Message_StringID(MT_SpellFailure, SPELL_NO_HOLD);
 				continue;
+			}
 			if (caster->CheckAggro(curmob))
 				continue;
 		}
@@ -829,7 +818,7 @@ void EntityList::MassGroupBuff(Mob *caster, Mob *center, uint16 spell_id, bool a
 			continue;
 		if (curmob == caster && !affect_caster)	//watch for caster too
 			continue;
-		if (center->DistNoRoot(*curmob) > dist2)	//make sure they are in range
+		if (DistanceSquared(center->GetPosition(), curmob->GetPosition()) > dist2)	//make sure they are in range
 			continue;
 
 		//Only npcs mgb should hit are client pets...
@@ -871,7 +860,7 @@ void EntityList::AEBardPulse(Mob *caster, Mob *center, uint16 spell_id, bool aff
 			continue;
 		if (curmob == caster && !affect_caster)	//watch for caster too
 			continue;
-		if (center->DistNoRoot(*curmob) > dist2)	//make sure they are in range
+		if (DistanceSquared(center->GetPosition(), curmob->GetPosition()) > dist2)	//make sure they are in range
 			continue;
 		if (isnpc && curmob->IsNPC()) {	//check npc->npc casting
 			FACTION_VALUE f = curmob->GetReverseFactionCon(caster);
@@ -921,7 +910,7 @@ void EntityList::AEAttack(Mob *attacker, float dist, int Hand, int count, bool I
 				&& curmob != attacker //this is not needed unless NPCs can use this
 				&&(attacker->IsAttackAllowed(curmob))
 				&& curmob->GetRace() != 216 && curmob->GetRace() != 472 /* dont attack horses */
-				&& (curmob->DistNoRoot(*attacker) <= dist2)
+				&& (DistanceSquared(curmob->GetPosition(), attacker->GetPosition()) <= dist2)
 		) {
 			attacker->Attack(curmob, Hand, false, false, IsFromSpell);
 			hit++;

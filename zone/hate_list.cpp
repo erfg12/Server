@@ -16,18 +16,21 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/debug.h"
-#include <assert.h>
-#include <stdlib.h>
-#include <math.h>
-#include <list>
-#include "masterentity.h"
+#include "client.h"
+#include "entity.h"
+#include "groups.h"
+#include "mob.h"
+#include "raids.h"
+
 #include "../common/rulesys.h"
-#include "../common/misc_functions.h"
+
 #include "hate_list.h"
 #include "quest_parser_collection.h"
 #include "zone.h"
 #include "water_map.h"
+
+#include <stdlib.h>
+#include <list>
 
 extern Zone *zone;
 
@@ -149,24 +152,24 @@ Mob* HateList::GetDamageTop(Mob* hater)
 }
 
 Mob* HateList::GetClosest(Mob *hater) {
-	Mob* close = nullptr;
-	float closedist = 99999.9f;
-	float thisdist;
+	Mob* close_entity = nullptr;
+	float close_distance = 99999.9f;
+	float this_distance;
 
 	auto iterator = list.begin();
 	while(iterator != list.end()) {
-		thisdist = (*iterator)->ent->DistNoRootNoZ(*hater);
-		if((*iterator)->ent != nullptr && thisdist <= closedist) {
-			closedist = thisdist;
-			close = (*iterator)->ent;
+		this_distance = DistanceSquaredNoZ((*iterator)->ent->GetPosition(), hater->GetPosition());
+		if((*iterator)->ent != nullptr && this_distance <= close_distance) {
+			close_distance = this_distance;
+			close_entity = (*iterator)->ent;
 		}
 		++iterator;
 	}
 
-	if ((!close && hater->IsNPC()) || (close && close->DivineAura()))
-		close = hater->CastToNPC()->GetHateTop();
+	if ((!close_entity && hater->IsNPC()) || (close_entity && close_entity->DivineAura()))
+		close_entity = hater->CastToNPC()->GetHateTop();
 
-	return close;
+	return close_entity;
 }
 
 
@@ -199,7 +202,7 @@ void HateList::Add(Mob *ent, int32 in_hate, int32 in_dam, bool bFrenzy, bool iAd
 		parse->EventNPC(EVENT_HATE_LIST, owner->CastToNPC(), ent, "1", 0);
 
 		if (ent->IsClient()) {
-			if (owner->CastToNPC()->IsRaidTarget()) 
+			if (owner->CastToNPC()->IsRaidTarget())
 				ent->CastToClient()->SetEngagedRaidTarget(true);
 			ent->CastToClient()->IncrementAggroCount();
 		}
@@ -222,7 +225,7 @@ bool HateList::RemoveEnt(Mob *ent)
 			parse->EventNPC(EVENT_HATE_LIST, owner->CastToNPC(), ent, "0", 0);
 			found = true;
 
-			
+
 			if(ent && ent->IsClient())
 				ent->CastToClient()->DecrementAggroCount();
 
@@ -263,11 +266,11 @@ int HateList::SummonedPetCount(Mob *hater) {
 	auto iterator = list.begin();
 	while(iterator != list.end()) {
 
-		if((*iterator)->ent != nullptr && (*iterator)->ent->IsNPC() && 	((*iterator)->ent->CastToNPC()->IsPet() || ((*iterator)->ent->CastToNPC()->GetSwarmOwner() > 0))) 
+		if((*iterator)->ent != nullptr && (*iterator)->ent->IsNPC() && 	((*iterator)->ent->CastToNPC()->IsPet() || ((*iterator)->ent->CastToNPC()->GetSwarmOwner() > 0)))
 		{
 			++petcount;
 		}
-		
+
 		++iterator;
 	}
 
@@ -303,15 +306,16 @@ Mob *HateList::GetTop(Mob *center)
 				continue;
 			}
 
+            auto hateEntryPosition = glm::vec3(cur->ent->GetX(), cur->ent->GetY(), cur->ent->GetZ());
 			if(center->IsNPC() && center->CastToNPC()->IsUnderwaterOnly() && zone->HasWaterMap()) {
-				if(!zone->watermap->InLiquid(cur->ent->GetX(), cur->ent->GetY(), cur->ent->GetZ())) {
+				if(!zone->watermap->InLiquid(hateEntryPosition)) {
 					skipped_count++;
 					++iterator;
 					continue;
 				}
 			}
 
-			if (cur->ent->Sanctuary()) { 
+			if (cur->ent->Sanctuary()) {
 				if(hate == -1)
 				{
 					top = cur->ent;
@@ -321,7 +325,7 @@ Mob *HateList::GetTop(Mob *center)
 				continue;
 			}
 
-			if(cur->ent->DivineAura() || cur->ent->IsMezzed() || cur->ent->IsFeared()){
+			if(cur->ent->DivineAura() || cur->ent->IsMezzed() || (cur->ent->IsFeared() && !cur->ent->IsFleeing())){
 				if(hate == -1)
 				{
 					top = cur->ent;
@@ -413,8 +417,8 @@ Mob *HateList::GetTop(Mob *center)
 		while(iterator != list.end())
 		{
 			tHateEntry *cur = (*iterator);
-			if(center->IsNPC() && center->CastToNPC()->IsUnderwaterOnly() && zone->HasWaterMap()) {
-				if(!zone->watermap->InLiquid(cur->ent->GetX(), cur->ent->GetY(), cur->ent->GetZ())) {
+ 			if(center->IsNPC() && center->CastToNPC()->IsUnderwaterOnly() && zone->HasWaterMap()) {
+				if(!zone->watermap->InLiquid(glm::vec3(cur->ent->GetPosition()))) {
 					skipped_count++;
 					++iterator;
 					continue;
@@ -470,10 +474,10 @@ Mob *HateList::GetRandom()
 	}
 
 	auto iterator = list.begin();
-	int random = MakeRandomInt(0, count - 1);
+	int random = zone->random.Int(0, count - 1);
 	for (int i = 0; i < random; i++)
 		++iterator;
-	
+
 	return (*iterator)->ent;
 }
 
@@ -516,37 +520,27 @@ int HateList::AreaRampage(Mob *caster, Mob *target, int count, ExtraAttackOption
 	if(!target || !caster)
 		return 0;
 
-	int ret = 0;
-	std::list<uint32> id_list;
+	int targetsHit = 0;
 	auto iterator = list.begin();
-	while (iterator != list.end())
+	tHateEntry* h = nullptr;
+
+	while (iterator != list.end() && targetsHit < count)
 	{
-		tHateEntry *h = (*iterator);
-		++iterator;
-		if(h && h->ent && h->ent != caster)
+		h = (*iterator);
+		if (h && h->ent && h->ent != caster)
 		{
-			if(caster->CombatRange(h->ent))
+			if (caster->CombatRange(h->ent))
 			{
-				id_list.push_back(h->ent->GetID());
-				++ret;
+				caster->DoMainHandRound(h->ent, opts);
+				caster->DoOffHandRound(h->ent, opts);
+
+				++targetsHit;
 			}
 		}
+		++iterator;
 	}
 
-	std::list<uint32>::iterator iter = id_list.begin();
-	while(iter != id_list.end())
-	{
-		Mob *cur = entity_list.GetMobID((*iter));
-		if(cur)
-		{
-			for(int i = 0; i < count; ++i) {
-				caster->Attack(cur, MainPrimary, false, false, false, opts);
-			}
-		}
-		iter++;
-	}
-
-	return ret;
+	return targetsHit;
 }
 
 void HateList::SpellCast(Mob *caster, uint32 spell_id, float range, Mob* ae_center)
@@ -573,8 +567,8 @@ void HateList::SpellCast(Mob *caster, uint32 spell_id, float range, Mob* ae_cent
 		tHateEntry *h = (*iterator);
 		if(range > 0)
 		{
-			dist_targ = center->DistNoRoot(*h->ent);
-			if(dist_targ <= range && dist_targ >= min_range2)
+			dist_targ = DistanceSquared(center->GetPosition(), h->ent->GetPosition());
+			if (dist_targ <= range && dist_targ >= min_range2)
 			{
 				id_list.push_back(h->ent->GetID());
 				h->ent->CalcSpellPowerDistanceMod(spell_id, dist_targ);

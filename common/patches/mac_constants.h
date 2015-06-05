@@ -85,9 +85,6 @@ namespace MAC {
 		static const uint16 MAP_TRADE_SIZE = 8;
 		static const uint16 MAP_WORLD_SIZE = 10;
 		static const uint16 MAP_LIMBO_SIZE = 36;
-		static const uint16 MAP_TRIBUTE_SIZE = 0; //?
-		static const uint16 MAP_TROPHY_TRIBUTE_SIZE = 0;
-		static const uint16 MAP_GUILD_TRIBUTE_SIZE = 0;
 		static const uint16 MAP_MERCHANT_SIZE = 0;
 		static const uint16 MAP_DELETED_SIZE = 0;
 		static const uint16 MAP_CORPSE_SIZE = slots::_MainCount;
@@ -101,8 +98,6 @@ namespace MAC {
 		static const uint16 MAP_ALT_STORAGE_SIZE = 0;
 		static const uint16 MAP_ARCHIVED_SIZE = 0;
 		static const uint16 MAP_MAIL_SIZE = 0;
-		static const uint16 MAP_GUILD_TROPHY_TRIBUTE_SIZE = 0;
-		static const uint16 MAP_KRONO_SIZE = NOT_USED;
 		static const uint16 MAP_OTHER_SIZE = 0;
 
 		static const int16 EQUIPMENT_BEGIN = slots::MainEar1;
@@ -143,18 +138,11 @@ namespace MAC {
 		static const int16 WORLD_BEGIN = 4000;
 		static const int16 WORLD_END = 4009;
 
-		static const int16 TRIBUTE_BEGIN = 400;
-		static const int16 TRIBUTE_END = 404;
-
-		static const int16 CORPSE_BEGIN = slots::MainGeneral1;
-		static const int16 CORPSE_END = slots::MainGeneral1 + slots::MainCursor;
+		static const int16 CORPSE_BEGIN = 0;
+		static const int16 CORPSE_END = 30;
 
 		static const uint16 ITEM_COMMON_SIZE = 5;
 		static const uint16 ITEM_CONTAINER_SIZE = 10;
-
-		static const uint32 BANDOLIERS_COUNT = 4;	// count = number of bandolier instances
-		static const uint32 BANDOLIER_SIZE = 4;		// size = number of equipment slots in bandolier instance
-		static const uint32 POTION_BELT_SIZE = 4;
 	}
 
 	namespace limits {

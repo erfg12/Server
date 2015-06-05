@@ -117,15 +117,7 @@ public:
 	int GetFactionAmt3();
 	int GetFactionAmt4();
 	const char *GetCharmFile();
-	uint32 GetAugType();
-	int GetAugSlotType(int i);
-	int GetAugSlotVisible(int i);
-	int GetAugSlotUnk2(int i);
-	uint32 GetLDoNTheme();
-	uint32 GetLDoNPrice();
-	uint32 GetLDoNSold();
 	uint32 GetBaneDmgRaceAmt();
-	uint32 GetAugRestrict();
 	uint32 GetEndur();
 	uint32 GetDotShielding();
 	uint32 GetAttack();
@@ -136,7 +128,6 @@ public:
 	uint32 GetDamageShield();
 	uint32 GetRecastDelay();
 	uint32 GetRecastType();
-	uint32 GetAugDistiller();
 	bool GetAttuneable();
 	bool GetNoPet();
 	bool GetStackable();
@@ -189,7 +180,6 @@ public:
 	int GetHeroicSVCorrup();
 	int GetHealAmt();
 	int GetSpellDmg();
-	uint32 GetLDoNSellBackRate();
 	uint32 GetScriptFileID();
 	int GetExpendableArrow();
 	uint32 GetClairvoyance();

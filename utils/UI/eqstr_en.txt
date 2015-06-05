@@ -2508,8 +2508,8 @@ EQST0002
 5006 ZONE: %1
 5007 * Steward *
 5008 * Apprentice Guide *
-5009 * Guide *
-5010 * QuestTroupe *
+5009 * Novice Guide *
+5010 * Guide *
 5011 * Senior Guide *
 5012 * GM-Tester *
 5013 * EQ Support *

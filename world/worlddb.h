@@ -39,6 +39,7 @@ public:
 
 	bool LoadCharacterCreateAllocations();
 	bool LoadCharacterCreateCombos();
+	bool LoadSoulMarksForClient(uint32 charid, std::vector<SoulMarkEntry_Struct>& outData);
 protected:
 
 };

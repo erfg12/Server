@@ -27,7 +27,7 @@
 
 #include "../common/features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "embperl.h"
 
 #ifdef seed
@@ -138,7 +138,7 @@ XS(XS_Doors_GetX)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetX();
+		RETVAL = THIS->GetPosition().x;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -164,7 +164,7 @@ XS(XS_Doors_GetY)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetY();
+		RETVAL = THIS->GetPosition().y;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -190,7 +190,7 @@ XS(XS_Doors_GetZ)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetZ();
+		RETVAL = THIS->GetPosition().z;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -216,7 +216,7 @@ XS(XS_Doors_GetHeading)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->GetHeading();
+		RETVAL = THIS->GetPosition().w;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -298,30 +298,6 @@ XS(XS_Doors_GetKeyItem)
 		XSprePUSH; PUSHu((UV)RETVAL);
 	}
 	XSRETURN(1);
-}
-
-XS(XS_Doors_GetNoKeyring); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Doors_GetNoKeyring)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Doors::GetNoKeyring(THIS, type)");
-	{
-		Doors *		THIS;
-		uint8		type = (uint8)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Doors")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Doors *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Doors");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		THIS->GetNoKeyring();
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_Doors_GetIncline); /* prototype to pass -Wmissing-prototypes */
@@ -450,30 +426,6 @@ XS(XS_Doors_SetKeyItem)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Doors_SetNoKeyring); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Doors_SetNoKeyring)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Doors::SetNoKeyring(THIS, type)");
-	{
-		Doors *		THIS;
-		uint8		type = (uint8)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Doors")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Doors *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Doors");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		THIS->SetNoKeyring(type);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Doors_SetIncline); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Doors_SetIncline)
 {
@@ -556,7 +508,7 @@ XS(XS_Doors_SetX)
 		Perl_croak(aTHX_ "Usage: Doors::SetX(THIS, XPos)");
 	{
 		Doors *		THIS;
-		float		pos = (float)SvNV(ST(1));
+		float		x = (float)SvNV(ST(1));
 
 		if (sv_derived_from(ST(0), "Doors")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -566,8 +518,9 @@ XS(XS_Doors_SetX)
 			Perl_croak(aTHX_ "THIS is not of type Doors");
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		THIS->SetX(pos);
+        auto position = THIS->GetPosition();
+        position.x = x;
+		THIS->SetPosition(position);
 	}
 	XSRETURN_EMPTY;
 }
@@ -580,7 +533,7 @@ XS(XS_Doors_SetY)
 		Perl_croak(aTHX_ "Usage: Doors::SetY(THIS, YPos)");
 	{
 		Doors *		THIS;
-		float		pos = (float)SvNV(ST(1));
+		float		y = (float)SvNV(ST(1));
 
 		if (sv_derived_from(ST(0), "Doors")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -591,7 +544,9 @@ XS(XS_Doors_SetY)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->SetY(pos);
+        auto position = THIS->GetPosition();
+        position.y = y;
+		THIS->SetPosition(position);
 	}
 	XSRETURN_EMPTY;
 }
@@ -604,7 +559,7 @@ XS(XS_Doors_SetZ)
 		Perl_croak(aTHX_ "Usage: Doors::SetZ(THIS, ZPos)");
 	{
 		Doors *		THIS;
-		float		pos = (float)SvNV(ST(1));
+		float		z = (float)SvNV(ST(1));
 
 		if (sv_derived_from(ST(0), "Doors")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -615,7 +570,9 @@ XS(XS_Doors_SetZ)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->SetZ(pos);
+		auto position = THIS->GetPosition();
+        position.z = z;
+		THIS->SetPosition(position);
 	}
 	XSRETURN_EMPTY;
 }
@@ -639,7 +596,9 @@ XS(XS_Doors_SetHeading)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->SetHeading(heading);
+		auto position = THIS->GetPosition();
+        position.w = heading;
+		THIS->SetPosition(position);
 	}
 	XSRETURN_EMPTY;
 }
@@ -762,8 +721,6 @@ XS(boot_Doors)
 		newXSproto(strcpy(buf, "GetLockPick"),XS_Doors_GetLockpick, file, "$");
 		newXSproto(strcpy(buf, "SetKeyItem"),XS_Doors_SetKeyItem, file, "$$");
 		newXSproto(strcpy(buf, "GetKeyItem"),XS_Doors_GetKeyItem, file, "$");
-		newXSproto(strcpy(buf, "SetNoKeyring"),XS_Doors_SetNoKeyring, file, "$$");
-		newXSproto(strcpy(buf, "GetNoKeyring"),XS_Doors_GetNoKeyring, file, "$");
 		newXSproto(strcpy(buf, "CreateDatabaseEntry"),XS_Doors_CreateDatabaseEntry, file, "$");
 	XSRETURN_YES;
 }

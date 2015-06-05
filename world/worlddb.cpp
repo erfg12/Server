@@ -43,8 +43,6 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 		strcpy(cs->name[i], "<none>");
 		cs->zone[i] = 0;
 		cs->level[i] = 0;
-		cs->tutorial[i] = 0;
-		cs->gohome[i] = 0;
 	}
 
 	/* Get Character Info */
@@ -66,10 +64,7 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 		"hair_style,                "  // 13
 		"beard,                     "  // 14
 		"face,                      "  // 15
-		"drakkin_heritage,          "  // 16
-		"drakkin_tattoo,            "  // 17
-		"drakkin_details,           "  // 18
-		"zone_id		            "  // 19
+		"zone_id		            "  // 16
 		"FROM                       "
 		"character_data             "
 		"WHERE `account_id` = %i ORDER BY `name` LIMIT 10   ", account_id);
@@ -86,7 +81,7 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 		cs->race[char_num] = atoi(row[3]);
 		cs->gender[char_num] = atoi(row[2]);
 		cs->deity[char_num] = atoi(row[6]);
-		cs->zone[char_num] = atoi(row[19]);
+		cs->zone[char_num] = atoi(row[16]);
 		cs->face[char_num] = atoi(row[15]);
 		cs->haircolor[char_num] = atoi(row[9]);
 		cs->beardcolor[char_num] = atoi(row[10]);
@@ -94,9 +89,6 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 		cs->eyecolor1[char_num] = atoi(row[11]);
 		cs->hairstyle[char_num] = atoi(row[13]);
 		cs->beard[char_num] = atoi(row[14]);
-		cs->drakkin_heritage[char_num] = atoi(row[16]);
-		cs->drakkin_tattoo[char_num] = atoi(row[17]);
-		cs->drakkin_details[char_num] = atoi(row[18]);
 		strcpy(cs->zonename[char_num], GetZoneName(cs->zone[char_num]));
 
 
@@ -255,11 +247,10 @@ bool WorldDatabase::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct*
                                     in_cc->start_zone, in_cc->class_, in_cc->deity, in_cc->race);
     auto results = QueryDatabase(query);
 	if(!results.Success()) {
-		LogFile->write(EQEMuLog::Status, "Start zone query failed: %s : %s\n", query.c_str(), results.ErrorMessage().c_str());
 		return false;
 	}
 
-	LogFile->write(EQEMuLog::Status, "Start zone query: %s\n", query.c_str());
+	Log.Out(Logs::General, Logs::Status, "Start zone query: %s\n", query.c_str());
 
     if (results.RowCount() == 0) {
         printf("No start_zones entry in database, using defaults\n");
@@ -267,11 +258,11 @@ bool WorldDatabase::GetStartZone(PlayerProfile_Struct* in_pp, CharCreate_Struct*
 		in_pp->x = in_pp->binds[0].x = -51;
 		in_pp->y = in_pp->binds[0].y = -20;
 		in_pp->z = in_pp->binds[0].z = 0.79;
-		in_pp->zone_id = in_pp->binds[0].zoneId = 77; // Arena
+		in_pp->zone_id = in_pp->binds[0].zoneId = arena;
     }
     else
 	{
-		LogFile->write(EQEMuLog::Status, "Found starting location in start_zones");
+		Log.Out(Logs::General, Logs::Status, "Found starting location in start_zones");
 		auto row = results.begin();
 		in_pp->x = atof(row[0]);
 		in_pp->y = atof(row[1]);
@@ -299,7 +290,7 @@ void WorldDatabase::GetLauncherList(std::vector<std::string> &rl) {
     const std::string query = "SELECT name FROM launcher";
     auto results = QueryDatabase(query);
     if (!results.Success()) {
-        LogFile->write(EQEMuLog::Error, "WorldDatabase::GetLauncherList: %s", results.ErrorMessage().c_str());
+        Log.Out(Logs::General, Logs::Error, "WorldDatabase::GetLauncherList: %s", results.ErrorMessage().c_str());
         return;
     }
 
@@ -321,7 +312,7 @@ void WorldDatabase::SetMailKey(int CharID, int IPAddress, int MailKey) {
                                     MailKeyString, CharID);
     auto results = QueryDatabase(query);
 	if (!results.Success())
-		LogFile->write(EQEMuLog::Error, "WorldDatabase::SetMailKey(%i, %s) : %s", CharID, MailKeyString, results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "WorldDatabase::SetMailKey(%i, %s) : %s", CharID, MailKeyString, results.ErrorMessage().c_str());
 
 }
 
@@ -330,7 +321,7 @@ bool WorldDatabase::GetCharacterLevel(const char *name, int &level)
 	std::string query = StringFormat("SELECT level FROM character_data WHERE name = '%s'", name);
 	auto results = QueryDatabase(query);
 	if (!results.Success()) {
-        LogFile->write(EQEMuLog::Error, "WorldDatabase::GetCharacterLevel: %s", results.ErrorMessage().c_str());
+        Log.Out(Logs::General, Logs::Error, "WorldDatabase::GetCharacterLevel: %s", results.ErrorMessage().c_str());
         return false;
 	}
 
@@ -393,6 +384,28 @@ bool WorldDatabase::LoadCharacterCreateCombos() {
 		combo.ExpansionRequired = atoi(row[5]);
 
 		character_create_race_class_combos.push_back(combo);
+	}
+
+	return true;
+}
+
+bool WorldDatabase::LoadSoulMarksForClient(uint32 charid, std::vector<SoulMarkEntry_Struct>& outData) {
+
+	std::string query = StringFormat("SELECT charname, acctname, gmname, gmacctname, utime, type, `desc` FROM character_soulmarks where charid=%i", charid);
+	auto results = QueryDatabase(query);
+	if (!results.Success())
+        return false;
+
+	for (auto row = results.begin(); row != results.end(); ++row) {
+		SoulMarkEntry_Struct entry;
+		strncpy(entry.name, row[0], 64);
+		strncpy(entry.accountname, row[1], 32);
+		strncpy(entry.gmname, row[2], 64);
+		strncpy(entry.gmaccountname, row[3], 32);
+		entry.unix_timestamp = atoi(row[4]);
+		entry.type = atoi(row[5]);
+		strncpy(entry.description, row[6], 256);
+		outData.push_back(entry);
 	}
 
 	return true;

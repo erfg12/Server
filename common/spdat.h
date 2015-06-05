@@ -31,6 +31,7 @@
 #define SPELL_HARM_TOUCH2 2821
 #define SPELL_IMP_HARM_TOUCH 2774
 #define SPELL_NPC_HARM_TOUCH 929
+#define SPELL_CAZIC_TOUCH 982
 
 
 #define EFFECT_COUNT 12
@@ -42,7 +43,7 @@
 
 const int Z_AGGRO=10;
 
-const int MobAISpellRange=100; // max range of buffs
+const int MobAISpellRange=80; // max range of buffs
 const int SpellType_Nuke=1;
 const int SpellType_Heal=2;
 const int SpellType_Root=4;
@@ -316,9 +317,6 @@ typedef enum {
 #define SE_MitigateSpellDamage			161	// implemented - rune with max value
 #define SE_MitigateMeleeDamage			162	// implemented - rune with max value
 #define SE_NegateAttacks				163	// implemented
-#define SE_AppraiseLDonChest			164	// implemented
-#define SE_DisarmLDoNTrap				165	// implemented
-#define SE_UnlockLDoNChest				166	// implemented
 #define SE_PetPowerIncrease				167 // implemented
 #define SE_MeleeMitigation				168	// implemented
 #define SE_CriticalHitChance			169	// implemented
@@ -700,7 +698,7 @@ struct SPDat_Spell_Struct
 /* 162 */	int bonushate;
 /* 163 */
 /* 164 */	// for most spells this appears to mimic ResistDiff
-/* 165 */	bool ldon_trap; //Flag found on all LDON trap / chest related spells.
+/* 165 */	//Flag found on all LDON trap / chest related spells.
 /* 166 */	int EndurCost;
 /* 167 */	int8 EndurTimerIndex;
 /* 168 */	bool IsDisciplineBuff; //Will goto the combat window when cast
@@ -772,6 +770,7 @@ bool IsStunSpell(uint16 spell_id);
 bool IsSlowSpell(uint16 spell_id);
 bool IsHasteSpell(uint16 spell_id);
 bool IsHarmonySpell(uint16 spell_id);
+bool IsPacifySpell(uint16 spell_id);
 bool IsPercentalHealSpell(uint16 spell_id);
 bool IsGroupOnlySpell(uint16 spell_id);
 bool IsBeneficialSpell(uint16 spell_id);
@@ -799,6 +798,7 @@ bool IsPureNukeSpell(uint16 spell_id);
 bool IsAENukeSpell(uint16 spell_id);
 bool IsPBAENukeSpell(uint16 spell_id);
 bool IsAERainNukeSpell(uint16 spell_id);
+bool IsPureDispelSpell(uint16 spell_id);
 bool IsPartialCapableSpell(uint16 spell_id);
 bool IsResistableSpell(uint16 spell_id);
 bool IsGroupSpell(uint16 spell_id);
@@ -806,12 +806,15 @@ bool IsTGBCompatibleSpell(uint16 spell_id);
 bool IsBardSong(uint16 spell_id);
 bool IsEffectInSpell(uint16 spellid, int effect);
 bool IsBlankSpellEffect(uint16 spellid, int effect_index);
-bool IsValidSpell(uint32 spellid);
+bool IsValidSpell(uint16 spellid);
 bool IsSummonSpell(uint16 spellid);
 bool IsEvacSpell(uint16 spellid);
 bool IsDamageSpell(uint16 spellid);
 bool IsFearSpell(uint16 spellid);
 bool IsCureSpell(uint16 spellid);
+bool IsRegeantFocus(uint16 spellid);
+bool IsBoltSpell(uint16 spellid);
+bool RequiresComponents(uint16 spellid);
 bool BeneficialSpell(uint16 spell_id);
 bool GroupOnlySpell(uint16 spell_id);
 int GetSpellEffectIndex(uint16 spell_id, int effect);
@@ -840,7 +843,6 @@ bool IsSuccorSpell(uint16 spell_id);
 bool IsTeleportSpell(uint16 spell_id);
 bool IsGateSpell(uint16 spell_id);
 bool IsPlayerIllusionSpell(uint16 spell_id); // seveian 2008-09-23
-bool IsLDoNObjectSpell(uint16 spell_id);
 int32 GetSpellResistType(uint16 spell_id);
 int32 GetSpellTargetType(uint16 spell_id);
 bool IsHealOverTimeSpell(uint16 spell_id);
@@ -864,6 +866,9 @@ uint32 GetPartialMeleeRuneReduction(uint32 spell_id);
 uint32 GetPartialMagicRuneReduction(uint32 spell_id);
 uint32 GetPartialMeleeRuneAmount(uint32 spell_id);
 uint32 GetPartialMagicRuneAmount(uint32 spell_id);
+bool IsRacialIllusion(uint16 spell_id);
+bool IsCorpseSummon(uint16 spell_id);
+bool IsSpeedBuff(uint16 spell_id);
 
 int CalcPetHp(int levelb, int classb, int STA = 75);
 const char *GetRandPetName();

@@ -71,12 +71,12 @@ public:
 	ItemInst* CreateItem(const Item_Struct* item, int16 charges=0);
 	ItemInst* CreateBaseItem(const Item_Struct* item, int16 charges=0);
 
-	// Web Token Verification
-	bool VerifyToken(std::string token, int& status);
-	
-	/*
-	* Shared Memory crap
-	*/
+		// Web Token Verification
+		bool VerifyToken(std::string token, int& status);
+
+		/*
+		    Shared Memory crap
+		*/
 
 	//items
 	void GetItemsCount(int32 &item_count, uint32 &max_id);

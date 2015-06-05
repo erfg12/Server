@@ -1,0 +1,95 @@
+#!/bin/sh
+
+#### Username check commented out, use if you must. Also set the cores at the bottom. Default is 1 core (READ: SLOW!!)
+#### This script assumes alot about usernames. Doubt check as needed.
+#### All places that would need editing if you wish have 4#'s encasing the descriptions.
+
+serverdir=eqemu
+user=tak
+#############################NOTHING BELOW THIS NEEDS TO BE EDITED!#############################
+path=/home/$user/$serverdir
+
+#if [ $user = "root" ];
+#	then echo Not good to run this as ROOT!
+#	exit 1
+#else
+	cd $path/cron_scripts
+	./server_reboot_10min.sh
+	cd $path
+	./EQServer.sh stop
+	rm *.pid
+	
+	#### Lets make sure all launchers are dead!
+	
+	killall world
+	killall queryserv
+	killall ucs
+	killall eqlauncha
+	killall eqlaunchb
+	killall eqlaunchc
+	killall eqlaunchd
+	killall eqlaunche
+	killall eqlaunchf
+	killall eqlaunch
+	killall zone
+	killall loginserver
+	
+	#### For clean debugging we delete logs for each run.
+	
+	cd $path/logs
+	rm *.log
+	
+	#Database
+	
+	#### If you want to add the database auto sourcing, 
+	#### you must first download the file from the project page and extract it here, 
+	#### set the file names, tailor to your needs and then it will work.
+	
+	#cd $path/db/
+	
+	#mysql -u eqemu --password= -h localhost -D peq_ak < drop_system.sql
+	#mysql -u eqemu --password= -h localhost -D peq_ak < alkabor_XXX.sql
+	
+	#Everything past this point doesn't have to be timestamped since it's handled by version control.
+	
+	#Quests
+	echo Quests..
+	cd $path/quests/
+	svn update
+	
+	#Maps
+	echo Maps..
+	cd $path/Maps/
+	svn update
+	
+	#Source
+	echo Source..
+	cd $path/
+	
+	# For a clean build and if there are cmake changes.	
+	rm -r -f $path/source/	
+	mkdir $path/source	
+	git clone https://github.com/cavedude00/Server.git $path/source/
+	
+	#### Comment the previous 3 lines if you wish to use this after a clone. ####
+	##git pull https://github.com/cavedude00/Server.git
+	
+	# Start building
+	mkdir $path/source/build	
+	
+	#Tak_Build
+	cd $path/source/build/
+	
+	#### Comment if you comment out the above lines and only do a pull. ####
+	cmake -G "Unix Makefiles" .. #-i #### Uncomment if you want interactive mode.
+	
+	#### Uncomment this line if only pulling and not clone.
+	#make clean
+	
+	#### Set this to how many processors you want ####
+	make -j1
+	
+	cd $path
+	./EQServer.sh start
+	./EQServer.sh status
+#fi

@@ -187,7 +187,7 @@ void Lua_Client::SetDeity(int v) {
 
 void Lua_Client::AddEXP(uint32 add_exp) {
 	Lua_Safe_Call_Void();
-	self->AddEXP(add_exp);
+	self->AddQuestEXP(add_exp);
 }
 
 void Lua_Client::AddEXP(uint32 add_exp, int conlevel) {
@@ -210,6 +210,11 @@ void Lua_Client::SetEXP(uint32 set_exp, uint32 set_aaxp, bool resexp) {
 	self->SetEXP(set_exp, set_aaxp, resexp);
 }
 
+void Lua_Client::AddEXPPercent(uint8 percent, uint8 level) {
+	Lua_Safe_Call_Void();
+	self->AddEXPPercent(percent, level);
+}
+
 void Lua_Client::SetBindPoint() {
 	Lua_Safe_Call_Void();
 	self->SetBindPoint();
@@ -227,17 +232,17 @@ void Lua_Client::SetBindPoint(int to_zone, int to_instance) {
 
 void Lua_Client::SetBindPoint(int to_zone, int to_instance, float new_x) {
 	Lua_Safe_Call_Void();
-	self->SetBindPoint(to_zone, to_instance, new_x);
+	self->SetBindPoint(to_zone, to_instance, glm::vec3(new_x,0.0f,0.0f));
 }
 
 void Lua_Client::SetBindPoint(int to_zone, int to_instance, float new_x, float new_y) {
 	Lua_Safe_Call_Void();
-	self->SetBindPoint(to_zone, to_instance, new_x, new_y);
+	self->SetBindPoint(to_zone, to_instance, glm::vec3(new_x, new_y, 0.0f));
 }
 
 void Lua_Client::SetBindPoint(int to_zone, int to_instance, float new_x, float new_y, float new_z) {
 	Lua_Safe_Call_Void();
-	self->SetBindPoint(to_zone, to_instance, new_x, new_y, new_z);
+	self->SetBindPoint(to_zone, to_instance, glm::vec3(new_x, new_y, new_z));
 }
 
 float Lua_Client::GetBindX() {
@@ -647,49 +652,22 @@ void Lua_Client::DeleteItemInInventory(int slot_id, int quantity, bool update_cl
 
 void Lua_Client::SummonItem(uint32 item_id) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, -1, 0, 0, 0, 0, 0, false, MainQuest);
+	self->SummonItem(item_id, 0, false, MainQuest);
 }
 
 void Lua_Client::SummonItem(uint32 item_id, int charges) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, 0, 0, 0, 0, 0, false, MainQuest);
+	self->SummonItem(item_id, charges, false, MainQuest);
 }
 
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1) {
+void Lua_Client::SummonItem(uint32 item_id, int charges, bool attuned) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, 0, 0, 0, 0, false, MainQuest);
+	self->SummonItem(item_id, charges, attuned, MainQuest);
 }
 
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2) {
+void Lua_Client::SummonItem(uint32 item_id, int charges, bool attuned, int to_slot) {
 	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, 0, 0, 0, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, 0, 0, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, 0, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, false, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, 
-							bool attuned) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, attuned, MainQuest);
-}
-
-void Lua_Client::SummonItem(uint32 item_id, int charges, uint32 aug1, uint32 aug2, uint32 aug3, uint32 aug4, uint32 aug5, 
-							bool attuned, int to_slot) {
-	Lua_Safe_Call_Void();
-	self->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, attuned, to_slot);
+	self->SummonItem(item_id, charges, attuned, to_slot);
 }
 
 void Lua_Client::DropItem(int slot_id) {
@@ -852,29 +830,9 @@ int Lua_Client::GetStartZone() {
 	return self->GetStartZone();
 }
 
-void Lua_Client::KeyRingAdd(uint32 item) {
-	Lua_Safe_Call_Void();
-	self->KeyRingAdd(item);
-}
-
-bool Lua_Client::KeyRingCheck(uint32 item) {
-	Lua_Safe_Call_Bool();
-	return self->KeyRingCheck(item);
-}
-
 void Lua_Client::QuestReadBook(const char *text, int type) {
 	Lua_Safe_Call_Void();
 	self->QuestReadBook(text, type);
-}
-
-uint32 Lua_Client::GetGroupPoints() {
-	Lua_Safe_Call_Int();
-	return self->GetGroupPoints();
-}
-
-uint32 Lua_Client::GetRaidPoints() {
-	Lua_Safe_Call_Int();
-	return self->GetRaidPoints();
 }
 
 void Lua_Client::LearnRecipe(uint32 recipe) {
@@ -1084,11 +1042,6 @@ void Lua_Client::SetConsumption(int in_hunger, int in_thirst) {
 	self->SetConsumption(in_hunger, in_thirst);
 }
 
-void Lua_Client::SendMarqueeMessage(uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, std::string msg) {
-	Lua_Safe_Call_Void();
-	self->SendMarqueeMessage(type, priority, fade_in, fade_out, duration, msg);
-}
-
 int Lua_Client::GetBoatID() 
 {
 	Lua_Safe_Call_Int();
@@ -1195,6 +1148,7 @@ luabind::scope lua_register_client() {
 		.def("AddEXP", (void(Lua_Client::*)(uint32,int,bool))&Lua_Client::AddEXP)
 		.def("SetEXP", (void(Lua_Client::*)(uint32,uint32))&Lua_Client::SetEXP)
 		.def("SetEXP", (void(Lua_Client::*)(uint32,uint32,bool))&Lua_Client::SetEXP)
+		.def("AddEXPPercent", (void(Lua_Client::*)(uint8,uint8))&Lua_Client::AddEXPPercent)
 		.def("SetBindPoint", (void(Lua_Client::*)(void))&Lua_Client::SetBindPoint)
 		.def("SetBindPoint", (void(Lua_Client::*)(int))&Lua_Client::SetBindPoint)
 		.def("SetBindPoint", (void(Lua_Client::*)(int,int))&Lua_Client::SetBindPoint)
@@ -1284,13 +1238,8 @@ luabind::scope lua_register_client() {
 		.def("DeleteItemInInventory", (void(Lua_Client::*)(int,int,bool))&Lua_Client::DeleteItemInInventory)
 		.def("SummonItem", (void(Lua_Client::*)(uint32))&Lua_Client::SummonItem)
 		.def("SummonItem", (void(Lua_Client::*)(uint32,int))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32,uint32))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32,uint32,bool))&Lua_Client::SummonItem)
-		.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32,uint32,uint32,uint32,uint32,bool,int))&Lua_Client::SummonItem) 
+		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool))&Lua_Client::SummonItem)
+		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool,int))&Lua_Client::SummonItem)
 		.def("DropItem", (void(Lua_Client::*)(int))&Lua_Client::DropItem)
 		.def("BreakInvis", (void(Lua_Client::*)(void))&Lua_Client::BreakInvis)
 		.def("LeaveGroup", (void(Lua_Client::*)(void))&Lua_Client::LeaveGroup)
@@ -1323,11 +1272,7 @@ luabind::scope lua_register_client() {
 		.def("RefundAA", (void(Lua_Client::*)(void))&Lua_Client::RefundAA)
 		.def("GetModCharacterFactionLevel", (int(Lua_Client::*)(int))&Lua_Client::GetModCharacterFactionLevel)
 		.def("GetStartZone", (int(Lua_Client::*)(void))&Lua_Client::GetStartZone)
-		.def("KeyRingAdd", (void(Lua_Client::*)(uint32))&Lua_Client::KeyRingAdd)
-		.def("KeyRingCheck", (bool(Lua_Client::*)(uint32))&Lua_Client::KeyRingCheck)
 		.def("QuestReadBook", (void(Lua_Client::*)(const char *,int))&Lua_Client::QuestReadBook)
-		.def("GetGroupPoints", (uint32(Lua_Client::*)(void))&Lua_Client::GetGroupPoints)
-		.def("GetRaidPoints", (uint32(Lua_Client::*)(void))&Lua_Client::GetRaidPoints)
 		.def("LearnRecipe", (void(Lua_Client::*)(uint32))&Lua_Client::LearnRecipe)
 		.def("GetEndurance", (int(Lua_Client::*)(void))&Lua_Client::GetEndurance)
 		.def("GetMaxEndurance", (int(Lua_Client::*)(void))&Lua_Client::GetMaxEndurance)
@@ -1369,7 +1314,6 @@ luabind::scope lua_register_client() {
 		.def("SetHunger", (void(Lua_Client::*)(int))&Lua_Client::SetHunger)
 		.def("SetThirst", (void(Lua_Client::*)(int))&Lua_Client::SetThirst)
 		.def("SetConsumption", (void(Lua_Client::*)(int, int))&Lua_Client::SetConsumption)
-		.def("SendMarqueeMessage", (void(Lua_Client::*)(uint32, uint32, uint32, uint32, uint32, std::string))&Lua_Client::SendMarqueeMessage)
 		.def("GetBoatID", (int(Lua_Client::*)(void))&Lua_Client::GetBoatID)
 		.def("SetBoatID", (void(Lua_Client::*)(uint32))&Lua_Client::SetBoatID)
 		.def("GetBoatName", (char *(Lua_Client::*)(void))&Lua_Client::GetBoatName)

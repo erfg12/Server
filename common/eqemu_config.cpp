@@ -15,9 +15,11 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
+
+#include "../common/global_define.h"
 #include "eqemu_config.h"
 #include "misc_functions.h"
+
 #include <iostream>
 #include <sstream>
 
@@ -246,7 +248,8 @@ void EQEmuConfig::do_web_interface(TiXmlElement *ele) {
 	}
 }
 
-void EQEmuConfig::do_zones(TiXmlElement *ele) {
+void EQEmuConfig::do_zones(TiXmlElement *ele)
+{
 	const char *text;
 	TiXmlElement *sub_ele;
 //	TiXmlNode *node,*sub_node;
@@ -261,7 +264,7 @@ void EQEmuConfig::do_zones(TiXmlElement *ele) {
 
 		text = sub_ele->Attribute("low");
 		if (text)
-			ZonePortLow=atoi(text);;
+			ZonePortLow=atoi(text);
 
 		text = sub_ele->Attribute("high");
 		if (text)
@@ -280,9 +283,6 @@ void EQEmuConfig::do_files(TiXmlElement *ele) {
 	if (text)
 		OpCodesFile=text;
 
-	text=ParseTextBlock(ele,"logsettings",true);
-	if (text)
-		LogSettingsFile=text;
 }
 
 void EQEmuConfig::do_directories(TiXmlElement *ele) {
@@ -411,8 +411,6 @@ std::string EQEmuConfig::GetByName(const std::string &var_name) const {
 		return(SpellsFile);
 	if(var_name == "OpCodesFile")
 		return(OpCodesFile);
-	if(var_name == "LogSettingsFile")
-		return(LogSettingsFile);
 	if(var_name == "MapDir")
 		return(MapDir);
 	if(var_name == "QuestDir")
@@ -435,6 +433,8 @@ std::string EQEmuConfig::GetByName(const std::string &var_name) const {
 //		return(itoa(DynamicCount));
 	return("");
 }
+
+
 
 void EQEmuConfig::Dump() const
 {
@@ -473,7 +473,6 @@ void EQEmuConfig::Dump() const
 	std::cout << "WebInterfacePrivKey = " << WebInterfacePrivKey << std::endl;
 	std::cout << "SpellsFile = " << SpellsFile << std::endl;
 	std::cout << "OpCodesFile = " << OpCodesFile << std::endl;
-	std::cout << "LogSettingsFile = " << LogSettingsFile << std::endl;
 	std::cout << "MapDir = " << MapDir << std::endl;
 	std::cout << "QuestDir = " << QuestDir << std::endl;
 	std::cout << "PluginDir = " << PluginDir << std::endl;

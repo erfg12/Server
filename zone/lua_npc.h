@@ -110,7 +110,6 @@ public:
 	int GetSpellFocusDMG();
 	int GetSpellFocusHeal();
 	float GetSlowMitigation();
-	float GetAttackSpeed();
 	int GetAccuracyRating();
 	int GetSpawnKillCount();
 	int GetScore();

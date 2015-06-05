@@ -18,7 +18,7 @@
 #ifndef WI_WEB_INTERFACE_H
 #define WI_WEB_INTERFACE_H
 
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "../common/opcodemgr.h"
 #include "../common/eq_stream_factory.h"
 #include "../common/rulesys.h"
@@ -31,15 +31,13 @@
 #include "../common/uuid.h"
 #include "../common/shareddb.h"
 #include "worldserver.h"
-#include "lib/libwebsockets.h"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
+#include "../dependencies/libwebsockets/lib/libwebsockets.h"
+#include "../common/rapidjson/document.h"
+#include "../common/rapidjson/writer.h"
+#include "../common/rapidjson/stringbuffer.h"
 #include <signal.h>
 #include <list>
 #include <map>
-
-#define MAX_MESSAGE_LENGTH 2048
 
 struct per_session_data_eqemu {
 	std::string auth;

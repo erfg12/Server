@@ -15,15 +15,35 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include <iostream>
-#include <string>
-#include <cctype>
-#include <math.h>
-#include "../common/moremath.h"
-#include <stdio.h>
-#include "../common/packet_dump_file.h"
+
+#include "../common/bodytypes.h"
+#include "../common/classes.h"
+#include "../common/global_define.h"
+#include "../common/misc_functions.h"
+#include "../common/rulesys.h"
+#include "../common/seperator.h"
+#include "../common/spdat.h"
+#include "../common/string_util.h"
+#include "../common/clientversions.h"
+#include "../common/features.h"    
+#include "../common/item.h"        
+#include "../common/item_struct.h" 
+#include "../common/linked_list.h" 
+#include "../common/servertalk.h"
+
+#include "aa.h"
+#include "client.h"
+#include "entity.h"
+#include "npc.h"
+#include "string_ids.h"
+#include "spawn2.h"
 #include "zone.h"
+#include "water_map.h"
+
+#include <cctype>
+#include <stdio.h>
+#include <string>
+
 #ifdef _WINDOWS
 #define snprintf	_snprintf
 #define strncasecmp	_strnicmp
@@ -33,28 +53,11 @@
 #include <pthread.h>
 #endif
 
-#include "npc.h"
-#include "map.h"
-#include "entity.h"
-#include "masterentity.h"
-#include "../common/spdat.h"
-#include "../common/bodytypes.h"
-#include "spawngroup.h"
-#include "../common/misc_functions.h"
-#include "../common/string_util.h"
-#include "../common/rulesys.h"
-#include "string_ids.h"
-
-//#define SPELLQUEUE //Use only if you want to be spammed by spell testing
-
-
 extern Zone* zone;
 extern volatile bool ZoneLoaded;
 extern EntityList entity_list;
 
-#include "quest_parser_collection.h"
-
-NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float heading, int iflymode, bool IsCorpse)
+NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int iflymode, bool IsCorpse)
 : Mob(d->name,
 		d->lastname,
 		d->max_hp,
@@ -68,11 +71,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 		d->npc_id,
 		d->size,
 		d->runspeed,
-		heading,
-		x,
-		y,
-		z,
-		d->light,
+		position,
+		d->light, // innate_light
 		d->texture,
 		d->helmtexture,
 		d->AC,
@@ -91,9 +91,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 		d->hairstyle,
 		d->luclinface,
 		d->beard,
-		d->drakkin_heritage,
-		d->drakkin_tattoo,
-		d->drakkin_details,
 		(uint32*)d->armor_tint,
 		0,
 		d->see_invis,			// pass see_invis/see_ivu flags to mob constructor
@@ -113,7 +110,10 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	qglobal_purge_timer(30000),
 	sendhpupdate_timer(1000),
 	enraged_timer(1000),
-	taunt_timer(TauntReuseTime * 1000)
+	taunt_timer(TauntReuseTime * 1000),
+	m_SpawnPoint(position),
+	m_GuardPoint(-1,-1,-1,0),
+	m_GuardPointSaved(0,0,0,0)
 {
 	//What is the point of this, since the names get mangled..
 	Mob* mob = entity_list.GetMob(name);
@@ -202,14 +202,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 
 	MerchantType = d->merchanttype;
 	merchant_open = GetClass() == MERCHANT;
-	org_x = x;
-	org_y = y;
-	org_z = z;
 	flymode = iflymode;
-	guard_x = -1;	//just some value we might be able to recongize as "unset"
-	guard_y = -1;
-	guard_z = -1;
-	guard_heading = 0;
 	guard_anim = eaStanding;
 	roambox_distance = 0;
 	roambox_max_x = -2;
@@ -220,7 +213,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	roambox_movingto_y = -2;
 	roambox_min_delay = 1000;
 	roambox_delay = 1000;
-	org_heading = heading;
 	p_depop = false;
 	loottable_id = d->loottable_id;
 
@@ -228,10 +220,12 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 
 	primary_faction = 0;
 	SetNPCFactionID(d->npc_faction_id);
+	SetPreCharmNPCFactionID(d->npc_faction_id);
 
 	npc_spells_id = 0;
 	HasAISpell = false;
 	HasAISpellEffects = false;
+	innateProcSpellId = 0;
 
 	SpellFocusDMG = 0;
 	SpellFocusHeal = 0;
@@ -240,7 +234,6 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 
 	delaytimer = false;
 	combat_event = false;
-	attack_speed = d->attack_speed;
 	attack_delay = d->attack_delay;
 	slow_mitigation = d->slow_mitigation;
 
@@ -251,8 +244,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 
 	AI_Start();
 
-	d_meele_texture1 = d->d_meele_texture1;
-	d_meele_texture2 = d->d_meele_texture2;
+	d_melee_texture1 = d->d_melee_texture1;
+	d_melee_texture2 = d->d_melee_texture2;
 	ammo_idfile = d->ammo_idfile;
 	memset(equipment, 0, sizeof(equipment));
 	prim_melee_type = d->prim_melee_type;
@@ -260,9 +253,9 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	ranged_type = d->ranged_type;
 
 	// If Melee Textures are not set, set attack type to Hand to Hand as default
-	if(!d_meele_texture1)
+	if(!d_melee_texture1)
 		prim_melee_type = 28;
-	if(!d_meele_texture2)
+	if(!d_melee_texture2)
 		sec_melee_type = 28;
 
 	//give NPCs skill values...
@@ -274,12 +267,17 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, float x, float y, float z, float 
 	reface_timer = new Timer(15000);
 	reface_timer->Disable();
 	qGlobals = nullptr;
-	guard_x_saved = 0;
-	guard_y_saved = 0;
-	guard_z_saved = 0;
-	guard_heading_saved = 0;
 	SetEmoteID(d->emoteid);
-	SetWalkSpeed(d->walkspeed);
+	if (d->walkspeed > 0.0f)
+		SetWalkSpeed(d->walkspeed);
+	SetCombatHPRegen(d->combat_hp_regen);
+	SetCombatManaRegen(d->combat_mana_regen);
+
+	// Innate Quad attack for NPCs is merely dual wield enabled with no weapon required
+	// these two special ability flags are redundant
+	// NPCs of all classes gain the ability to dual wield two weapons starting at level 4 on Live as of 2014
+	if (GetSpecialAbility(SPECATK_INNATE_DW) || GetSpecialAbility(SPECATK_QUAD))
+		can_dual_wield = true;
 
 	InitializeBuffSlots();
 	CalcBonuses();
@@ -368,14 +366,19 @@ void NPC::RemoveItem(uint32 item_id, uint16 quantity, uint16 slot) {
 		ServerLootItem_Struct* item = *cur;
 		if (item->item_id == item_id && slot <= 0 && quantity <= 0) {
 			itemlist.erase(cur);
+			UpdateEquipmentLight();
+			if (UpdateActiveLight()) { SendAppearancePacket(AT_Light, GetActiveLightType()); }
 			return;
 		}
 		else if (item->item_id == item_id && item->equip_slot == slot && quantity >= 1) {
-			//std::cout<<"NPC::RemoveItem"<<" equipSlot:"<<iterator.GetData()->equipSlot<<" quantity:"<< quantity<<std::endl; // iterator undefined [CODEBUG]
-			if (item->charges <= quantity)
+			if (item->charges <= quantity) {
 				itemlist.erase(cur);
-			else
+				UpdateEquipmentLight();
+				if (UpdateActiveLight()) { SendAppearancePacket(AT_Light, GetActiveLightType()); }
+			}
+			else {
 				item->charges -= quantity;
+			}
 			return;
 		}
 	}
@@ -407,6 +410,9 @@ void NPC::CheckMinMaxLevel(Mob *them)
 		++cur;
 	}
 
+	UpdateEquipmentLight();
+	if (UpdateActiveLight())
+		SendAppearancePacket(AT_Light, GetActiveLightType());
 }
 
 void NPC::ClearItemList() {
@@ -418,6 +424,10 @@ void NPC::ClearItemList() {
 		safe_delete(item);
 	}
 	itemlist.clear();
+
+	UpdateEquipmentLight();
+	if (UpdateActiveLight())
+		SendAppearancePacket(AT_Light, GetActiveLightType());
 }
 
 void NPC::QueryLoot(Client* to) {
@@ -433,10 +443,10 @@ void NPC::QueryLoot(Client* to) {
 		{
 			static char itemid[7];
 			sprintf(itemid, "%06d", item->ID);
-			to->Message(0, "minlvl: %i maxlvl: %i %i: %c%c%s%s%c", (*cur)->min_level, (*cur)->max_level, (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
+			to->Message(0, "(%i:%i) minlvl: %i maxlvl: %i %i: %c%c%s%s%c", (*cur)->equip_slot, (*cur)->lootslot, (*cur)->min_level, (*cur)->max_level, (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
 		}
 		else
-			LogFile->write(EQEMuLog::Error, "Database error, invalid item");
+			Log.Out(Logs::General, Logs::Error, "Database error, invalid item");
 		x++;
 	}
 	to->Message(0, "%i items on %s.", x, GetName());
@@ -465,10 +475,10 @@ void NPC::AddCash(uint16 in_copper, uint16 in_silver, uint16 in_gold, uint16 in_
 }
 
 void NPC::AddCash() {
-	copper = MakeRandomInt(1, 100);
-	silver = MakeRandomInt(1, 50);
-	gold = MakeRandomInt(1, 10);
-	platinum = MakeRandomInt(1, 5);
+	copper = zone->random.Int(1, 100);
+	silver = zone->random.Int(1, 50);
+	gold = zone->random.Int(1, 10);
+	platinum = zone->random.Int(1, 5);
 }
 
 void NPC::RemoveCash() {
@@ -509,35 +519,11 @@ bool NPC::Process()
 		if(curfp)
 			ProcessFlee();
 
-		uint32 bonus = 0;
+		if(GetHP() < GetMaxHP())
+			SetHP(GetHP() + GetHPRegen());
 
-		if(GetAppearance() == eaSitting)
-			bonus+=3;
-
-		int32 OOCRegen = 0;
-		if(oocregen > 0){ //should pull from Mob class
-			OOCRegen += GetMaxHP() * oocregen / 100;
-			}
-		//Lieka Edit:Fixing NPC regen.NPCs should regen to full during a set duration, not based on their HPs.Increase NPC's HPs by % of total HPs / tick.
-		if((GetHP() < GetMaxHP()) && !IsPet()) {
-			if(!IsEngaged()) {//NPC out of combat
-				if(GetNPCHPRegen() > OOCRegen)
-					SetHP(GetHP() + GetNPCHPRegen());
-				else
-					SetHP(GetHP() + OOCRegen);
-			} else
-				SetHP(GetHP()+GetNPCHPRegen());
-		} else if(GetHP() < GetMaxHP() && GetOwnerID() !=0) {
-			if(!IsEngaged()) //pet
-				SetHP(GetHP()+GetNPCHPRegen()+bonus+(GetLevel()/5));
-			else
-				SetHP(GetHP()+GetNPCHPRegen()+bonus);
-		} else
-			SetHP(GetHP()+GetNPCHPRegen());
-
-		if(GetMana() < GetMaxMana()) {
-			SetMana(GetMana()+mana_regen+bonus);
-		}
+		if(GetMana() < GetMaxMana())
+			SetMana(GetMana() + GetManaRegen());
 	}
 
 	if (sendhpupdate_timer.Check() && (IsTargeted() || (IsPet() && GetOwner() && GetOwner()->IsClient()))) {
@@ -566,8 +552,8 @@ bool NPC::Process()
 			DoGravityEffect();
 	}
 
-	if(reface_timer->Check() && !IsEngaged() && (guard_x == GetX() && guard_y == GetY() && guard_z == GetZ())) {
-		SetHeading(guard_heading);
+	if(reface_timer->Check() && !IsEngaged() && (m_GuardPoint.x == GetX() && m_GuardPoint.y == GetY() && m_GuardPoint.z == GetZ())) {
+		SetHeading(m_GuardPoint.w);
 		SendPosition();
 		reface_timer->Disable();
 	}
@@ -605,6 +591,41 @@ bool NPC::Process()
 
 uint32 NPC::CountLoot() {
 	return(itemlist.size());
+}
+
+void NPC::UpdateEquipmentLight()
+{
+	m_Light.Type.Equipment = 0;
+	m_Light.Level.Equipment = 0;
+	
+	for (int index = MAIN_BEGIN; index < EmuConstants::EQUIPMENT_SIZE; ++index) {
+		if (index == MainAmmo) { continue; }
+
+		auto item = database.GetItem(equipment[index]);
+		if (item == nullptr) { continue; }
+
+		if (m_Light.IsLevelGreater(item->Light, m_Light.Type.Equipment)) {
+			m_Light.Type.Equipment = item->Light;
+			m_Light.Level.Equipment = m_Light.TypeToLevel(m_Light.Type.Equipment);
+		}
+	}
+
+	uint8 general_light_type = 0;
+	for (auto iter = itemlist.begin(); iter != itemlist.end(); ++iter) {
+		auto item = database.GetItem((*iter)->item_id);
+		if (item == nullptr) { continue; }
+
+		if (item->ItemClass != ItemClassCommon) { continue; }
+		if (item->Light < 9 || item->Light > 13) { continue; }
+
+		if (m_Light.TypeToLevel(item->Light))
+			general_light_type = item->Light;
+	}
+
+	if (m_Light.IsLevelGreater(general_light_type, m_Light.Type.Equipment))
+		m_Light.Type.Equipment = general_light_type;
+
+	m_Light.Level.Equipment = m_Light.TypeToLevel(m_Light.Type.Equipment);
 }
 
 void NPC::Depop(bool StartSpawnTimer) {
@@ -672,7 +693,7 @@ bool NPC::DatabaseCastAccepted(int spell_id) {
 	return false;
 }
 
-NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z, float in_heading, Client* client) {
+NPC* NPC::SpawnNPC(const char* spawncommand, const glm::vec4& position, Client* client) {
 	if(spawncommand == 0 || spawncommand[0] == 0) {
 		return 0;
 	}
@@ -797,8 +818,7 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		}
 
 		//Time to create the NPC!!
-		NPCType* npc_type = new NPCType;
-		memset(npc_type, 0, sizeof(NPCType));
+		NPCType* npc_type = database.GetNPCTypeTemp(RuleI(NPC, NPCTemplateID));
 
 		strncpy(npc_type->name, sep.arg[0], 60);
 		npc_type->cur_hp = atoi(sep.arg[4]);
@@ -811,10 +831,10 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		npc_type->npc_id = 0;
 		npc_type->loottable_id = 0;
 		npc_type->texture = atoi(sep.arg[3]);
-		npc_type->light = 0;
-		npc_type->runspeed = 1.25;
-		npc_type->d_meele_texture1 = atoi(sep.arg[7]);
-		npc_type->d_meele_texture2 = atoi(sep.arg[8]);
+		npc_type->light = 0; // spawncommand needs update
+		npc_type->runspeed = 1.3f;
+		npc_type->d_melee_texture1 = atoi(sep.arg[7]);
+		npc_type->d_melee_texture2 = atoi(sep.arg[8]);
 		npc_type->merchanttype = atoi(sep.arg[9]);
 		npc_type->bodytype = atoi(sep.arg[10]);
 
@@ -831,8 +851,8 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 		npc_type->prim_melee_type = 28;
 		npc_type->sec_melee_type = 28;
 
-		NPC* npc = new NPC(npc_type, 0, in_x, in_y, in_z, in_heading/8, FlyMode3);
-		npc->GiveNPCTypeData(npc_type);
+		NPC* npc = new NPC(npc_type, nullptr, position, FlyMode3);
+		//npc->GiveNPCTypeData(npc_type);
 
 		entity_list.AddNPC(npc);
 
@@ -846,7 +866,7 @@ NPC* NPC::SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z,
 			client->Message(0, "Current/Max HP: %i", npc->max_hp);
 			client->Message(0, "Gender: %u", npc->gender);
 			client->Message(0, "Class: %u", npc->class_);
-			client->Message(0, "Weapon Item Number: %u/%u", npc->d_meele_texture1, npc->d_meele_texture2);
+			client->Message(0, "Weapon Item Number: %u/%u", npc->d_melee_texture1, npc->d_melee_texture2);
 			client->Message(0, "MerchantID: %u", npc->MerchantType);
 			client->Message(0, "Bodytype: %u", npc->bodytype);
 		}
@@ -896,7 +916,6 @@ uint32 ZoneDatabase::CreateNewNPCCommand(const char* zone, uint32 zone_version,C
                                         spawn->MerchantType, 0, spawn->GetRunspeed(), 28, 28);
         auto results = QueryDatabase(query);
 		if (!results.Success()) {
-			LogFile->write(EQEMuLog::Error, "NPCSpawnDB Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
 			return false;
 		}
 		npc_type_id = results.LastInsertedID();
@@ -913,25 +932,17 @@ uint32 ZoneDatabase::CreateNewNPCCommand(const char* zone, uint32 zone_version,C
                                         spawn->MerchantType, 0, spawn->GetRunspeed(), 28, 28);
         auto results = QueryDatabase(query);
 		if (!results.Success()) {
-			LogFile->write(EQEMuLog::Error, "NPCSpawnDB Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
 			return false;
 		}
 		npc_type_id = results.LastInsertedID();
 	}
 
-	if(client)
-        client->LogSQL(query.c_str());
-
 	query = StringFormat("INSERT INTO spawngroup (id, name) VALUES(%i, '%s-%s')", 0, zone, spawn->GetName());
     auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "NPCSpawnDB Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
 		return false;
 	}
     uint32 spawngroupid = results.LastInsertedID();
-
-	if(client)
-        client->LogSQL(query.c_str());
 
     query = StringFormat("INSERT INTO spawn2 (zone, version, x, y, z, respawntime, heading, spawngroupID) "
                         "VALUES('%s', %u, %f, %f, %f, %i, %f, %i)",
@@ -939,23 +950,15 @@ uint32 ZoneDatabase::CreateNewNPCCommand(const char* zone, uint32 zone_version,C
                         spawn->GetHeading(), spawngroupid);
     results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "NPCSpawnDB Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
 		return false;
 	}
-
-	if(client)
-        client->LogSQL(query.c_str());
 
     query = StringFormat("INSERT INTO spawnentry (spawngroupID, npcID, chance) VALUES(%i, %i, %i)",
                         spawngroupid, npc_type_id, 100);
     results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "NPCSpawnDB Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
 		return false;
 	}
-
-	if(client)
-        client->LogSQL(query.c_str());
 
 	return true;
 }
@@ -967,13 +970,9 @@ uint32 ZoneDatabase::AddNewNPCSpawnGroupCommand(const char* zone, uint32 zone_ve
                                     zone, spawn->GetName(), Timer::GetCurrentTime());
     auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "CreateNewNPCSpawnGroupCommand Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
 		return 0;
 	}
     last_insert_id = results.LastInsertedID();
-
-    if(client)
-        client->LogSQL(query.c_str());
 
     uint32 respawntime = 0;
     uint32 spawnid = 0;
@@ -990,24 +989,16 @@ uint32 ZoneDatabase::AddNewNPCSpawnGroupCommand(const char* zone, uint32 zone_ve
                         spawn->GetHeading(), last_insert_id);
     results = QueryDatabase(query);
     if (!results.Success()) {
-        LogFile->write(EQEMuLog::Error, "CreateNewNPCSpawnGroupCommand Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
         return 0;
     }
     spawnid = results.LastInsertedID();
-
-    if(client)
-        client->LogSQL(query.c_str());
 
     query = StringFormat("INSERT INTO spawnentry (spawngroupID, npcID, chance) VALUES(%i, %i, %i)",
                         last_insert_id, spawn->GetNPCTypeID(), 100);
     results = QueryDatabase(query);
     if (!results.Success()) {
-        LogFile->write(EQEMuLog::Error, "CreateNewNPCSpawnGroupCommand Error: %s %s", query.c_str(), results.ErrorMessage().c_str());
         return 0;
     }
-
-    if(client)
-        client->LogSQL(query.c_str());
 
     return spawnid;
 }
@@ -1022,8 +1013,6 @@ uint32 ZoneDatabase::UpdateNPCTypeAppearance(Client *client, NPC* spawn) {
                                     spawn->GetHelmTexture(), spawn->GetSize(), spawn->GetLoottableID(),
                                     spawn->MerchantType, spawn->GetNPCTypeID());
     auto results = QueryDatabase(query);
-    if (!results.Success() && client)
-            client->LogSQL(query.c_str());
 
     return results.Success() == true? 1: 0;
 }
@@ -1053,24 +1042,15 @@ uint32 ZoneDatabase::DeleteSpawnLeaveInNPCTypeTable(const char* zone, Client *cl
 	if (!results.Success())
 		return 0;
 
-	if(client)
-        client->LogSQL(query.c_str());
-
     query = StringFormat("DELETE FROM spawngroup WHERE id = '%i'", spawngroupID);
     results = QueryDatabase(query);
 	if (!results.Success())
 		return 0;
 
-	if(client)
-        client->LogSQL(query.c_str());
-
     query = StringFormat("DELETE FROM spawnentry WHERE spawngroupID = '%i'", spawngroupID);
     results = QueryDatabase(query);
 	if (!results.Success())
 		return 0;
-
-	if(client)
-        client->LogSQL(query.c_str());
 
 	return 1;
 }
@@ -1103,32 +1083,20 @@ uint32 ZoneDatabase::DeleteSpawnRemoveFromNPCTypeTable(const char* zone, uint32 
 	if (!results.Success())
 		return 0;
 
-	if(client)
-        client->LogSQL(query.c_str());
-
     query = StringFormat("DELETE FROM spawngroup WHERE id = '%i'", spawngroupID);
 	results = QueryDatabase(query);
 	if (!results.Success())
 		return 0;
-
-	if(client)
-        client->LogSQL(query.c_str());
 
     query = StringFormat("DELETE FROM spawnentry WHERE spawngroupID = '%i'", spawngroupID);
 	results = QueryDatabase(query);
 	if (!results.Success())
 		return 0;
 
-	if(client)
-        client->LogSQL(query.c_str());
-
     query = StringFormat("DELETE FROM npc_types WHERE id = '%i'", spawn->GetNPCTypeID());
 	results = QueryDatabase(query);
 	if (!results.Success())
 		return 0;
-
-	if(client)
-        client->LogSQL(query.c_str());
 
 	return 1;
 }
@@ -1143,9 +1111,6 @@ uint32  ZoneDatabase::AddSpawnFromSpawnGroup(const char* zone, uint32 zone_versi
     auto results = QueryDatabase(query);
     if (!results.Success())
 		return 0;
-
-	if(client)
-        client->LogSQL(query.c_str());
 
     return 1;
 }
@@ -1168,9 +1133,6 @@ uint32 ZoneDatabase::AddNPCTypes(const char* zone, uint32 zone_version, Client *
 	if (!results.Success())
 		return 0;
     npc_type_id = results.LastInsertedID();
-
-	if(client)
-        client->LogSQL(query.c_str());
 
 	if(client)
         client->Message(0, "%s npc_type ID %i created successfully!", numberlessName, npc_type_id);
@@ -1221,9 +1183,9 @@ int32 NPC::GetEquipmentMaterial(uint8 material_slot) const
 		case MaterialChest:
 			return texture;
 		case MaterialPrimary:
-			return d_meele_texture1;
+			return d_melee_texture1;
 		case MaterialSecondary:
-			return d_meele_texture2;
+			return d_melee_texture2;
 		default:
 			//they have nothing in the slot, and its not a special slot... they get nothing.
 			return(0);
@@ -1254,17 +1216,24 @@ void NPC::PickPocket(Client* thief) {
 
 	//make sure were allowed to targte them:
 	int olevel = GetLevel();
-	if(olevel > (thief->GetLevel() + THIEF_PICKPOCKET_OVER)) {
-		thief->Message(13, "You are too inexperienced to pick pocket this target");
+	if(thief->GetLevel() < 50) {
+		if(olevel > 45) {
+			thief->Message(CC_Red, "You are too inexperienced to pick pocket this target");
+			thief->SendPickPocketResponse(this, 0, PickPocketFailed);
+			//should we check aggro
+			return;
+		}
+	} else if(olevel > (thief->GetLevel() + THIEF_PICKPOCKET_OVER)) {
+		thief->Message(CC_Red, "You are too inexperienced to pick pocket this target");
 		thief->SendPickPocketResponse(this, 0, PickPocketFailed);
 		//should we check aggro
 		return;
 	}
 
-	if(MakeRandomInt(0, 100) > 95){
+	if(zone->random.Roll(5)) {
 		AddToHateList(thief, 50);
-		Say("Stop thief!");
-		thief->Message(13, "You are noticed trying to steal!");
+		Say("Stop thief! <%s>", thief->GetName());
+		thief->Message(CC_Red, "You are noticed trying to steal!");
 		thief->SendPickPocketResponse(this, 0, PickPocketFailed);
 		return;
 	}
@@ -1290,7 +1259,7 @@ void NPC::PickPocket(Client* thief) {
 	memset(charges,0,50);
 	//Determine wheter to steal money or an item.
 	bool no_coin = ((money[0] + money[1] + money[2] + money[3]) == 0);
-	bool steal_item = (MakeRandomInt(0, 99) < 50 || no_coin);
+	bool steal_item = (zone->random.Roll(50) || no_coin);
 	if (steal_item)
 	{
 		ItemList::iterator cur,end;
@@ -1320,7 +1289,7 @@ void NPC::PickPocket(Client* thief) {
 		}
 		if (x > 0)
 		{
-			int random = MakeRandomInt(0, x-1);
+			int random = zone->random.Int(0, x-1);
 			inst = database.CreateItem(steal_items[random], charges[random]);
 			if (inst)
 			{
@@ -1355,7 +1324,7 @@ void NPC::PickPocket(Client* thief) {
 	}
 	if (!steal_item) //Steal money
 	{
-		uint32 amt = MakeRandomInt(1, (steal_skill/25)+1);
+		uint32 amt = zone->random.Int(1, (steal_skill/25)+1);
 		int steal_type = 0;
 		if (!money[0])
 		{
@@ -1370,7 +1339,7 @@ void NPC::PickPocket(Client* thief) {
 			}
 		}
 
-		if (MakeRandomInt(0, 100) <= stealchance)
+		if (zone->random.Roll(stealchance))
 		{
 			switch (steal_type)
 			{
@@ -1560,7 +1529,7 @@ void Mob::NPCSpecialAttacks(const char* parse, int permtag, bool reset, bool rem
 	{
 		if(database.SetSpecialAttkFlag(this->GetNPCTypeID(), orig_parse))
 		{
-			LogFile->write(EQEMuLog::Normal, "NPCTypeID: %i flagged to '%s' for Special Attacks.\n",this->GetNPCTypeID(),orig_parse);
+			Log.Out(Logs::General, Logs::Normal, "NPCTypeID: %i flagged to '%s' for Special Attacks.\n",this->GetNPCTypeID(),orig_parse);
 		}
 	}
 }
@@ -1729,6 +1698,8 @@ bool Mob::HasNPCSpecialAtk(const char* parse) {
 void NPC::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 {
 	Mob::FillSpawnStruct(ns, ForWho);
+	UpdateActiveLight();
+	ns->spawn.light = GetActiveLightType();
 
 	//Not recommended if using above (However, this will work better on older clients).
 	if (RuleB(Pets, UnTargetableSwarmPet)) {
@@ -1797,7 +1768,6 @@ void NPC::ModifyNPCStat(const char *identifier, const char *newValue)
 	else if(id == "runspeed") { runspeed = (float)atof(val.c_str()); CalcBonuses(); return; }
 	else if(id == "special_attacks") { NPCSpecialAttacks(val.c_str(), 0, 1); return; }
 	else if(id == "special_abilities") { ProcessSpecialAbilities(val.c_str()); return; }
-	else if(id == "attack_speed") { attack_speed = (float)atof(val.c_str()); CalcBonuses(); return; }
 	else if(id == "atk") { ATK = atoi(val.c_str()); return; }
 	else if(id == "accuracy") { accuracy_rating = atoi(val.c_str()); return; }
 	else if(id == "avoidance") { avoidance_rating = atoi(val.c_str()); return; }
@@ -1822,7 +1792,7 @@ void NPC::ModifyNPCStat(const char *identifier, const char *newValue)
 
 void NPC::LevelScale() {
 
-	uint8 random_level = (MakeRandomInt(level, maxlevel));
+	uint8 random_level = (zone->random.Int(level, maxlevel));
 	float scaling = (((random_level / (float)level) - 1) * (scalerate / 100.0f));
 
 	if(scalerate == 0 || maxlevel <= 25)
@@ -1861,7 +1831,7 @@ void NPC::LevelScale() {
 		STA += (int)(STA * scaling / scale_adjust);
 		AGI += (int)(AGI * scaling / scale_adjust);
 		DEX += (int)(DEX * scaling / scale_adjust);
-		if(INT > RuleI(Aggro, IntAggroThreshold))
+		if (RuleB(Aggro, UseLevelAggro) || INT > RuleI(Aggro, IntAggroThreshold))
 			INT += (int)(INT * scaling / scale_adjust);
 		WIS += (int)(WIS * scaling / scale_adjust);
 		CHA += (int)(CHA * scaling / scale_adjust);
@@ -1999,10 +1969,10 @@ uint32 NPC::GetSpawnPointID() const
 void NPC::NPCSlotTexture(uint8 slot, uint16 texture)
 {
 	if (slot == 7) {
-		d_meele_texture1 = texture;
+		d_melee_texture1 = texture;
 	}
 	else if (slot == 8) {
-		d_meele_texture2 = texture;
+		d_melee_texture2 = texture;
 	}
 	else if (slot < 6) {
 		// Reserved for texturing individual armor slots
@@ -2299,7 +2269,7 @@ void NPC::DepopSwarmPets()
 			Mob* owner = entity_list.GetMobID(GetSwarmInfo()->owner_id);
 			if (owner)
 				owner->SetTempPetCount(owner->GetTempPetCount() - 1);
-			
+
 			Depop();
 			return;
 		}
@@ -2317,4 +2287,422 @@ void NPC::DepopSwarmPets()
 			}
 		}
 	}
+}
+
+int32 NPC::GetHPRegen() 
+{
+	uint32 bonus = 0;
+	if(GetAppearance() == eaSitting)
+			bonus+=3;
+
+	if((GetHP() < GetMaxHP()) && !IsPet()) 
+	{
+		// OOC
+		if(!IsEngaged()) 
+		{
+			return(GetNPCHPRegen() + bonus); // hp_regen + spell/item regen + sitting bonus
+		// In Combat
+		} 
+		else
+			return(GetCombatHPRegen() + (GetNPCHPRegen() - hp_regen)); // combat_regen + spell/item regen
+	} 
+	// Pet
+	else if(GetHP() < GetMaxHP() && GetOwnerID() !=0) 
+	{
+		if(!IsEngaged())
+			return(GetNPCHPRegen() + bonus + (GetLevel()/5));
+		else
+			return(GetCombatHPRegen() + (GetNPCHPRegen() - hp_regen));
+	}
+	else
+		return 0;
+}
+
+int32 NPC::GetManaRegen()
+{
+	uint32 bonus = 0;
+	if(GetAppearance() == eaSitting)
+	bonus+=3;
+
+	// Non-Pet
+	if((GetMana() < GetMaxMana()) && !IsPet()) 
+	{
+		// OOC
+		if(!IsEngaged()) 
+		{
+			return(GetNPCManaRegen() + bonus); // mana_regen + spell/item regen + sitting bonus
+		// In Combat
+		} 
+		else
+			return(GetCombatManaRegen() + (GetNPCManaRegen() - mana_regen)); // combat_regen + spell/item regen
+	} 
+	// Pet
+	else if(GetMana() < GetMaxMana() && GetOwnerID() !=0) 
+	{
+		if(!IsEngaged())
+			return(GetNPCManaRegen() + bonus + (GetLevel()/5));
+		else
+			return(GetCombatManaRegen() + (GetNPCManaRegen() - mana_regen));
+	}
+	else
+		return 0;
+}
+
+void NPC::AddPush(float heading, float magnitude)
+{
+	float headingRadians = heading;
+	headingRadians = (headingRadians * 360.0f) / 256.0f;	// convert to degrees first; heading range is 0-255
+	if (headingRadians < 270)
+		headingRadians += 90;
+	else
+		headingRadians -= 270;
+	headingRadians = headingRadians * 3.1415f / 180.0f;
+
+	push_vector.x += cosf(headingRadians) * magnitude;
+	push_vector.y += sinf(headingRadians) * magnitude;
+}
+
+/*
+	Used by ApplyPushVector()
+	Creates two lines from p1 to p1 - pv, and hitLocation with 2nd point from a perpendicular of hitNormal
+	and finds intersection coords.  Returns magnitude of intersect point - (hitLocation - pv) vector.
+	Negative magnitude indicates the intersect point was behind p1 - pv.
+	This is needed to know where along the pushed-in-to wall the NPC stopped at.  NPCs have a 'cushion' around it
+	to prevent it from going half way into the wall, and NPC might hit a wall from the side, so the side checks
+	need this function.
+*/
+float WallIntersect(glm::vec3 &p1, glm::vec3 &pv, glm::vec3 &hitLocation, glm::vec3 &hitNormal, glm::vec3 &intersection, Mob *npc)
+{
+	float p2x = p1.x - -pv.x;
+	float p2y = p1.y + -pv.y;
+
+	float a1 = p2y - p1.y;
+	float b1 = p1.x - p2x;
+	float c1 = a1 * p1.x + b1 * p1.y;
+
+	float a2 = (hitLocation.y + (hitNormal.x)) - hitLocation.y;
+	float b2 = hitLocation.x - (hitLocation.x + -hitNormal.y);
+	float c2 = a2 * hitLocation.x + b2 * hitLocation.y;
+
+	float det = a1*b2 - a2*b1;
+	if (det == 0.0f)
+	{
+		return 0.0f;	// parallel
+	}
+
+	intersection.x = (b2*c1 - b1*c2) / det;
+	intersection.y = (a1*c2 - a2*c1) / det;
+
+	float xv = intersection.x - p2x;
+	float yv = intersection.y - p2y;
+	float mag = sqrtf(xv * xv + yv * yv);
+	float pvmag = sqrtf(pv.x * pv.x + pv.y * pv.y);
+
+	float dotp = (-pv.x / pvmag) * (xv / mag) + (pv.y / pvmag) * (yv / mag);
+
+	if (dotp > 0)
+		return mag;
+	else
+	{
+		//npc->Say("-mag in wall intersect;  dotp: %.2f;  xv: %.2f, xy: %.2f;  mag: %.2f;  pvmag: %.2f", dotp, xv, yv, mag, pvmag);
+		return -mag;
+	}
+}
+
+/*
+	This function attempts to move the NPC in the drection of push_vector.  Checks are made to prevent NPCs from
+	going into walls.  Multiple raycasts with zone geoemtry are done to prevent NPCs from going into the wall up
+	to their centerpoints.  If the NPC hits a wall, it will 'glance' it and change the direction of the vector
+	to align with the wall so mobs won't get stuck on it.
+
+	Since this is expensive, this gets called on a timer periodically instead of called for every melee hit.
+	Use AddPush() to add to the push vector.
+*/
+float NPC::ApplyPushVector(bool noglance)
+{
+	if (!zone->zonemap)
+	{
+		return 0.0f;
+	}
+
+	if (push_vector.x == 0.0f && push_vector.y == 0.0f)
+		return 0.0f;
+
+	glm::vec3 currentLoc(GetX(), GetY(), GetZ());
+	glm::vec3 newLoc(GetX(), GetY(), GetZ());
+	glm::vec3 hitLocation, hitNormal, glanceV, intersection;
+	float hitDistance;
+	float magnitude = sqrtf(push_vector.x * push_vector.x + push_vector.y * push_vector.y);
+	glm::vec2 pushUnitV(push_vector.x == 0.0f ? 0.0f : push_vector.x / magnitude,
+		push_vector.y == 0.0f ? 0.0f : push_vector.y / magnitude);
+	float sizeCushion = GetSize() / 2.0f;
+	float newz;
+
+	// where we want to be
+	newLoc.x -= push_vector.x;
+	newLoc.y += push_vector.y;
+	newLoc.z = GetZ();
+
+	/*
+	if (noglance)
+		Say("starting loc: %.2f, %.2f, %.2f  newLoc: %.2f, %.2f, %.2f (%.2f)  push mag: %.2f;  sizeCushion: %.2f",
+		currentLoc.x, currentLoc.y, currentLoc.z, newLoc.x, newLoc.y, newLoc.z, GetZ(), magnitude, sizeCushion);
+	else
+		Shout("starting loc: %.2f, %.2f, %.2f  newLoc: %.2f, %.2f, %.2f (%.2f)  push mag: %.2f;  sizeCushion: %.2f",
+		currentLoc.x, currentLoc.y, currentLoc.z, newLoc.x, newLoc.y, newLoc.z, GetZ(), magnitude, sizeCushion);
+
+	glm::vec3 down(currentLoc.x, currentLoc.y, -99999);
+	zone->zonemap->LineIntersectsZone(currentLoc, down, 0.0f, &hitLocation, &hitNormal, &hitDistance);
+	Say("curentLoc.z to floor == %.2f", hitDistance);
+	*/
+
+	bool glancing = false;
+	float glanceMag = 0.0f;
+	int wallsHit = 0;
+	glm::vec3 points[5];
+
+	// Check for walls in 5 locations: in front of NPC, both sides of NPC, and 45 degree angles, half size dist away.
+	// this prevents NPC centerpoints from colliding into the wall, burying half their model in zone geometry
+	for (int i = 0; i < 5; i++)
+	{
+		switch (i)
+		{
+		case 0:
+			points[i].x = newLoc.x - pushUnitV.x * sizeCushion;
+			points[i].y = newLoc.y + pushUnitV.y * sizeCushion;
+			points[i].z = newLoc.z;
+			break;
+
+		case 1:
+			points[i].x = newLoc.x - -pushUnitV.y * sizeCushion;
+			points[i].y = newLoc.y + pushUnitV.x * sizeCushion;
+			points[i].z = newLoc.z;
+			break;
+
+		case 2:
+			points[i].x = newLoc.x - pushUnitV.y * sizeCushion;
+			points[i].y = newLoc.y + -pushUnitV.x * sizeCushion;
+			points[i].z = newLoc.z;
+			break;
+
+		case 3:
+			points[i].x = newLoc.x - (pushUnitV.x * cosf(-3.141592f/4.0f) - pushUnitV.y * sinf(-3.141592f/4.0f)) * sizeCushion;
+			points[i].y = newLoc.y + (pushUnitV.x * sinf(-3.141592f/4.0f) + pushUnitV.y * cosf(-3.141592f/4.0f)) * sizeCushion;
+			points[i].z = newLoc.z;
+			break;
+
+		case 4:
+			points[i].x = newLoc.x - (pushUnitV.x * cosf(3.141592f / 4.0f) - pushUnitV.y * sinf(3.141592f / 4.0f)) * sizeCushion;
+			points[i].y = newLoc.y + (pushUnitV.x * sinf(3.141592f / 4.0f) + pushUnitV.y * cosf(3.141592f / 4.0f)) * sizeCushion;
+			points[i].z = newLoc.z;
+			break;
+		}
+
+		if (zone->zonemap->LineIntersectsZone(i == 0 ? currentLoc : newLoc, points[i], 0.0f, &hitLocation, &hitNormal, &hitDistance))
+		{
+			//Say("Hit Wall %i; dist: %.2f point: %.2f, %.2f; hitLoc: %.2f, %.2f, %.2f  push_vector: %.2f, %.2f; normal: %.2f, %.2f, %.2f",
+			//	i, hitDistance, points[i].x, points[i].y, hitLocation.x, hitLocation.y, hitLocation.z, push_vector.x, push_vector.y, hitNormal.x, hitNormal.y, hitNormal.z);
+
+			if (hitNormal.x != 0.0f || hitNormal.y != 0.0f)
+			{
+				// z > 0 means NPC hit an inclined floor.  z < 0 means NPC hit an inclined ceiling
+				if (hitNormal.z < 0.25f || hitDistance > 10)		// stop large pushes to inclined floors, otherwise we can see
+				{													// weird stuff like pushing through hills or walls
+					wallsHit++;
+
+					if (magnitude == 0.0f)
+					{
+						continue;
+					}
+					else if (i == 0)		// forward facing collision check
+					{
+						if (hitDistance > (sizeCushion + 0.01f))
+						{
+							// NPC isn't at the wall yet, but will be after we apply vector
+							// reduce vector magnitude to end up precisely at wall
+							float newMag = magnitude - (sizeCushion - (hitDistance - magnitude));
+							push_vector.x = pushUnitV.x * newMag;
+							push_vector.y = pushUnitV.y * newMag;
+
+							newLoc.x = currentLoc.x - push_vector.x;
+							newLoc.y = currentLoc.y + push_vector.y;
+
+							glanceMag = magnitude - newMag;
+							magnitude = newMag;
+
+							wallsHit--;
+							//Say("reducing push magnitude to match cushion dist;   newLoc: %.2f, %.2f, %.2f  push mag: %.2f", newLoc.x, newLoc.y, newLoc.z, magnitude);
+						}
+					}
+					else   // all points but the forward one
+					{
+						// do a line intersection check to figure out where NPC collides with wall
+						// at sizeCushion distance from centerpoint
+
+						if (hitNormal.z != 0.0f)
+						{
+							// 'rotate' by extending the x and y to a 2d unit vector
+							float normal2dMag = sqrt(hitNormal.x * hitNormal.x + hitNormal.y * hitNormal.y);
+							hitNormal.x /= normal2dMag;
+							hitNormal.y /= normal2dMag;
+							hitNormal.z = 0.0f;
+						}
+
+						float pushVhitNormDotp = hitNormal.x * -pushUnitV.x + hitNormal.y * pushUnitV.y;
+
+						// dotp of >= 0.0f means we are pushing away from the wall we hit
+						if (pushVhitNormDotp < 0.0f)
+						{
+							// pushing toward wall
+
+							float mag = WallIntersect(points[i], push_vector, hitLocation, hitNormal, intersection, this);
+
+							if (mag < magnitude && mag > 0.0f)
+							{
+								// NPC was pushed into wall; set newLoc to stop at the wall
+
+								push_vector.x = pushUnitV.x * mag;
+								push_vector.y = pushUnitV.y * mag;
+
+								newLoc.x = currentLoc.x - push_vector.x;
+								newLoc.y = currentLoc.y + push_vector.y;
+
+								glanceMag = magnitude - mag;
+								magnitude = mag;
+
+								//Say("side collision mid-push; xy: %.2f, %.2f;  new push vector: %.2f, %.2f   pushv magnitude: %.2f;  pushVhitNormDotp: %.2f",
+								//	intersection.x, intersection.y, push_vector.x, push_vector.y, magnitude, pushVhitNormDotp);
+								wallsHit--;
+							}
+							else if (mag < 0.0f)
+							{
+								// -mag means line intersection is in opposite direction of push vector
+								// indicating that NPC is likely already at the wall and closer than cushion dist
+								newLoc.x = currentLoc.x;
+								newLoc.y = currentLoc.y;
+								//Say("side collision behind currentLoc; x: %.2f  y: %.2f  mag: %.2f;  pushVhitNormDotp: %.2f", 
+								//	intersection.x, intersection.y, mag, pushVhitNormDotp);
+							}
+							else if (mag == 0.0f)
+							{
+								// collision with wall is precisely at 0 push magnitude, or lines are parallel
+								newLoc.x = currentLoc.x;
+								newLoc.y = currentLoc.y;
+								//Say("side collision mag == 0.0f;  intersect: %.2f, %.2f;  pushVhitNormDotp: %.2f", intersection.x, intersection.y, pushVhitNormDotp);
+							}
+						}
+						else
+						{
+							// if pushing away from the wall, don't count it as a hit
+							/*
+							if (pushVhitNormDotp == 0.0f)
+								Say("wall is parallel to push vector");
+							else
+								Say("pushing away from a wall I am touching; dotp: %.2f;  pushUnitV: %.2f, %.2f;  wall normal: %.2f, %.2f", 
+								pushVhitNormDotp, pushUnitV.x, pushUnitV.y, hitNormal.x, hitNormal.y);
+							*/
+							wallsHit--;
+							continue;
+						}
+					}
+
+					if (!glancing && !noglance)
+					{
+						// create glancing vector
+
+						if (hitNormal.z != 0.0f)
+						{
+							// 'rotate' by extending the x and y to a 2d unit vector
+							float normal2dMag = sqrt(hitNormal.x * hitNormal.x + hitNormal.y * hitNormal.y);
+							hitNormal.x /= normal2dMag;
+							hitNormal.y /= normal2dMag;
+							hitNormal.z = 0.0f;
+						}
+
+						// angle between wall normal and push vector
+						float hitNormalDotp = hitNormal.x * -pushUnitV.x + hitNormal.y * pushUnitV.y;
+
+						// create perpendicular vector of wall normal
+						float perpNormalX = -hitNormal.y;
+						float perpNormalY = hitNormal.x;
+
+						float perpDotp = perpNormalX * -pushUnitV.x + perpNormalY * pushUnitV.y;
+
+						// two possible perpendicular vectors; figure out which one to use
+						if (perpDotp < 0.0f)
+						{
+							perpNormalX = -perpNormalX;
+							perpNormalY = -perpNormalY;
+						}
+
+						if (glanceMag == 0.0f)
+							glanceMag = magnitude;
+
+						// reduce push magnitude the more the push vector is perpendicular to wall
+						glanceV.x = -perpNormalX * glanceMag * (1.0f + hitNormalDotp);		// hitNormalDotp should be -1 to 0
+						glanceV.y = perpNormalY * glanceMag * (1.0f + hitNormalDotp);
+
+						glancing = true;
+						//Say("Glancing the wall; glanceMag: %.3f, push mag: %.3f  perpNormal: %.3f, %.3f  hitNormal %.3f, %.3f  hitNormalDotp: %.3f  glanceV: %.3f, %.3f",
+						//	glanceMag, (glanceMag * (1.0f + hitNormalDotp)), perpNormalX, perpNormalY, hitNormal.x, hitNormal.y, hitNormalDotp, glanceV.x, glanceV.y);
+					}
+
+				}  // if (hitNormal.z < 0.25f)
+				else
+				{
+					//Say("hit inclined wall %i", i);
+					if (i == 0 && hitNormal.z > 0.0f && magnitude < 10)
+						newLoc.z += hitNormal.z * magnitude;
+
+				}
+			}  // if (hitNormal.x != 0.0f || hitNormal.y != 0.0f)
+			/*else
+			{
+				Shout("Error: hitNormal x and y both 0");
+			}*/
+		}
+
+	}
+
+	float pushedDist = 0.0f;
+
+	if (wallsHit == 0 && (newLoc.x != currentLoc.x || newLoc.y != currentLoc.y))
+	{
+		if (!IsUnderwaterOnly() && (!zone->watermap || !zone->watermap->InLiquid(newLoc)))
+		{
+			newz = zone->zonemap->FindClosestZ(newLoc, nullptr);
+			if (newz != BEST_Z_INVALID)
+				newLoc.z = SetBestZ(newz);
+		}
+
+		if (!zone->zonemap->LineIntersectsZone(currentLoc, newLoc, 0.0f, &hitLocation, nullptr, &hitDistance))
+		{
+			m_Position.x = newLoc.x;
+			m_Position.y = newLoc.y;
+			m_Position.z = newLoc.z;
+			pushedDist += magnitude;
+
+			SendPosition();
+
+			//Say(" -- Setting position to: %.2f, %.2f, %.2f; push magnitude: %.3f", newLoc.x, newLoc.y, newLoc.z, magnitude);
+		}
+		/*else
+		{
+			Shout(" --- No LOS to newLoc from currentLoc; hitDist: %.2f  newLoc: %.2f, %.2f, %.2f  hitLoc: %.2f, %.2f, %.2f  mag: %.2f",
+				hitDistance, newLoc.x, newLoc.y, newLoc.z, hitLocation.x, hitLocation.y, hitLocation.z, magnitude);
+		}*/
+	}
+
+	push_vector.x = 0.0f;
+	push_vector.y = 0.0f;
+	push_vector.z = 0.0f;
+
+	if (glancing)
+	{
+		push_vector.x = glanceV.x;
+		push_vector.y = glanceV.y;
+		pushedDist += ApplyPushVector(true);
+	}
+
+	return pushedDist;
 }

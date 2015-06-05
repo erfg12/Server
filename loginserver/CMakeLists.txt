@@ -13,11 +13,6 @@ SET(eqlogin_sources
 	world_server.cpp
 )
 
-IF(MSVC OR MINGW)
-	ADD_DEFINITIONS(-DNOMINMAX)
-	SET(eqlogin_sources ${eqlogin_sources} encryption.cpp)
-ENDIF(MSVC OR MINGW)
-
 SET(eqlogin_headers
 	client.h
 	client_manager.h
@@ -25,9 +20,7 @@ SET(eqlogin_headers
 	database.h
 	database_mysql.h
 	database_postgresql.h
-	encryption.h
 	EQCrypto.h
-	eq_crypto_api.h
 	error_log.h
 	login_server.h
 	login_structures.h

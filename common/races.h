@@ -71,8 +71,8 @@
 #define gnome_1			2048
 #define iksar_1			4096
 #define vahshir_1		8192
+#define allraces_1		16383
 #define rall_1			16384 //froglok?
-#define drakkin_1		32768
 
 const char* GetRaceName(uint16 race);
 
@@ -95,16 +95,16 @@ inline uint32 GetRaceBitmask(uint16 race) { return uint32(pow(2.0f, float(GetArr
 #define Array_Race_IKSAR		13
 #define Array_Race_VAHSHIR		14
 #define Array_Race_FROGLOK		15
-#define Array_Race_DRAKKIN		16
-#define Array_Race_NPC			17
-#define Array_Race_PET			18
-#define Count_Array_Race		19 // used for array defines, must be the max + 1
-#define PLAYER_RACE_COUNT		16 // The count of all player races
+#define Array_Race_NPC			16
+#define Array_Race_PET			17
+#define Count_Array_Race		18 // used for array defines, must be the max + 1
+#define PLAYER_RACE_COUNT		15 // The count of all player races
 
 /*
 
 //pulled from the client by ksmith:
 $races_table = array(
+		0 => "Doug",
 		1 => "Human",
 		2 => "Barbarian",
 		3 => "Erudite",
@@ -246,8 +246,8 @@ $races_table = array(
 		139 => "Iksar Citizen",
 		140 => "Forest Giant",
 		141 => "Boat",
-		142 => "UNKNOWN RACE",
-		143 => "UNKNOWN RACE",
+		142 => 'Minor Illusion',
+		143 => 'Tree Illusion',
 		144 => "Burynai",
 		145 => "Goo",
 		146 => "Spectral Sarnak",
@@ -356,7 +356,7 @@ $races_table = array(
 		249 => "Clockwork Brain",
 		250 => "Spectral Banshee",
 		251 => "Guard of Justice",
-		252 => "UNKNOWN RACE",
+		252 => 'PoM Castle',
 		253 => "Disease Boss",
 		254 => "Sol Ro Guard",
 		255 => "New Bertox",
@@ -465,50 +465,6 @@ $races_table = array(
 		358 => "Undead Veksar",
 		359 => "Vampire Lesser",
 		360 => "Vampire Elite",
-		361 => "Rujakian Orc",
-		362 => "Bone Golem",
-		363 => "Synarcana",
-		364 => "Sand Elf",
-		365 => "Vampire Master",
-		366 => "Rujakian Orc Elite",
-		367 => "Skeleton New",
-		368 => "Mummy New",
-		369 => "Goblin New",
-		370 => "Insect",
-		371 => "Froglok Ghost",
-		372 => "Dervish New",
-		373 => "Shadow Creatue",
-		374 => "Golem New",
-		375 => "Evil Eye New",
-		376 => "Box",
-		377 => "Barrel",
-		378 => "Chest",
-		379 => "Vase",
-		380 => "Table",
-		381 => "Weapons Rack",
-		382 => "Coffin",
-		383 => "Bones",
-		384 => "Jokester",
-		385 => "Talosian Nihil",
-		386 => "Talosian Exile",
-		387 => "Talosian Golem",
-		388 => "Talosian Wolf",
-		389 => "Talosian Amphibian",
-		390 => "Talosian Mountain Beast",
-		391 => "Talosian Trilobyte",
-		392 => "Invader War Hound",
-		393 => "Invader Elite Centaur",
-		394 => "Invader Lamia",
-		395 => "Invader Cyclops",
-		396 => "Kyv",
-		397 => "Invader Soldier",
-		398 => "Invader Brute",
-		399 => "Invader Force Commander",
-		400 => "Invader Lieutenant Boss",
-		401 => "Invader War Beast",
-		402 => "Invader Soldier Elite",
-		403 => "UNKNOWN RACE",
-		404 => "Discord Ship",
 */
 
 #endif

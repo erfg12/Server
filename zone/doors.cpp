@@ -15,18 +15,22 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include <iostream>
-#include <stdlib.h>
-#include <string.h>
-#include "masterentity.h"
-#include "worldserver.h"
-#include "string_ids.h"
-#include "zonedb.h"
-#include "../common/packet_functions.h"
-#include "../common/packet_dump.h"
+
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include "../common/string_util.h"
+
+#include "client.h"
+#include "doors.h"
+#include "entity.h"
 #include "guild_mgr.h"
+#include "mob.h"
+#include "string_ids.h"
+#include "worldserver.h"
+#include "zonedb.h"
+
+#include <iostream>
+#include <string.h>
 
 #define OPEN_DOOR 0x02
 #define CLOSE_DOOR 0x03
@@ -36,23 +40,21 @@
 extern EntityList entity_list;
 extern WorldServer worldserver;
 
-Doors::Doors(const Door* door)
-:	close_timer(5000)
+Doors::Doors(const Door* door) :
+    close_timer(5000),
+    m_Position(door->pos_x, door->pos_y, door->pos_z, door->heading),
+    m_Destination(door->dest_x, door->dest_y, door->dest_z, door->dest_heading)
 {
 	db_id = door->db_id;
 	door_id = door->door_id;
 	strn0cpy(zone_name,door->zone_name,32);
 	strn0cpy(door_name,door->door_name,32);
-	pos_x = door->pos_x;
-	pos_y = door->pos_y;
-	pos_z = door->pos_z;
-	heading = door->heading;
 	incline = door->incline;
 	opentype = door->opentype;
 	guild_id = door->guild_id;
 	lockpick = door->lock_pick;
 	keyitem = door->keyitem;
-	nokeyring = door->nokeyring;
+	altkeyitem = door->altkeyitem;
 	trigger_door = door->trigger_door;
 	trigger_type = door->trigger_type;
 	triggered=false;
@@ -63,33 +65,27 @@ Doors::Doors(const Door* door)
 
 	close_timer.Disable();
 
-	strn0cpy(dest_zone,door->dest_zone,32);
+	strn0cpy(dest_zone,door->dest_zone,16);
 	dest_instance_id = door->dest_instance_id;
-	dest_x = door->dest_x;
-	dest_y = door->dest_y;
-	dest_z = door->dest_z;
-	dest_heading = door->dest_heading;
 
 	client_version_mask = door->client_version_mask;
 }
 
-Doors::Doors(const char *dmodel, float dx, float dy, float dz, float dheading, uint8 dopentype, uint16 dsize)
-:	close_timer(5000)
+Doors::Doors(const char *dmodel, const glm::vec4& position, uint8 dopentype, uint16 dsize) :
+    close_timer(5000),
+    m_Position(position),
+    m_Destination(glm::vec4())
 {
 	db_id = database.GetDoorsCountPlusOne(zone->GetShortName(), zone->GetInstanceVersion());
 	door_id = database.GetDoorsDBCountPlusOne(zone->GetShortName(), zone->GetInstanceVersion());
 	strn0cpy(zone_name,zone->GetShortName(),32);
 	strn0cpy(door_name,dmodel,32);
-	pos_x = dx;
-	pos_y = dy;
-	pos_z = dz;
-	heading = dheading;
 	incline = 0;
 	opentype = dopentype;
 	guild_id = 0;
 	lockpick = 0;
 	keyitem = 0;
-	nokeyring = 0;
+	altkeyitem = 0;
 	trigger_door = 0;
 	trigger_type = 0;
 	triggered=false;
@@ -102,10 +98,6 @@ Doors::Doors(const char *dmodel, float dx, float dy, float dz, float dheading, u
 
 	strn0cpy(dest_zone,"NONE",32);
 	dest_instance_id = 0;
-	dest_x = 0;
-	dest_y = 0;
-	dest_z = 0;
-	dest_heading = 0;
 
 	client_version_mask = 4294967295u;
 }
@@ -139,9 +131,9 @@ bool Doors::Process()
 void Doors::HandleClick(Client* sender, uint8 trigger)
 {
 	//door debugging info dump
-	_log(DOORS__INFO, "%s clicked door %s (dbid %d, eqid %d) at (%.4f,%.4f,%.4f @%.4f)", sender->GetName(), door_name, db_id, door_id, pos_x, pos_y, pos_z, heading);
-	_log(DOORS__INFO, "  incline %d, opentype %d, lockpick %d, key %d, nokeyring %d, trigger %d type %d, param %d", incline, opentype, lockpick, keyitem, nokeyring, trigger_door, trigger_type, door_param);
-	_log(DOORS__INFO, "  size %d, invert %d, dest: %s (%.4f,%.4f,%.4f @%.4f)", size, invert_state, dest_zone, dest_x, dest_y, dest_z, dest_heading);
+	Log.Out(Logs::Detail, Logs::Doors, "%s clicked door %s (dbid %d, eqid %d) at %s", sender->GetName(), door_name, db_id, door_id, to_string(m_Position).c_str());
+	Log.Out(Logs::Detail, Logs::Doors, "  incline %d, opentype %d, lockpick %d, keys %d %d, trigger %d type %d, param %d", incline, opentype, lockpick, keyitem, altkeyitem, trigger_door, trigger_type, door_param);
+	Log.Out(Logs::Detail, Logs::Doors, "  size %d, invert %d, dest: %s %s", size, invert_state, dest_zone, to_string(m_Destination).c_str());
 
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	MoveDoor_Struct* md = (MoveDoor_Struct*)outapp->pBuffer;
@@ -152,16 +144,22 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 	//////////////////////////////////////////////////////////////////
 
 	uint32 keyneeded = GetKeyItem();
-	uint8 keepoffkeyring = GetNoKeyring();
+	uint32 altkey = GetAltKeyItem();
 	uint32 haskey = 0;
+	uint32 hasaltkey = 0;
 	uint32 playerkey = 0;
 	const ItemInst *lockpicks = sender->GetInv().GetItem(MainCursor);
 
-	haskey = sender->GetInv().HasItem(keyneeded, 1);
+	haskey = sender->GetInv().HasItem(keyneeded, 1, invWhereCursor);
+	hasaltkey = sender->GetInv().HasItem(altkey, 1, invWhereCursor);
 
 	if(haskey == MainCursor)
 	{
 		playerkey = keyneeded;
+	}
+	else if(hasaltkey == MainCursor)
+	{
+		playerkey = altkey;
 	}
 
 	if(GetTriggerType() == 255)
@@ -185,7 +183,7 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 	}
 
 	// guild doors
-	if(((keyneeded == 0) && (GetLockpick() == 0) && (guild_id == 0)) ||
+	if(((keyneeded == 0 && altkey == 0) && (GetLockpick() == 0) && (guild_id == 0)) ||
 		(IsDoorOpen() && (opentype == 58)) ||
 		((guild_id > 0) && (guild_id == sender->GuildID())))
 	{	//door not locked
@@ -212,15 +210,15 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 			{
 				strcpy(tmpmsg, "Door is locked by an unknown guild");
 			}
-			sender->Message(4, tmpmsg);
+			sender->Message(CC_Blue, tmpmsg);
 			safe_delete(outapp);
 			return;
 		}
 		// a key is required or the door is locked but can be picked or both
-		sender->Message(4, "This is locked...");		// debug spam - should probably go
+		sender->Message(CC_Blue, "This is locked...");		// debug spam - should probably go
 		if(sender->GetGM())		// GM can always open locks - should probably be changed to require a key
 		{
-			sender->Message_StringID(4,DOORS_GM);
+			sender->Message_StringID(CC_Blue,DOORS_GM);
 			if(!IsDoorOpen() || (opentype == 58))
 			{
 				md->action = invert_state == 0 ? OPEN_DOOR : OPEN_INVDOOR;
@@ -232,13 +230,9 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 		}
 		else if(playerkey)
 		{	// they have something they are trying to open it with
-			if(keyneeded && (keyneeded == playerkey))
+			if(keyneeded && (keyneeded == playerkey) || altkey && (altkey == playerkey))
 			{	// key required and client is using the right key
-				if(!keepoffkeyring)
-				{
-					sender->KeyRingAdd(playerkey);
-				}
-				sender->Message(4, "You got it open!");
+				sender->Message(CC_Blue, "You got it open!");
 				if(!IsDoorOpen() || (opentype == 58))
 				{
 					md->action = invert_state == 0 ? OPEN_DOOR : OPEN_INVDOOR;
@@ -258,9 +252,7 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 					float modskill=sender->GetSkill(SkillPickLock);
 					
 
-#if EQDEBUG>=5
-					LogFile->write(EQEMuLog::Debug, "Client has lockpicks: skill=%f", modskill);
-#endif
+					Log.Out(Logs::General, Logs::Skills, "Client has lockpicks: skill=%f", modskill);
 
 					if(GetLockpick() <= modskill)
 					{
@@ -273,51 +265,34 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 						{
 							md->action = invert_state == 0 ? CLOSE_DOOR : CLOSE_INVDOOR;
 						}
-						sender->Message_StringID(4, DOORS_SUCCESSFUL_PICK);
+						sender->Message_StringID(CC_Blue, DOORS_SUCCESSFUL_PICK);
 					}
 					else
 					{
-						sender->Message_StringID(4, DOORS_INSUFFICIENT_SKILL);
+						sender->Message_StringID(CC_Blue, DOORS_INSUFFICIENT_SKILL);
 						safe_delete(outapp);
 						return;
 					}
 				}
 				else
 				{
-					sender->Message_StringID(4, DOORS_NO_PICK);
+					sender->Message_StringID(CC_Blue, DOORS_NO_PICK);
 					safe_delete(outapp);
 					return;
 				}
 			}
 			else
 			{
-				sender->Message_StringID(4, DOORS_CANT_PICK);
+				sender->Message_StringID(CC_Blue, DOORS_CANT_PICK);
 				safe_delete(outapp);
 				return;
 			}
 		}
 		else
 		{	// locked door and nothing to open it with
-			// search for key on keyring
-			if(sender->KeyRingCheck(keyneeded))
-			{
-				playerkey = keyneeded;
-				sender->Message(4, "You got it open!"); // more debug spam
-				if(!IsDoorOpen() || (opentype == 58))
-				{
-					md->action = invert_state == 0 ? OPEN_DOOR : OPEN_INVDOOR;
-				}
-				else
-				{
-					md->action = invert_state == 0 ? CLOSE_DOOR : CLOSE_INVDOOR;
-				}
-			}
-			else
-			{
-				sender->Message_StringID(4, DOORS_LOCKED);
-				safe_delete(outapp);
-				return;
-			}
+			sender->Message_StringID(CC_Blue, DOORS_LOCKED);
+			safe_delete(outapp);
+			return;
 		}
 	}
 
@@ -376,36 +351,28 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 	{ // Teleport door!
 		if (( strncmp(dest_zone,zone_name,strlen(zone_name)) == 0) && (!keyneeded))
 		{
-			if(!keepoffkeyring)
-			{
-				sender->KeyRingAdd(playerkey);
-			}
-			sender->MovePC(zone->GetZoneID(), zone->GetInstanceID(), dest_x, dest_y, dest_z, dest_heading);
+			sender->MovePC(zone->GetZoneID(), zone->GetInstanceID(), m_Destination.x, m_Destination.y, m_Destination.z, m_Destination.w);
 		}
 		else if (( !IsDoorOpen() || opentype == 58 ) && (keyneeded && ((keyneeded == playerkey) || sender->GetGM())))
 		{
-			if(!keepoffkeyring)
-			{
-				sender->KeyRingAdd(playerkey);
-			}
 			if(database.GetZoneID(dest_zone) == zone->GetZoneID())
 			{
-				sender->MovePC(zone->GetZoneID(), zone->GetInstanceID(), dest_x, dest_y, dest_z, dest_heading);
+				sender->MovePC(zone->GetZoneID(), zone->GetInstanceID(), m_Destination.x, m_Destination.y, m_Destination.z, m_Destination.w);
 			}
 			else
 			{
-				sender->MovePC(database.GetZoneID(dest_zone), dest_instance_id, dest_x, dest_y, dest_z, dest_heading);
+				sender->MovePC(database.GetZoneID(dest_zone), dest_instance_id, m_Destination.x, m_Destination.y, m_Destination.z, m_Destination.w);
 			}
 		}
 		if (( !IsDoorOpen() || opentype == 58 ) && (!keyneeded))
 		{
 			if(database.GetZoneID(dest_zone) == zone->GetZoneID())
 			{
-				sender->MovePC(zone->GetZoneID(), zone->GetInstanceID(), dest_x, dest_y, dest_z, dest_heading);
+				sender->MovePC(zone->GetZoneID(), zone->GetInstanceID(), m_Destination.x, m_Destination.y, m_Destination.z, m_Destination.w);
 			}
 			else
 			{
-				sender->MovePC(database.GetZoneID(dest_zone), dest_instance_id, dest_x, dest_y, dest_z, dest_heading);
+				sender->MovePC(database.GetZoneID(dest_zone), dest_instance_id, m_Destination.x, m_Destination.y, m_Destination.z, m_Destination.w);
 			}
 		}
 	}
@@ -414,7 +381,7 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 void Doors::NPCOpen(NPC* sender, bool alt_mode)
 {
 	if(sender) {
-		if(GetTriggerType() == 255 || GetTriggerDoorID() > 0 || GetLockpick() != 0 || GetKeyItem() != 0 || opentype == 59 || opentype == 58 || !sender->IsNPC()) { // this object isnt triggered or door is locked - NPCs should not open locked doors!
+		if(GetTriggerType() == 255 || (GetTriggerDoorID() > 0 && IsDoorOpen()) || GetLockpick() != 0 || GetKeyItem() != 0 || opentype == 59 || opentype == 58 || !sender->IsNPC()) { // this object isnt triggered or door is locked - NPCs should not open locked doors!
 			return;
 		}
 
@@ -424,6 +391,7 @@ void Doors::NPCOpen(NPC* sender, bool alt_mode)
 		md->action = invert_state == 0 ? OPEN_DOOR : OPEN_INVDOOR;
 		entity_list.QueueCloseClients(sender,outapp,false,200);
 		safe_delete(outapp);
+
 
 		if(!alt_mode) { // original function
 			if(!isopen) {
@@ -517,15 +485,15 @@ void Doors::ToggleState(Mob *sender)
 }
 
 void Doors::DumpDoor(){
-	LogFile->write(EQEMuLog::Debug,
-		"db_id:%i door_id:%i zone_name:%s door_name:%s pos_x:%f pos_y:%f pos_z:%f heading:%f",
-		db_id, door_id, zone_name, door_name, pos_x, pos_y, pos_z, heading);
-	LogFile->write(EQEMuLog::Debug,
-		"opentype:%i guild_id:%i lockpick:%i keyitem:%i nokeyring:%i trigger_door:%i trigger_type:%i door_param:%i open:%s",
-		opentype, guild_id, lockpick, keyitem, nokeyring, trigger_door, trigger_type, door_param, (isopen) ? "open":"closed");
-	LogFile->write(EQEMuLog::Debug,
-		"dest_zone:%s dest_x:%f dest_y:%f dest_z:%f dest_heading:%f",
-		dest_zone, dest_x, dest_y, dest_z, dest_heading);
+	Log.Out(Logs::General, Logs::None,
+		"db_id:%i door_id:%i zone_name:%s door_name:%s %s",
+		db_id, door_id, zone_name, door_name, to_string(m_Position).c_str());
+	Log.Out(Logs::General, Logs::None,
+		"opentype:%i guild_id:%i lockpick:%i keyitem:%i trigger_door:%i trigger_type:%i door_param:%i open:%s",
+		opentype, guild_id, lockpick, keyitem, trigger_door, trigger_type, door_param, (isopen) ? "open":"closed");
+	Log.Out(Logs::General, Logs::None,
+		"dest_zone:%s destination:%s ",
+		dest_zone, to_string(m_Destination).c_str());
 }
 
 int32 ZoneDatabase::GetDoorsCount(uint32* oMaxID, const char *zone_name, int16 version) {
@@ -535,7 +503,6 @@ int32 ZoneDatabase::GetDoorsCount(uint32* oMaxID, const char *zone_name, int16 v
                                     zone_name, version);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
-        std::cerr << "Error in GetDoorsCount query '" << query << "' " << results.ErrorMessage() << std::endl;
 		return -1;
     }
 
@@ -562,7 +529,6 @@ int32 ZoneDatabase::GetDoorsCountPlusOne(const char *zone_name, int16 version) {
                                     "WHERE zone = '%s' AND version = %u", zone_name, version);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
-        std::cerr << "Error in GetDoorsCountPlusOne query '" << query << "' " << results.ErrorMessage() << std::endl;
 		return -1;
     }
 
@@ -586,7 +552,6 @@ int32 ZoneDatabase::GetDoorsDBCountPlusOne(const char *zone_name, int16 version)
                                     zone_name, version);
 	auto results = QueryDatabase(query);
 	if (!results.Success()) {
-        std::cerr << "Error in GetDoorsCountPlusOne query '" << query << "' " << results.ErrorMessage() << std::endl;
 		return -1;
 	}
 
@@ -602,19 +567,18 @@ int32 ZoneDatabase::GetDoorsDBCountPlusOne(const char *zone_name, int16 version)
 }
 
 bool ZoneDatabase::LoadDoors(int32 iDoorCount, Door *into, const char *zone_name, int16 version) {
-	LogFile->write(EQEMuLog::Status, "Loading Doors from database...");
+	Log.Out(Logs::General, Logs::Status, "Loading Doors from database...");
 
 
 //	Door tmpDoor;
     std::string query = StringFormat("SELECT id, doorid, zone, name, pos_x, pos_y, pos_z, heading, "
-                                    "opentype, guild, lockpick, keyitem, nokeyring, triggerdoor, triggertype, "
+                                    "opentype, guild, lockpick, keyitem, triggerdoor, triggertype, "
                                     "dest_zone, dest_instance, dest_x, dest_y, dest_z, dest_heading, "
-                                    "door_param, invert_state, incline, size, client_version_mask "
+                                    "door_param, invert_state, incline, size, client_version_mask, altkeyitem "
                                     "FROM doors WHERE zone = '%s' AND (version = %u OR version = -1) "
                                     "ORDER BY doorid asc", zone_name, version);
 	auto results = QueryDatabase(query);
 	if (!results.Success()){
-		std::cerr << "Error in DBLoadDoors query '" << query << "' " << results.ErrorMessage() << std::endl;
 		return false;
 	}
 
@@ -641,22 +605,22 @@ bool ZoneDatabase::LoadDoors(int32 iDoorCount, Door *into, const char *zone_name
 		into[rowIndex].guild_id = atoi(row[9]);
 		into[rowIndex].lock_pick = atoi(row[10]);
 		into[rowIndex].keyitem = atoi(row[11]);
-		into[rowIndex].nokeyring = atoi(row[12]);
-		into[rowIndex].trigger_door = atoi(row[13]);
-		into[rowIndex].trigger_type = atoi(row[14]);
+		into[rowIndex].trigger_door = atoi(row[12]);
+		into[rowIndex].trigger_type = atoi(row[13]);
 
-		strn0cpy(into[rowIndex].dest_zone, row[15], 32);
+		strn0cpy(into[rowIndex].dest_zone, row[14], 32);
 
-		into[rowIndex].dest_instance_id = atoi(row[16]);
-		into[rowIndex].dest_x = (float) atof(row[17]);
-		into[rowIndex].dest_y = (float) atof(row[18]);
-		into[rowIndex].dest_z = (float) atof(row[19]);
-		into[rowIndex].dest_heading = (float) atof(row[20]);
-		into[rowIndex].door_param=atoi(row[21]);
-		into[rowIndex].invert_state=atoi(row[22]);
-		into[rowIndex].incline=atoi(row[23]);
-		into[rowIndex].size=atoi(row[24]);
-		into[rowIndex].client_version_mask = (uint32)strtoul(row[25], nullptr, 10);
+		into[rowIndex].dest_instance_id = atoi(row[15]);
+		into[rowIndex].dest_x = (float) atof(row[16]);
+		into[rowIndex].dest_y = (float) atof(row[17]);
+		into[rowIndex].dest_z = (float) atof(row[18]);
+		into[rowIndex].dest_heading = (float) atof(row[19]);
+		into[rowIndex].door_param=atoi(row[20]);
+		into[rowIndex].invert_state=atoi(row[21]);
+		into[rowIndex].incline=atoi(row[22]);
+		into[rowIndex].size=atoi(row[23]);
+		into[rowIndex].client_version_mask = (uint32)strtoul(row[24], nullptr, 10);
+		into[rowIndex].altkeyitem = atoi(row[25]);
     }
 
 	return true;
@@ -666,30 +630,13 @@ bool ZoneDatabase::LoadDoors(int32 iDoorCount, Door *into, const char *zone_name
 void Doors::SetLocation(float x, float y, float z)
 {
 	entity_list.DespawnAllDoors();
-	pos_x = x;
-	pos_y = y;
-	pos_z = z;
+    m_Position = glm::vec4(x, y, z, m_Position.w);
 	entity_list.RespawnAllDoors();
 }
 
-void Doors::SetX(float in) {
+void Doors::SetPosition(const glm::vec4& position) {
 	entity_list.DespawnAllDoors();
-	pos_x = in;
-	entity_list.RespawnAllDoors();
-}
-void Doors::SetY(float in) {
-	entity_list.DespawnAllDoors();
-	pos_y = in;
-	entity_list.RespawnAllDoors();
-}
-void Doors::SetZ(float in) {
-	entity_list.DespawnAllDoors();
-	pos_z = in;
-	entity_list.RespawnAllDoors();
-}
-void Doors::SetHeading(float in) {
-	entity_list.DespawnAllDoors();
-	heading = in;
+	m_Position = position;
 	entity_list.RespawnAllDoors();
 }
 
@@ -724,6 +671,6 @@ void Doors::CreateDatabaseEntry()
 	{
 		return;
 	}
-	database.InsertDoor(GetDoorDBID(), GetDoorID(), GetDoorName(), GetX(), GetY(), GetZ(), GetHeading(), GetOpenType(), GetGuildID(), GetLockpick(), GetKeyItem(), GetDoorParam(), GetInvertState(), GetIncline(), GetSize());
+	database.InsertDoor(GetDoorDBID(), GetDoorID(), GetDoorName(), m_Position, GetOpenType(), GetGuildID(), GetLockpick(), GetKeyItem(), GetDoorParam(), GetInvertState(), GetIncline(), GetSize());
 }
 

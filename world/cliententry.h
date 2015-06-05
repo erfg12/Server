@@ -22,7 +22,6 @@ struct ServerClientList_Struct;
 class ClientListEntry {
 public:
 	ClientListEntry(uint32 id, uint32 iLSID, const char* iLoginName, const char* iLoginKey, int16 iWorldAdmin = 0, uint32 ip = 0, uint8 local=0, uint8 version=0);
-	ClientListEntry(uint32 id, uint32 iAccID, const char* iAccName, MD5& iMD5Pass, int16 iAdmin = 0);
 	ClientListEntry(uint32 id, ZoneServer* iZS, ServerClientList_Struct* scl, int8 iOnline);
 	~ClientListEntry();
 	bool	CheckStale();
@@ -72,6 +71,7 @@ public:
 	inline uint32		GuildID() const	{ return pguild_id; }
 	inline void			SetGuild(uint32 guild_id) { pguild_id = guild_id; }
 	inline bool			LFG() const			{ return pLFG; }
+	inline bool			LD() const			{ return pLD; }
 	inline uint8			GetGM() const		{ return gm; }
 	inline void			SetGM(uint8 igm)	{ gm = igm; }
 	inline void			SetZone(uint32 zone) { pzone = zone; }
@@ -87,6 +87,7 @@ public:
 	inline bool TellQueueEmpty() const { return tell_queue.empty(); }
 	inline void PushToTellQueue(ServerChannelMessage_Struct *scm) { tell_queue.push_back(scm); }
 	void ProcessTellQueue();
+
 
 private:
 	void	ClearVars(bool iAll = false);
@@ -129,9 +130,11 @@ private:
 	uint8	pLFGToLevel;
 	bool	pLFGMatchFilter;
 	char	pLFGComments[64];
+	bool	pLD;
 
 	// Tell Queue -- really a vector :D
 	std::vector<ServerChannelMessage_Struct *> tell_queue;
+	std::vector<SoulMarkEntry_Struct> soulmarks;
 };
 
 #endif /*CLIENTENTRY_H_*/

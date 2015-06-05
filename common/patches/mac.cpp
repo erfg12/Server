@@ -1,7 +1,7 @@
-#include "../debug.h"
+#include "../global_define.h"
+#include "../eqemu_logsys.h"
 #include "mac.h"
 #include "../opcodemgr.h"
-#include "../logsys.h"
 #include "../eq_stream_ident.h"
 #include "../crc32.h"
 
@@ -42,7 +42,7 @@ namespace Mac {
 			opcodes = new RegularOpcodeManager();
 			if(!opcodes->LoadOpcodes(opfile.c_str())) 
 			{
-				_log(NET__OPCODES, "Error loading opcodes file %s. Not registering patch %s.", opfile.c_str(), name);
+				Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Error loading opcodes file %s. Not registering patch %s.", opfile.c_str(), name);
 				return;
 			}
 		}
@@ -64,7 +64,7 @@ namespace Mac {
 		signature.first_eq_opcode = opcodes->EmuToEQ(OP_DataRate);
 		into.RegisterOldPatch(signature, pname.c_str(), &opcodes, &struct_strategy);
 		
-		_log(NET__IDENTIFY, "Registered patch %s", name);
+		Log.Out(Logs::General, Logs::Netcode, "[IDENTIFY] Registered patch %s", name);
 	}
 
 	void Reload() 
@@ -82,10 +82,10 @@ namespace Mac {
 			opfile += ".conf";
 			if(!opcodes->ReloadOpcodes(opfile.c_str()))
 			{
-				_log(NET__OPCODES, "Error reloading opcodes file %s for patch %s.", opfile.c_str(), name);
+				Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Error reloading opcodes file %s for patch %s.", opfile.c_str(), name);
 				return;
 			}
-			_log(NET__OPCODES, "Reloaded opcodes for patch %s", name);
+			Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Reloaded opcodes for patch %s", name);
 		}
 	}
 
@@ -125,10 +125,18 @@ namespace Mac {
 
 	DECODE(OP_EnterWorld) 
 	{
-		SETUP_DIRECT_DECODE(EnterWorld_Struct, structs::EnterWorld_Struct);
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		if(!__eq_buffer)
+		{
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		__packet->size = sizeof(structs::EnterWorld_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size]; 
+		EnterWorld_Struct *emu = (EnterWorld_Struct*) __packet->pBuffer;
+		structs::EnterWorld_Struct *eq = (structs::EnterWorld_Struct *) __eq_buffer;
 		strn0cpy(emu->name, eq->charname, 64);
-		emu->return_home = 0;
-		emu->tutorial = 0;
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -150,7 +158,8 @@ namespace Mac {
 			eq->anon = emu->player.spawn.anon;
 			strncpy(eq->name, emu->player.spawn.name, 64);
 			eq->deity = emu->player.spawn.deity;
-			if(emu->player.spawn.race == 42)
+			eq->race = emu->player.spawn.race;
+			if (emu->player.spawn.race == 42 && emu->player.spawn.gender == 2)
 				eq->size = emu->player.spawn.size + 2.0f;
 			else
 				eq->size = emu->player.spawn.size;
@@ -160,8 +169,8 @@ namespace Mac {
 			eq->curHP = emu->player.spawn.curHp;
 			eq->x_pos = (float)emu->player.spawn.x;
 			eq->y_pos = (float)emu->player.spawn.y;
+			eq->z_pos = (float)emu->player.spawn.z;
 			eq->animation = emu->player.spawn.animation;
-			eq->z_pos = (float)emu->player.spawn.z;///10.0f;
 			eq->heading = (float)emu->player.spawn.heading;
 			eq->haircolor = emu->player.spawn.haircolor;
 			eq->beardcolor = emu->player.spawn.beardcolor;
@@ -181,7 +190,6 @@ namespace Mac {
 			eq->anim_type = 0x64;
 			eq->texture = emu->player.spawn.equip_chest2;
 			eq->helm = emu->player.spawn.helm;
-			eq->race = emu->player.spawn.race;
 			eq->GM = emu->player.spawn.gm;
 			eq->GuildID = emu->player.spawn.guildID;
 			if(eq->GuildID == 0)
@@ -212,7 +220,6 @@ namespace Mac {
 			eq->extra[12] = 0xFF;
 			eq->extra[13] = 0xFF;
 			eq->type = 0;
-			eq->size = emu->player.spawn.size;
 			eq->petOwnerId = emu->player.spawn.petOwnerId;
 
 			CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::ServerZoneEntry_Struct));
@@ -231,10 +238,13 @@ namespace Mac {
 		OUT(race);
 		OUT(class_);
 		OUT(level);
-		eq->bind_point_zone = emu->binds[0].zoneId;
-		eq->bind_location[0].x = emu->binds[0].x;
-		eq->bind_location[0].y = emu->binds[0].y;
-		eq->bind_location[0].z = emu->binds[0].z;
+		for(r = 0; r < 5; r++) {
+			eq->bind_point_zone[r] = emu->binds[r].zoneId;
+			eq->bind_x[r] = emu->binds[r].x;
+			eq->bind_y[r] = emu->binds[r].y;
+			eq->bind_z[r] = emu->binds[r].z;
+			eq->bind_heading[r] = emu->binds[r].heading;
+		}
 		OUT(deity);
 		OUT(intoxication);
 		OUT(haircolor);
@@ -340,7 +350,7 @@ namespace Mac {
 		OUT_array(spellSlotRefresh, structs::MAX_PP_MEMSPELL);
 		eq->eqbackground = 0;
 
-		//_log(NET__STRUCTS, "Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
+		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
 
 		CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::PlayerProfile_Struct)-4);
 		EQApplicationPacket* outapp = new EQApplicationPacket();
@@ -348,7 +358,7 @@ namespace Mac {
 		outapp->pBuffer = new uchar[10000];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, sizeof(structs::PlayerProfile_Struct), outapp->pBuffer, 10000);
 		EncryptProfilePacket(outapp->pBuffer, outapp->size);
-		//_log(NET__STRUCTS, "Player Profile Packet is %i bytes compressed", outapp->size);
+		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes compressed", outapp->size);
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
 		delete __packet;
@@ -487,7 +497,7 @@ namespace Mac {
 		OUT(safe_x);
 		OUT(safe_z);
 		OUT(max_z);
-		eq->underworld=emu->underworld;
+		OUT(underworld);
 		OUT(minclip);
 		OUT(maxclip);
 		OUT(skylock);
@@ -496,31 +506,10 @@ namespace Mac {
 		OUT_array(snow_duration, 4);
 		OUT_array(rain_chance, 4);
 		OUT_array(rain_duration, 4);
+		OUT(normal_music_day);
+		eq->water_music = 4; // No need to add a column for these two, they never change like gravity.
+		eq->normal_music_night = 0;
 		FINISH_ENCODE();	
-	}
-
-	ENCODE(OP_ChannelMessage) 
-	{
-		EQApplicationPacket *__packet = *p; 
-		*p = nullptr; 
-		unsigned char *__emu_buffer = __packet->pBuffer; 
-		ChannelMessage_Struct *emu = (ChannelMessage_Struct *) __emu_buffer; 
-		uint32 __i = 0; 
-		__i++; /* to shut up compiler */
-	
-		int msglen = __packet->size - sizeof(ChannelMessage_Struct);
-		int len = sizeof(structs::ChannelMessage_Struct) + msglen + 4;
-		__packet->pBuffer = new unsigned char[len]; 
-		__packet->size = len; 
-		memset(__packet->pBuffer, 0, len); 
-		structs::ChannelMessage_Struct *eq = (structs::ChannelMessage_Struct *) __packet->pBuffer; 
-		strncpy(eq->targetname, emu->targetname, 64);
-		strncpy(eq->sender, emu->sender, 64);
-		eq->language = emu->language;
-		eq->chan_num = emu->chan_num;
-		eq->skill_in_language = emu->skill_in_language;
-		strcpy(eq->message, emu->message);
-		FINISH_ENCODE();
 	}
 
 	ENCODE(OP_SpecialMesg)
@@ -541,117 +530,6 @@ namespace Mac {
 		eq->msg_type = emu->msg_type;
 		strcpy(eq->message, emu->message);
 		FINISH_ENCODE();
-	}
-
-	DECODE(OP_ChannelMessage)
-	{
-		unsigned char *__eq_buffer = __packet->pBuffer;
-		structs::ChannelMessage_Struct *eq = (structs::ChannelMessage_Struct *) __eq_buffer;
-		int msglen = __packet->size - sizeof(structs::ChannelMessage_Struct) - 4;
-		int len = msglen + sizeof(ChannelMessage_Struct);
-		__packet->size = len; 
-		__packet->pBuffer = new unsigned char[len];
-		MEMSET_IN(ChannelMessage_Struct);
-		ChannelMessage_Struct *emu = (ChannelMessage_Struct *) __packet->pBuffer;
-		strncpy(emu->targetname, eq->targetname, 64);
-		strncpy(emu->sender, eq->targetname, 64);
-		emu->language = eq->language;
-		emu->chan_num = eq->chan_num;
-		emu->skill_in_language = eq->skill_in_language;
-		strcpy(emu->message, eq->message);
-	}
-
-	ENCODE(OP_MobUpdate)
-	{
-		//consume the packet
-		EQApplicationPacket *in = *p;
-		*p = nullptr;
-
-		//store away the emu struct
-		unsigned char *__emu_buffer = in->pBuffer;
-		SpawnPositionUpdate_Struct *emu = (SpawnPositionUpdate_Struct *) __emu_buffer;
-
-		EQApplicationPacket* app = new EQApplicationPacket(OP_MobUpdate,sizeof(structs::SpawnPositionUpdates_Struct) + sizeof(structs::SpawnPositionUpdate_Struct));
-		structs::SpawnPositionUpdates_Struct* spu = (structs::SpawnPositionUpdates_Struct*)app->pBuffer;
-	
-		spu->num_updates = 1;
-		float anim_type = (float)emu->anim_type / 37.0f;
-		spu->spawn_update[0].anim_type = (uint8)emu->anim_type;
-		spu->spawn_update[0].delta_heading = (uint8)emu->delta_heading;
-		spu->spawn_update[0].delta_x = (uint32)emu->delta_x;
-		spu->spawn_update[0].delta_y = (uint32)emu->delta_y;
-		spu->spawn_update[0].delta_z = (uint32)emu->delta_z;
-		spu->spawn_update[0].spawn_id = emu->spawn_id;
-		spu->spawn_update[0].x_pos = (int16)emu->y_pos;
-		spu->spawn_update[0].y_pos = (int16)emu->x_pos;
-		spu->spawn_update[0].z_pos = (int16)emu->z_pos*10;
-		spu->spawn_update[0].heading = (int8)emu->heading;
-		spu->spawn_update[0].anim_type = anim_type * 7;
-		dest->FastQueuePacket(&app);
-
-		delete[] __emu_buffer;
-	}
-
-	ENCODE(OP_ClientUpdate)
-	{
-		SETUP_DIRECT_ENCODE(SpawnPositionUpdate_Struct, structs::SpawnPositionUpdate_Struct);
-		OUT(spawn_id);
-		if(emu->y_pos >= 0)
-			eq->x_pos = int16(emu->y_pos + 0.5);
-		else
-			eq->x_pos = int16(emu->y_pos - 0.5);
-		if(emu->x_pos >= 0)
-			eq->y_pos = int16(emu->x_pos + 0.5);
-		else
-			eq->y_pos = int16(emu->x_pos - 0.5);
-		if(emu->z_pos >= 0)
-			eq->z_pos = int16(emu->z_pos + 0.5)*10;
-		else
-			eq->z_pos = int16(emu->z_pos - 0.5)*10;
-		/*OUT(delta_x);
-		OUT(delta_y);
-		OUT(delta_z);
-		if(emu->delta_heading >= 0)
-			eq->delta_heading = uint8(emu->delta_heading + 0.5);
-		else
-			eq->delta_heading = uint8(emu->delta_heading - 0.5);*/
-		eq->delta_x = 0;
-		eq->delta_y = 0;
-		eq->delta_z = 0;
-		eq->delta_heading = 0;
-		eq->anim_type = (uint8)emu->anim_type;
-		eq->heading = (uint8)emu->heading;
-		FINISH_ENCODE();
-	}
-
-	DECODE(OP_ClientUpdate)
-	{
-		SETUP_DIRECT_DECODE(SpawnPositionUpdate_Struct, structs::SpawnPositionUpdate_Struct);
-		IN(spawn_id);
-	//	IN(sequence);
-		if(eq->y_pos >= 0)
-			emu->x_pos = int16(eq->y_pos + 0.5);
-		else
-			emu->x_pos = int16(eq->y_pos - 0.5);
-		if(eq->x_pos >= 0)
-			emu->y_pos = int16(eq->x_pos + 0.5);
-		else
-			emu->y_pos = int16(eq->x_pos - 0.5);
-		if(eq->z_pos >= 0)
-			emu->z_pos = int16(eq->z_pos + 0.5)/10;
-		else
-			emu->z_pos = int16(eq->z_pos - 0.5)/10;
-		emu->heading = (uint8)eq->heading;
-		/*emu->delta_x = 0;
-		emu->delta_y = 0;
-		emu->delta_z = 0;
-		emu->delta_heading = 0;*/
-		IN(delta_x);
-		IN(delta_y);
-		IN(delta_z);
-		emu->delta_heading = (uint8)eq->delta_heading;
-		IN(anim_type);
-		FINISH_DIRECT_DECODE();
 	}
 
 	DECODE(OP_TargetMouse)
@@ -675,43 +553,6 @@ namespace Mac {
 		FINISH_DIRECT_DECODE();
 	}
 
-	DECODE(OP_SetServerFilter)
-	{
-		DECODE_LENGTH_EXACT(structs::SetServerFilter_Struct);
-		SETUP_DIRECT_DECODE(SetServerFilter_Struct, structs::SetServerFilter_Struct);
-		emu->filters[0]=eq->filters[5]; //GuildChat
-		emu->filters[1]=eq->filters[6]; //Socials
-		emu->filters[2]=eq->filters[7]; //GroupChat
-		emu->filters[3]=eq->filters[8]; //Shouts
-		emu->filters[4]=eq->filters[9]; //Auctions
-		emu->filters[5]=eq->filters[10];//OOC
-		emu->filters[6]=1;				//BadWords (Handled by LogServer?)
-		emu->filters[7]=eq->filters[2]; //PC Spells 0 is on
-		emu->filters[8]=0;				//NPC Spells Client has it but it doesn't work. 0 is on.
-		emu->filters[9]=eq->filters[3]; //Bard Songs 0 is on
-		emu->filters[10]=eq->filters[15]; //Spell Crits 0 is on
-		int critm = eq->filters[16];
-		if(critm > 0){critm = critm-1;}
-		emu->filters[11]=critm;			//Melee Crits 0 is on. EQMac has 3 options, Emu only 2.
-		emu->filters[12]=eq->filters[0]; //Spell Damage 0 is on
-		emu->filters[13]=eq->filters[11]; //My Misses
-		emu->filters[14]=eq->filters[12]; //Others Misses
-		emu->filters[15]=eq->filters[13]; //Others Hit
-		emu->filters[16]=eq->filters[14]; //Missed Me
-		emu->filters[17] = 0;			  //Damage Shields
-		emu->filters[18] = 0;			  //DOT
-		emu->filters[19] = 0;			  //Pet Hits
-		emu->filters[20] = 0;			  //Pet Misses
-		emu->filters[21] = 0;			  //Focus Effects
-		emu->filters[22] = 0;			  //Pet Spells
-		emu->filters[23] = 0;			  //HoT	
-		emu->filters[24] = 0;			  //Unknowns
-		emu->filters[25] = 0;			
-		emu->filters[26] = 0;
-		emu->filters[27] = 0;
-		FINISH_DIRECT_DECODE();
-	}
-
 	ENCODE(OP_ZoneSpawns)
 	{
 
@@ -727,7 +568,7 @@ namespace Mac {
 		int entrycount = in->size / sizeof(Spawn_Struct);
 		if(entrycount == 0 || (in->size % sizeof(Spawn_Struct)) != 0) 
 		{
-			_log(NET__STRUCTS, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(Spawn_Struct));
+			Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(Spawn_Struct));
 			delete in;
 			return;
 		}
@@ -747,6 +588,7 @@ namespace Mac {
 
 			struct structs::Spawn_Struct* spawns = MacSpawns(emu,0);
 			memcpy(eq,spawns,sizeof(structs::Spawn_Struct));
+			safe_delete(spawns);
 
 		}
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
@@ -765,6 +607,7 @@ namespace Mac {
 
 		struct structs::Spawn_Struct* spawns = MacSpawns(emu,1);
 		memcpy(eq,spawns,sizeof(structs::Spawn_Struct));
+		safe_delete(spawns);
 
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(structs::Spawn_Struct));
 		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
@@ -772,6 +615,8 @@ namespace Mac {
 		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete[] __emu_buffer;
+		safe_delete(__packet);
+
 	}
 
 	DECODE(OP_ZoneChange)
@@ -904,9 +749,9 @@ namespace Mac {
 		OUT(type);
 		OUT(spellid);
 		OUT(damage);
-		//OUT(unknown11);
+		OUT(force);
 		OUT(sequence);
-		//OUT(unknown19);
+		OUT(pushup_angle);
 		FINISH_ENCODE();
 	}
 
@@ -920,8 +765,9 @@ namespace Mac {
 		OUT(level);
 		eq->unknown6 = 0x41; //Think this is target level.
 		OUT(instrument_mod);
-		OUT(bard_focus_id);
+		OUT(force);
 		OUT(sequence);
+		OUT(pushup_angle);
 		OUT(type);
 		OUT(spell);
 		OUT(buff_unknown);
@@ -1004,7 +850,11 @@ namespace Mac {
 	
 		if(item)
 		{
-			structs::Item_Struct* mac_item = MacItem((ItemInst*)int_struct->inst,int_struct->slot_id);
+			uint8 type = 0;
+			if(old_item_pkt->PacketType == ItemPacketViewLink)
+				type = 2;
+
+			structs::Item_Struct* mac_item = MacItem((ItemInst*)int_struct->inst,int_struct->slot_id, type);
 
 			if(mac_item == 0)
 			{
@@ -1025,17 +875,19 @@ namespace Mac {
 				outapp->SetOpcode(OP_MerchantItemPacket);
 			else if(old_item_pkt->PacketType == ItemPacketLoot)
 				outapp->SetOpcode(OP_LootItemPacket);
-			else if(item->GetItem()->ItemClass == 1)
+			else if(old_item_pkt->PacketType == ItemPacketWorldContainer)
+				outapp->SetOpcode(OP_ObjectItemPacket);
+			else if(item->GetItem()->ItemClass == ItemClassContainer)
 				outapp->SetOpcode(OP_ContainerPacket);
-			else if(item->GetItem()->ItemClass == 2)
+			else if(item->GetItem()->ItemClass == ItemClassBook)
 				outapp->SetOpcode(OP_BookPacket);
-			else if(int_struct->slot_id == 0)
+			else if(int_struct->slot_id == MainCursor)
 				outapp->SetOpcode(OP_SummonedItem);
 			else
 				outapp->SetOpcode(OP_ItemPacket);
 
 			if(outapp->size != sizeof(structs::Item_Struct))
-				_log(ZONE__INIT,"Invalid size on OP_ItemPacket packet. Expected: %i, Got: %i", sizeof(structs::Item_Struct), outapp->size);
+				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_ItemPacket packet. Expected: %i, Got: %i", sizeof(structs::Item_Struct), outapp->size);
 
 			dest->FastQueuePacket(&outapp);
 			delete[] __emu_buffer;
@@ -1072,7 +924,7 @@ namespace Mac {
 			memcpy(&myitem->item,mac_item,sizeof(structs::Item_Struct));
 		
 			if(outapp->size != sizeof(structs::TradeItemsPacket_Struct))
-				_log(ZONE__INIT,"Invalid size on OP_TradeItemPacket packet. Expected: %i, Got: %i", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
+				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_TradeItemPacket packet. Expected: %i, Got: %i", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
 
 			dest->FastQueuePacket(&outapp);
 			delete[] __emu_buffer;
@@ -1092,7 +944,7 @@ namespace Mac {
 		int16 itemcount = in->size / sizeof(InternalSerializedItem_Struct);
 		if(itemcount == 0 || (in->size % sizeof(InternalSerializedItem_Struct)) != 0)
 		{
-			_log(NET__STRUCTS, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
+			Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
 			delete in;
 			return;
 		}
@@ -1114,7 +966,7 @@ namespace Mac {
 			{
 				char *mac_item_char = reinterpret_cast<char*>(mac_item);
 				mac_item_string.append(mac_item_char,sizeof(structs::Item_Struct));
-				safe_delete_array(mac_item_char);	
+				safe_delete(mac_item);	
 			}
 		}
 		int32 length = 5000;
@@ -1124,6 +976,7 @@ namespace Mac {
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_CharInventory, length);
 		outapp->size = buffer + DeflatePacket((uchar*) pi->packets, itemcount * sizeof(structs::Item_Struct), &outapp->pBuffer[buffer], length-buffer);
 		outapp->pBuffer[0] = itemcount;
+		safe_delete_array(pi);
 
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
@@ -1141,14 +994,14 @@ namespace Mac {
 		int16 itemcount = in->size / sizeof(InternalSerializedItem_Struct);
 		if(itemcount == 0 || (in->size % sizeof(InternalSerializedItem_Struct)) != 0) 
 		{
-			_log(ZONE__INIT, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
+			Log.Out(Logs::Detail, Logs::Zone_Server, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
 			delete in;
 			return;
 		}
-		if(itemcount > 80)
-			itemcount = 80;
+		if(itemcount > 79)
+			itemcount = 79;
 
-		int pisize = sizeof(structs::MerchantItems_Struct) + (80 * sizeof(structs::MerchantItemsPacket_Struct));
+		int pisize = sizeof(structs::MerchantItems_Struct) + (79 * sizeof(structs::MerchantItemsPacket_Struct));
 		structs::MerchantItems_Struct* pi = (structs::MerchantItems_Struct*) new uchar[pisize];
 		memset(pi, 0, pisize);
 
@@ -1162,14 +1015,15 @@ namespace Mac {
 
 			if(mac_item != 0)
 			{
-				structs::MerchantItemsPacket_Struct* merchant = new struct structs::MerchantItemsPacket_Struct;
+				structs::MerchantItemsPacket_Struct* merchant = new structs::MerchantItemsPacket_Struct;
 				memset(merchant,0,sizeof(structs::MerchantItemsPacket_Struct));
 				memcpy(&merchant->item,mac_item,sizeof(structs::Item_Struct));
 				merchant->itemtype = mac_item->ItemClass;
 
 				char *mac_item_char = reinterpret_cast<char*>(merchant);
 				mac_item_string.append(mac_item_char,sizeof(structs::MerchantItemsPacket_Struct));
-				safe_delete_array(mac_item_char);	
+				safe_delete(mac_item);	
+				safe_delete(merchant);
 			}
 		}
 		int32 length = 5000;
@@ -1182,6 +1036,7 @@ namespace Mac {
 
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
+		safe_delete_array(pi);
 	}
 
 	DECODE(OP_DeleteCharge) {  DECODE_FORWARD(OP_MoveItem); }
@@ -1193,7 +1048,7 @@ namespace Mac {
 		emu->to_slot = MacToServerSlot(eq->to_slot);
 		IN(number_in_stack);
 
-		_log(INVENTORY__SLOTS, "EQMAC DECODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", emu->to_slot, emu->from_slot, emu->number_in_stack);
+		Log.Out(Logs::Detail, Logs::Inventory, "EQMAC DECODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", emu->to_slot, emu->from_slot, emu->number_in_stack);
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -1207,7 +1062,7 @@ namespace Mac {
 		eq->to_slot = ServerToMacSlot(emu->to_slot);
 		OUT(to_slot);
 		OUT(number_in_stack);
-		_log(INVENTORY__SLOTS, "EQMAC ENCODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", eq->to_slot, eq->from_slot, eq->number_in_stack);
+		Log.Out(Logs::Detail, Logs::Inventory, "EQMAC ENCODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", eq->to_slot, eq->from_slot, eq->number_in_stack);
 
 		FINISH_ENCODE();
 	}
@@ -1402,26 +1257,6 @@ namespace Mac {
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_Animation)
-	{
-		ENCODE_LENGTH_EXACT(Animation_Struct);
-		SETUP_DIRECT_ENCODE(Animation_Struct, structs::Animation_Struct);
-		OUT(spawnid);
-		OUT(action);
-		eq->a_unknown[5]=0x80;
-		eq->a_unknown[6]=0x3F;
-		FINISH_ENCODE();
-	}
-
-	DECODE(OP_Animation)
-	{
-		DECODE_LENGTH_EXACT(structs::Animation_Struct);
-		SETUP_DIRECT_DECODE(Animation_Struct, structs::Animation_Struct);
-		IN(spawnid);
-		IN(action);
-		FINISH_DIRECT_DECODE();
-	}
-
 	ENCODE(OP_LootItem)
 	{
 		ENCODE_LENGTH_EXACT(LootingItem_Struct);
@@ -1486,12 +1321,12 @@ namespace Mac {
 		int g;
 		for(g=0; g<10; g++)
 		{
-			/*if(eq->itemsinbag[g] > 0)
+			if(eq->itemsinbag[g] > 0)
 			{
 				eq->itemsinbag[g] = emu->itemsinbag[g];
-				_log(EQMAC__LOG, "Found a container item %i in slot: %i", emu->itemsinbag[g], g);
+				Log.Out(Logs::Detail, Logs::Inventory, "Found a container item %i in slot: %i", emu->itemsinbag[g], g);
 			}
-			else*/
+			else
 				eq->itemsinbag[g] = 0xFFFF;
 		}
 		eq->unknown208 = 0xFFFFFFFF;
@@ -1615,21 +1450,6 @@ namespace Mac {
 		FINISH_ENCODE();
 	}
 
-	DECODE(OP_WhoAllRequest) 
-	{
-		DECODE_LENGTH_EXACT(structs::Who_All_Struct);
-		SETUP_DIRECT_DECODE(Who_All_Struct, structs::Who_All_Struct);
-		strcpy(emu->whom,eq->whom);
-		IN(wrace);
-		IN(wclass);
-		IN(lvllow);
-		IN(lvlhigh);
-		IN(gmlookup);
-		IN(guildid);
-		emu->type = 3;
-		FINISH_DIRECT_DECODE();
-	}
-
 	ENCODE(OP_GroupInvite2) { ENCODE_FORWARD(OP_GroupInvite); }
 	ENCODE(OP_GroupInvite)
 	{
@@ -1701,6 +1521,7 @@ namespace Mac {
 			ENCODE_LENGTH_EXACT(Trader_Struct);
 			SETUP_DIRECT_ENCODE(Trader_Struct, structs::Trader_Struct);
 			OUT(Code);
+			OUT(TraderID);
 			int k;
 			for(k = 0; k < 80; k++) 
 			{
@@ -1758,6 +1579,7 @@ namespace Mac {
 			DECODE_LENGTH_EXACT(structs::Trader_Struct);
 			SETUP_DIRECT_DECODE(Trader_Struct, structs::Trader_Struct);
 			IN(Code);
+			IN(TraderID);
 			int k;
 			for(k = 0; k < 80; k++)
 			{
@@ -1909,23 +1731,6 @@ namespace Mac {
 		FINISH_ENCODE();
 	}
 
-	DECODE(OP_Bug)
-	{
-		DECODE_LENGTH_EXACT(structs::BugStruct);
-		SETUP_DIRECT_DECODE(BugStruct, structs::BugStruct);
-		strcpy(emu->chartype,eq->chartype);
-		strn0cpy(emu->bug,eq->bug,sizeof(eq->bug));
-		strcpy(emu->name,eq->name);
-		strcpy(emu->target_name,eq->target_name);
-		strcpy(emu->ui,"EQMac Client");
-		IN(x);
-		IN(y);
-		IN(z);
-		IN(heading);
-		IN(type);
-		FINISH_DIRECT_DECODE();
-	}
-
 	DECODE(OP_CombatAbility) 
 	{
 		DECODE_LENGTH_EXACT(structs::CombatAbility_Struct);
@@ -2043,28 +1848,38 @@ namespace Mac {
 		if(item->ID > 32767)
 			return 0;
 
-		structs::Item_Struct *mac_pop_item = new struct structs::Item_Struct;
+		structs::Item_Struct *mac_pop_item = new structs::Item_Struct;
 		memset(mac_pop_item,0,sizeof(structs::Item_Struct));
 
+		if(item->GMFlag == -1)
+			Log.Out(Logs::Moderate, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
+
+		// General items
   		if(type == 0)
   		{
-  			mac_pop_item->equipSlot = ServerToMacSlot(slot_id_in);
 			mac_pop_item->Charges = inst->GetCharges();
+  			mac_pop_item->equipSlot = ServerToMacSlot(slot_id_in);
 			if(item->NoDrop == 0)
 				mac_pop_item->Price = 0; 
 			else
 				mac_pop_item->Price = item->Price;
 			mac_pop_item->SellRate = item->SellRate;
   		}
-  		else
+		// Items on a merchant
+  		else if(type == 1)
   		{ 
   			mac_pop_item->Charges = 1;
   			mac_pop_item->equipSlot = inst->GetMerchantSlot();
-			if(item->NoDrop == 0)
-				mac_pop_item->Price = 0; 
-			else
-				mac_pop_item->Price = inst->GetPrice();  //This handles sellrate for us. 
+			mac_pop_item->Price = inst->GetPrice();  //This handles sellrate for us. 
 			mac_pop_item->SellRate = 1;
+		}
+		// Item links
+		else if(type == 2)
+		{
+			mac_pop_item->Charges = item->MaxCharges;
+			mac_pop_item->equipSlot = ServerToMacSlot(slot_id_in);
+			mac_pop_item->Price = item->Price;
+			mac_pop_item->SellRate = item->SellRate;
 		}
   
 			mac_pop_item->ItemClass = item->ItemClass;
@@ -2137,6 +1952,7 @@ namespace Mac {
 			mac_pop_item->common.Mana = item->Mana;           
 			mac_pop_item->common.AC = item->AC;		
 			mac_pop_item->common.MaxCharges = item->MaxCharges;    
+			mac_pop_item->common.GMFlag = item->GMFlag;
 			mac_pop_item->common.Light = item->Light;          
 			mac_pop_item->common.Delay = item->Delay;          
 			mac_pop_item->common.Damage = item->Damage;               
@@ -2240,7 +2056,7 @@ namespace Mac {
 		if(sizeof(emu) == 0)
 			return 0;
 
-		structs::Spawn_Struct *eq = new struct structs::Spawn_Struct;
+		structs::Spawn_Struct *eq = new structs::Spawn_Struct;
 		memset(eq,0,sizeof(structs::Spawn_Struct));
 
 		if(type == 0)
@@ -2252,8 +2068,8 @@ namespace Mac {
 		eq->anon = emu->anon;
 		memcpy(eq->name, emu->name, 64);
 		eq->deity = emu->deity;
-		if(emu->race == 42)
-			eq->size = emu->size + 2.0f;
+		if (emu->race == 42 && emu->gender == 2)
+				eq->size = emu->size + 2.0f;
 		else
 			eq->size = emu->size;
 		eq->NPC = emu->NPC;
@@ -2289,7 +2105,20 @@ namespace Mac {
 		if(eq->GuildID == 0)
 			eq->GuildID = 0xFFFF;
 		eq->helm = emu->helm;
-		eq->race = emu->race;
+		if (emu->race >= 209 && emu->race <= 212)
+		{
+			eq->race = 75;
+			if (emu->race == 210)
+				eq->texture = 3;
+			else if (emu->race == 211)
+				eq->texture = 2;
+			else if (emu->race == 212)
+				eq->texture = 1;
+			else
+				eq->texture = 0;
+		}
+		else
+			eq->race = emu->race;
 		strncpy(eq->Surname, emu->lastName, 32);
 		eq->walkspeed = emu->walkspeed;
 		eq->light = emu->light;
@@ -2317,21 +2146,13 @@ namespace Mac {
 	}
 
 	ENCODE(OP_DisciplineUpdate) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_Dye) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_RaidJoin) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_RemoveAllDoors) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_SendAAStats) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_SpellEffect) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_TraderDelItem) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_TraderItemUpdate) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_Untargetable) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_UpdateAA) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_Unknown)
 	{
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		_log(EQMAC__LOG, "Dropped an invalid packet: %s",opcodes->EmuToName(in->GetOpcode()));
+		Log.Out(Logs::Detail, Logs::Client_Server_Packet, "Dropped an invalid packet: %s", opcodes->EmuToName(in->GetOpcode()));
 
 		delete in;
 		return;

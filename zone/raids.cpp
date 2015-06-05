@@ -15,13 +15,17 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include "masterentity.h"
-#include "npc_ai.h"
-#include "../common/packet_functions.h"
-#include "../common/packet_dump.h"
+
 #include "../common/string_util.h"
+
+#include "client.h"
+#include "entity.h"
+#include "groups.h"
+#include "mob.h"
+#include "raids.h"
+
 #include "worldserver.h"
+
 extern EntityList entity_list;
 extern WorldServer worldserver;
 
@@ -83,7 +87,7 @@ void Raid::AddMember(Client *c, uint32 group, bool rleader, bool groupleader, bo
     auto results = database.QueryDatabase(query);
 
 	if(!results.Success()) {
-		LogFile->write(EQEMuLog::Error, "Error inserting into raid members: %s", results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "Error inserting into raid members: %s", results.ErrorMessage().c_str());
 	}
 
 	LearnMembers();
@@ -194,12 +198,12 @@ void Raid::SetRaidLeader(const char *wasLead, const char *name)
 	std::string query = StringFormat("UPDATE raid_members SET israidleader = 0 WHERE name = '%s'", wasLead);
 	auto results = database.QueryDatabase(query);
 	if (!results.Success())
-		LogFile->write(EQEMuLog::Error, "Set Raid Leader error: %s\n", results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "Set Raid Leader error: %s\n", results.ErrorMessage().c_str());
 
 	query = StringFormat("UPDATE raid_members SET israidleader = 1 WHERE name = '%s'", name);
 	results = database.QueryDatabase(query);
 	if (!results.Success())
-		LogFile->write(EQEMuLog::Error, "Set Raid Leader error: %s\n", results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "Set Raid Leader error: %s\n", results.ErrorMessage().c_str());
 
 	strn0cpy(leadername, name, 64);
 
@@ -398,7 +402,7 @@ void Raid::CastGroupSpell(Mob* caster, uint16 spellid, uint32 gid)
 		else if(members[x].member != nullptr)
 		{
 			if(members[x].GroupNumber == gid){
-				distance = caster->DistNoRoot(*members[x].member);
+				distance = DistanceSquared(caster->GetPosition(), members[x].member->GetPosition());
 				if(distance <= range2){
 					caster->SpellOnTarget(spellid, members[x].member);
 #ifdef GROUP_BUFF_PETS
@@ -407,7 +411,7 @@ void Raid::CastGroupSpell(Mob* caster, uint16 spellid, uint32 gid)
 #endif
 				}
 				else{
-					_log(SPELLS__CASTING, "Raid spell: %s is out of range %f at distance %f from %s", members[x].member->GetName(), range, distance, caster->GetName());
+					Log.Out(Logs::Detail, Logs::Spells, "Raid spell: %s is out of range %f at distance %f from %s", members[x].member->GetName(), range, distance, caster->GetName());
 				}
 			}
 		}
@@ -446,7 +450,7 @@ void Raid::HealGroup(uint32 heal_amt, Mob* caster, uint32 gid, float range)
 		if(members[gi].member){
 			if(members[gi].GroupNumber == gid)
 			{
-				distance = caster->DistNoRoot(*members[gi].member);
+				distance = DistanceSquared(caster->GetPosition(), members[gi].member->GetPosition());
 				if(distance <= range2){
 					numMem += 1;
 				}
@@ -460,7 +464,7 @@ void Raid::HealGroup(uint32 heal_amt, Mob* caster, uint32 gid, float range)
 		if(members[gi].member){
 			if(members[gi].GroupNumber == gid)
 			{
-				distance = caster->DistNoRoot(*members[gi].member);
+				distance = DistanceSquared(caster->GetPosition(), members[gi].member->GetPosition());
 				if(distance <= range2){
 					members[gi].member->SetHP(members[gi].member->GetHP() + heal_amt);
 					members[gi].member->SendHPUpdate();
@@ -490,7 +494,7 @@ void Raid::BalanceHP(int32 penalty, uint32 gid, float range, Mob* caster, int32 
 		if(members[gi].member){
 			if(members[gi].GroupNumber == gid)
 			{
-				distance = caster->DistNoRoot(*members[gi].member);
+				distance = DistanceSquared(caster->GetPosition(), members[gi].member->GetPosition());
 				if(distance <= range2){
 
 					dmgtaken_tmp = members[gi].member->GetMaxHP() - members[gi].member->GetHP();
@@ -511,7 +515,7 @@ void Raid::BalanceHP(int32 penalty, uint32 gid, float range, Mob* caster, int32 
 		if(members[gi].member){
 			if(members[gi].GroupNumber == gid)
 			{
-				distance = caster->DistNoRoot(*members[gi].member);
+				distance = DistanceSquared(caster->GetPosition(), members[gi].member->GetPosition());
 				if(distance <= range2){
 					if((members[gi].member->GetMaxHP() - dmgtaken) < 1){//this way the ability will never kill someone
 						members[gi].member->SetHP(1);					//but it will come darn close
@@ -546,7 +550,7 @@ void Raid::BalanceMana(int32 penalty, uint32 gid, float range, Mob* caster, int3
 			if(members[gi].GroupNumber == gid)
 			{
 				if (members[gi].member->GetMaxMana() > 0) {
-					distance = caster->DistNoRoot(*members[gi].member);
+					distance = DistanceSquared(caster->GetPosition(), members[gi].member->GetPosition());
 					if(distance <= range2){
 
 						manataken_tmp = members[gi].member->GetMaxMana() - members[gi].member->GetMana();
@@ -569,7 +573,7 @@ void Raid::BalanceMana(int32 penalty, uint32 gid, float range, Mob* caster, int3
 		if(members[gi].member){
 			if(members[gi].GroupNumber == gid)
 			{
-				distance = caster->DistNoRoot(*members[gi].member);
+				distance = DistanceSquared(caster->GetPosition(), members[gi].member->GetPosition());
 				if(distance <= range2){
 					if((members[gi].member->GetMaxMana() - manataken) < 1){
 						members[gi].member->SetMana(1);
@@ -700,15 +704,12 @@ void Raid::GroupBardPulse(Mob* caster, uint16 spellid, uint32 gid){
 		else if(members[z].member != nullptr)
 		{
 			if(members[z].GroupNumber == gid){
-				distance = caster->DistNoRoot(*members[z].member);
-				if(distance <= range2) {
-					members[z].member->BardPulse(spellid, caster);
+				distance = DistanceSquared(caster->GetPosition(), members[z].member->GetPosition());
+				members[z].member->BardPulse(spellid, caster);
 #ifdef GROUP_BUFF_PETS
-					if(members[z].member->GetPet() && members[z].member->HasPetAffinity() && !members[z].member->GetPet()->IsCharmed())
-						members[z].member->GetPet()->BardPulse(spellid, caster);
+				if(members[z].member->GetPet() && members[z].member->HasPetAffinity() && !members[z].member->GetPet()->IsCharmed())
+					members[z].member->GetPet()->BardPulse(spellid, caster);
 #endif
-				} else
-					_log(SPELLS__BARDS, "Group bard pulse: %s is out of range %f at distance %f from %s", members[z].member->GetName(), range, distance, caster->GetName());
 			}
 		}
 	}
@@ -1064,8 +1065,8 @@ void Raid::SendGroupUpdate(Client *to)
 	if(!to)
 		return;
 
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupUpdate2_Struct));
-	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_GroupUpdate,sizeof(GroupUpdate_Struct));
+	GroupUpdate_Struct* gu = (GroupUpdate_Struct*)outapp->pBuffer;
 	gu->action = groupActUpdate;
 	int index = 0;
 	uint32 grp = GetGroup(to->GetName());
@@ -1247,7 +1248,7 @@ void Raid::GetRaidDetails()
         return;
 
     if (results.RowCount() == 0) {
-        LogFile->write(EQEMuLog::Error, "Error getting raid details for raid %lu: %s", (unsigned long)GetID(), results.ErrorMessage().c_str());
+        Log.Out(Logs::General, Logs::Error, "Error getting raid details for raid %lu: %s", (unsigned long)GetID(), results.ErrorMessage().c_str());
         return;
     }
 
@@ -1270,7 +1271,7 @@ bool Raid::LearnMembers()
         return false;
 
 	if(results.RowCount() == 0) {
-        LogFile->write(EQEMuLog::Error, "Error getting raid members for raid %lu: %s", (unsigned long)GetID(), results.ErrorMessage().c_str());
+        Log.Out(Logs::General, Logs::Error, "Error getting raid members for raid %lu: %s", (unsigned long)GetID(), results.ErrorMessage().c_str());
         disbandCheck = true;
         return false;
     }

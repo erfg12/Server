@@ -51,7 +51,6 @@ public:
 	static std::string InventoryMapName(int16 map);
 	static std::string InventoryMainName(int16 main);
 	static std::string InventorySubName(int16 sub);
-	static std::string InventoryAugName(int16 aug);
 
 	// these are currently hard-coded for existing inventory system..do not use in place of special client version handlers until ready
 	static const uint16	MAP_POSSESSIONS_SIZE = _MainCount;
@@ -60,9 +59,6 @@ public:
 	static const uint16 MAP_TRADE_SIZE = 8;
 	static const uint16 MAP_WORLD_SIZE = 10;
 	static const uint16 MAP_LIMBO_SIZE = 36;
-	static const uint16 MAP_TRIBUTE_SIZE = 5; // (need client values)
-	static const uint16 MAP_TROPHY_TRIBUTE_SIZE = 0;
-	static const uint16 MAP_GUILD_TRIBUTE_SIZE = 0;
 	static const uint16 MAP_MERCHANT_SIZE = 0;
 	static const uint16 MAP_DELETED_SIZE = 0;
 	static const uint16 MAP_CORPSE_SIZE = _MainCount; // no bitmask use..limits to size of client corpse window (see EQLimits::InventoryMapSize(MapCorpse, <EQClientVersion))
@@ -76,8 +72,6 @@ public:
 	static const uint16 MAP_ALT_STORAGE_SIZE = 0;
 	static const uint16 MAP_ARCHIVED_SIZE = 0;
 	static const uint16 MAP_MAIL_SIZE = 0;
-	static const uint16 MAP_GUILD_TROPHY_TRIBUTE_SIZE = 0;
-	static const uint16 MAP_KRONO_SIZE = 0;
 	static const uint16 MAP_OTHER_SIZE = 0;
 
 	// most of these definitions will go away with the structure-based system..this maintains compatibility for now
@@ -120,10 +114,6 @@ public:
 	static const int16 WORLD_END = 4009;
 	static const int16 WORLD_SIZE = MAP_WORLD_SIZE;
 
-	static const int16 TRIBUTE_BEGIN = 400;
-	static const int16 TRIBUTE_END = 404;
-	static const int16 TRIBUTE_SIZE = MAP_TRIBUTE_SIZE;
-
 	static const int16 CORPSE_BEGIN = 22;
 	//static const int16 CORPSE_END = RoF::consts::CORPSE_END; // not ready for use
 
@@ -141,10 +131,6 @@ public:
 	//static const uint32 CLASS_BITMASK = 0;	// needs value
 	//static const uint32 RACE_BITMASK = 0;	// needs value
 
-	// BANDOLIERS_COUNT sets maximum limit..active limit will need to be handled by the appropriate AA
-	static const uint32 BANDOLIERS_COUNT = MAC::consts::BANDOLIERS_COUNT;	// count = number of bandolier instances
-	static const uint32 BANDOLIER_SIZE = MAC::consts::BANDOLIER_SIZE;		// size = number of equipment slots in bandolier instance
-	static const uint32 POTION_BELT_SIZE = MAC::consts::POTION_BELT_SIZE;
 
 	// legacy-related functions
 	//static int ServerToPerlSlot(int slot);	// encode
@@ -189,10 +175,6 @@ public:
 	// player profile
 	static bool	CoinHasWeight(uint32 version);
 
-	static uint32	BandoliersCount(uint32 version);
-	static uint32	BandolierSize(uint32 version);
-
-	static uint32	PotionBeltSize(uint32 version);
 };
 
 #endif /* EQ_LIMITS_H */

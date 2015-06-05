@@ -39,12 +39,6 @@ uint16 EmuConstants::InventoryMapSize(int16 map) {
 		return MAP_WORLD_SIZE;
 	case MapLimbo:
 		return MAP_LIMBO_SIZE;
-	case MapTribute:
-		return MAP_TRIBUTE_SIZE;
-	case MapTrophyTribute:
-		return MAP_TROPHY_TRIBUTE_SIZE;
-	case MapGuildTribute:
-		return MAP_GUILD_TRIBUTE_SIZE;
 	case MapMerchant:
 		return MAP_MERCHANT_SIZE;
 	case MapDeleted:
@@ -71,10 +65,6 @@ uint16 EmuConstants::InventoryMapSize(int16 map) {
 		return MAP_ARCHIVED_SIZE;
 	case MapMail:
 		return MAP_MAIL_SIZE;
-	case MapGuildTrophyTribute:
-		return MAP_GUILD_TROPHY_TRIBUTE_SIZE;
-	case MapKrono:
-		return MAP_KRONO_SIZE;
 	case MapOther:
 		return MAP_OTHER_SIZE;
 	default:
@@ -238,19 +228,6 @@ std::string EmuConstants::InventorySubName(int16 sub) {
 
 	std::string ret_str;
 	ret_str = StringFormat("Container %i", (sub + 1)); // zero-based index..but, count starts at one
-
-	return ret_str;
-}
-
-std::string EmuConstants::InventoryAugName(int16 aug) {
-	if (aug == INVALID_INDEX)
-		return "Invalid Aug";
-
-	if ((uint16)aug >= ITEM_COMMON_SIZE)
-		return "Unknown Aug";
-
-	std::string ret_str;
-	ret_str = StringFormat("Augment %i", (aug + 1)); // zero-based index..but, count starts at one
 
 	return ret_str;
 }
@@ -902,44 +879,3 @@ bool EQLimits::CoinHasWeight(uint32 version) {
 	return local[ValidateMobVersion(version)];
 }
 
-uint32 EQLimits::BandoliersCount(uint32 version) {
-	static const uint32 local[_EmuClientCount] = {
-		/*Unknown*/		NOT_USED,
-		/*Trilogy*/		EmuConstants::BANDOLIERS_COUNT,
-		/*Mac*/			EmuConstants::BANDOLIERS_COUNT,
-		/*Evolution*/	0,
-
-		/*NPC*/			NOT_USED,
-		/*Pet*/			NOT_USED
-	};
-
-	return local[ValidateMobVersion(version)];
-}
-
-uint32 EQLimits::BandolierSize(uint32 version) {
-	static const uint32 local[_EmuClientCount] = {
-		/*Unknown*/		NOT_USED,
-		/*Trilogy*/		EmuConstants::BANDOLIER_SIZE,
-		/*Mac*/			EmuConstants::BANDOLIER_SIZE,
-		/*Evolution*/	0,
-
-		/*NPC*/			NOT_USED,
-		/*Pet*/			NOT_USED
-	};
-
-	return local[ValidateMobVersion(version)];
-}
-
-uint32 EQLimits::PotionBeltSize(uint32 version) {
-	static const uint32 local[_EmuClientCount] = {
-		/*Unknown*/		NOT_USED,
-		/*Trilogy*/		NOT_USED,
-		/*Mac*/			NOT_USED,
-		/*Evolution*/	0,
-
-		/*NPC*/			NOT_USED,
-		/*Pet*/			NOT_USED
-	};
-
-	return local[ValidateMobVersion(version)];
-}

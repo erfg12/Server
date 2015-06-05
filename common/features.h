@@ -35,11 +35,6 @@ Core Zone features
 
 */
 
-
-//Uncomment this to cause a zone to basically idle
-//when there are no players in it, mobs stop wandering, etc..
-//#define IDLE_WHEN_EMPTY
-
 #ifdef EMBPERL
 //Enable the new XS based perl parser
 #define EMBPERL_XS
@@ -111,9 +106,6 @@ Zone extensions and features
 //path to where sql logs should be placed
 #define SQL_LOG_PATH "sql_logs/"
 
-//New aggro system to reduce overhead.
-#define REVERSE_AGGRO
-
 //The highest you can #setskill / #setallskill
 #define HIGHEST_CAN_SET_SKILL 400
 
@@ -161,7 +153,6 @@ enum {	//timer settings, all in milliseconds
 	AIassistcheck_delay = 3000,		//now often a fighting NPC will yell for help
 	ClientProximity_interval = 150,
 	CombatEventTimer_expire = 12000,
-	Tribute_duration = 600000,
 	ZoneTimerResolution = 3,			//sleep time between zone main loop runs (milliseconds)
 	FeignMemoryDuration = 120000, // Duration player must feign death to clear zonewide agro.
 	EnragedTimer = 360000,
@@ -171,10 +162,11 @@ enum {	//timer settings, all in milliseconds
 enum {	//some random constants
 	//each of these attack modifiers are added to the NPC's level to determine their
 	//probability of executing such an attack (which may or may not hit)
-	NPCDualAttackModifier = 20,
 	NPCTripleAttackModifier = 0,
 	NPCQuadAttackModifier = -20
 };
+
+#define DUAL_WIELD_LEVEL 4
 
 //Max number of groups you can link with. Not tied to the client.
 //if group linking is enabled above
@@ -183,12 +175,6 @@ enum {	//some random constants
 //this is the number of levels above the thief's level that
 //an npc can be and still let the theif PP them
 #define THIEF_PICKPOCKET_OVER 5
-
-//this is the % chance that an NPC will dual wield a 2nd weapon
-//in its loot table, if it is able to.
-//Aug 2007: was 5% chance.. changed to 100% by default since that seems more normal
-//Kept it intact codewise incase someone wants to or is already using it.
-#define NPC_DW_CHANCE 100
 
 //This is the entry in npc_types to spawn for trap damagaes
 #define TRAP_NPC_TYPE 1586
@@ -215,7 +201,7 @@ enum {	//some random constants
 
 //the formula for experience for killing a mob.
 //level is the only valid variable to use
-#define EXP_FORMULA level*level*75*35/10
+#define EXP_FORMULA level*level
 
 #define HIGHEST_AA_VALUE 35
 
@@ -240,15 +226,15 @@ enum {
 	commandToggleAI = 250,			//can turn NPC AI on and off
 	commandCastSpecials = 100,		//can cast special spells
 	commandInstacast = 100,			//insta-cast all #casted spells
-	commandLevelAboveCap = 100,		//can #level players above level cap
-	commandLevelNPCAboveCap = 100,	//can #level NPCs above level cap
+	commandLevelAboveCap = 250,		//can #level players above level cap
+	commandLevelNPCAboveCap = 250,	//can #level NPCs above level cap
 	commandSetSkillsOther = 100,	//ability to setskills on others
 	commandRaceOthers = 100,	//ability to #race on others
 	commandGenderOthers = 100,	//ability to #gender on others
 	commandTextureOthers = 100,	//ability to #texture on others
 	commandDoAnimOthers = 100,	//can #doanim on others
 	commandLockZones = 101,		//can lock or unlock zones
-	commandEditPlayerCorpses = 150,	//can Edit Player Corpses
+	commandEditPlayerCorpses = 95,	//can Edit Player Corpses
 	commandChangeFlags = 200,		//ability to set/refresh flags
 	commandBanPlayers = 100,		//can set bans on players
 	commandChangeDatarate = 201,	//edit client's data rate

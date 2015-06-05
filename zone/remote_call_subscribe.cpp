@@ -1,13 +1,11 @@
-#include "../common/debug.h"
-#include "../common/logsys.h"
-#include "../common/logtypes.h"
+#include "../common/global_define.h"
 #include "../common/md5.h"
 #include "../common/emu_tcp_connection.h"
 #include "../common/packet_functions.h"
 #include "../common/packet_dump.h"
 #include "../common/servertalk.h"
-//#include "remote_call_subscribe.h"
-//#include "remote_call_subscribe.h"
+#include "remote_call_subscribe.h"
+#include "remote_call.h"
 #include "worldserver.h"
 #include "zone.h"
 
@@ -99,12 +97,19 @@ void RemoteCallSubscriptionHandler::OnEvent(std::string method, std::vector<std:
 	std::string func = "On." + method;
 	std::vector<std::string> &conns = registered_events[method];
 	if(conns.size() > 0) {
-		auto &iter = conns.begin();
+		auto iter = conns.begin();
 		while(iter != conns.end()) {
 			RemoteCall((*iter), func, params);
 			++iter;
 		}
 	}
+}
+
+bool RemoteCallSubscriptionHandler::IsSubscribed(std::string method){
+	if (registered_events.count(method) == 0) {
+		return false; 
+	}
+	return true; 
 }
 
 void RemoteCallSubscriptionHandler::Process() {

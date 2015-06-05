@@ -82,7 +82,7 @@ struct Item_Struct {
 	char	Name[64];		// Name
 	char	Lore[80];		// Lore Name: *=lore, &=summoned, #=artifact, ~=pending lore
 	char	IDFile[30];		// Visible model
-	int16	ID;				// Unique ID (also PK for DB)
+	uint32	ID;				// Unique ID (also PK for DB)
 	uint16  Unused;
 	uint8	Weight;			// Item weight * 10
 	uint8	NoRent;			// No Rent: 0=norent, 255=not norent
@@ -246,6 +246,7 @@ struct Item_Struct {
 	char	WornName[65];
 	char	FocusName[65];
 	char	ScrollName[65];
+	int8	GMFlag;
 
 };
 

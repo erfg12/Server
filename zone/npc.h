@@ -18,19 +18,16 @@
 #ifndef NPC_H
 #define NPC_H
 
-class NPC;
-#include "zonedb.h"
-#include "mob.h"
-//#include "spawn.h"
-
-#include <list>
-#include <deque>
-
-#include "spawn2.h"
-#include "../common/loottable.h"
-#include "zonedump.h"
-#include "qglobals.h"
 #include "../common/rulesys.h"
+
+#include "mob.h"
+#include "qglobals.h"
+#include "zonedb.h"
+#include "zonedump.h"
+
+#include <deque>
+#include <list>
+
 
 #ifdef _WINDOWS
 	#define M_PI	3.141592
@@ -67,10 +64,10 @@ struct AISpells_Struct {
 };
 
 struct AISpellsEffects_Struct {
-	uint16	spelleffectid;		
-	int32	base;		
-	int32	limit;	
-	int32	max;	
+	uint16	spelleffectid;
+	int32	base;
+	int32	limit;
+	int32	max;
 };
 
 struct AISpellsVar_Struct {
@@ -86,23 +83,27 @@ struct AISpellsVar_Struct {
 	uint32  idle_no_sp_recast_min;
 	uint32  idle_no_sp_recast_max;
 	uint8	idle_beneficial_chance;
-}; 
-
+};
 
 class AA_SwarmPetInfo;
+class Client;
+class Group;
+class Raid;
+class Spawn2;
+struct Item_Struct;
 
 class NPC : public Mob
 {
 public:
-	static NPC* SpawnNPC(const char* spawncommand, float in_x, float in_y, float in_z, float in_heading = 0, Client* client = 0);
+	static NPC* SpawnNPC(const char* spawncommand, const glm::vec4& position, Client* client = nullptr);
 	static int8 GetAILevel(bool iForceReRead = false);
 
-	NPC(const NPCType* data, Spawn2* respawn, float x, float y, float z, float heading, int iflymode, bool IsCorpse = false);
+	NPC(const NPCType* data, Spawn2* respawn, const glm::vec4& position, int iflymode, bool IsCorpse = false);
 
 	virtual ~NPC();
 
 	//abstract virtual function implementations requird by base abstract class
-	virtual bool Death(Mob* killerMob, int32 damage, uint16 spell_id, SkillUseTypes attack_skill);
+	virtual bool Death(Mob* killerMob, int32 damage, uint16 spell_id, SkillUseTypes attack_skill, uint8 killedby = 0);
 	virtual void Damage(Mob* from, int32 damage, uint16 spell_id, SkillUseTypes attack_skill, bool avoidable = true, int8 buffslot = -1, bool iBuffTic = false);
 	virtual bool Attack(Mob* other, int Hand = MainPrimary, bool FromRiposte = false, bool IsStrikethrough = false,
 		bool IsFromSpell = false, ExtraAttackOptions *opts = nullptr);
@@ -118,6 +119,7 @@ public:
 	virtual void	AI_Start(uint32 iMoveDelay = 0);
 	virtual void	AI_Stop();
 	void			AI_DoMovement();
+	void			AI_SetupNextWaypoint();
 	bool			AI_AddNPCSpells(uint32 iDBSpellsID);
 	bool			AI_AddNPCSpellsEffects(uint32 iDBSpellsEffectsID);
 	virtual bool	AI_EngagedCastCheck();
@@ -154,6 +156,7 @@ public:
 	virtual void UninitializeBuffSlots();
 
 	virtual void	SetAttackTimer();
+	virtual uint32  GetAttackTimer();
 	virtual void	RangedAttack(Mob* other);
 	virtual void	ThrowingAttack(Mob* other) { }
 	int32 GetNumberOfAttacks() const { return attack_count; }
@@ -163,7 +166,7 @@ public:
 	FACTION_VALUE CheckNPCFactionAlly(int32 other_faction);
 	virtual FACTION_VALUE GetReverseFactionCon(Mob* iOther);
 
-	void	GoToBind(uint8 bindnum = 0)	{ GMMove(org_x, org_y, org_z, org_heading); }
+	void	GoToBind(uint8 bindnum = 0)	{ GMMove(m_SpawnPoint.x, m_SpawnPoint.y, m_SpawnPoint.z, m_SpawnPoint.w); }
 	void	Gate();
 
 	void	GetPetState(SpellBuff_Struct *buffs, uint32 *items, char *name);
@@ -188,6 +191,7 @@ public:
 	void	QueryLoot(Client* to);
 	uint32	CountLoot();
 	inline uint32	GetLoottableID()	const { return loottable_id; }
+	virtual void UpdateEquipmentLight();
 
 	inline uint32	GetCopper()		const { return copper; }
 	inline uint32	GetSilver()		const { return silver; }
@@ -211,14 +215,8 @@ public:
 	uint32 GetSp2() const { return spawn_group; }
 	uint32 GetSpawnPointID() const;
 
-	float GetSpawnPointX()	const { return org_x; }
-	float GetSpawnPointY()	const { return org_y; }
-	float GetSpawnPointZ()	const { return org_z; }
-	float GetSpawnPointH()	const { return org_heading; }
-	float GetGuardPointX()	const { return guard_x; }
-	float GetGuardPointY()	const { return guard_y; }
-	float GetGuardPointZ()	const { return guard_z; }
-	float GetGuardPointH()	const { return guard_heading; }
+	glm::vec4 const GetSpawnPoint() const { return m_SpawnPoint; }
+	glm::vec4 const GetGuardPoint() const { return m_GuardPoint; }
 	EmuAppearance GetGuardPointAnim() const { return guard_anim; }
 	void SaveGuardPointAnim(EmuAppearance anim) { guard_anim = anim; }
 
@@ -238,7 +236,7 @@ public:
 	inline void	MerchantCloseShop() { merchant_open = false; }
 	inline bool	IsMerchantOpen() { return merchant_open; }
 	void	Depop(bool StartSpawnTimer = false);
-	void	Stun(int duration);
+	void	Stun(int duration, Mob* attacker);
 	void	UnStun();
 	uint32	GetSwarmOwner();
 	uint32	GetSwarmTarget();
@@ -249,23 +247,29 @@ public:
 	void	SignalNPC(int _signal_id);
 
 	inline int32	GetNPCFactionID()	const { return npc_faction_id; }
-	inline int32			GetPrimaryFaction()	const { return primary_faction; }
+	inline int32	GetPreCharmNPCFactionID()	const { return precharm_npc_faction_id; }
+	inline int32	GetPrimaryFaction()	const { return primary_faction; }
 	int32	GetNPCHate(Mob* in_ent) {return hate_list.GetEntHate(in_ent);}
 	bool	IsOnHatelist(Mob*p) { return hate_list.IsOnHateList(p);}
 
 	void	SetNPCFactionID(int32 in) { npc_faction_id = in; database.GetFactionIdsForNPC(npc_faction_id, &faction_list, &primary_faction); }
+	void	SetPreCharmNPCFactionID(int32 in) { precharm_npc_faction_id = in; }
+	void	RestoreNPCFactionID() { npc_faction_id = precharm_npc_faction_id; database.GetFactionIdsForNPC(npc_faction_id, &faction_list, &primary_faction); }
 
-	float	org_x, org_y, org_z, org_heading;
+    glm::vec4 m_SpawnPoint;
 
 	uint32	GetMaxDMG() const {return max_dmg;}
 	uint32	GetMinDMG() const {return min_dmg;}
+	int32	GetMinBashKickDmg();
+	int32	GetMaxBashKickDmg();
+	inline void	TriggerClassAtkTimer() { classattack_timer.Trigger(); }
 	int16	GetSlowMitigation() const {return slow_mitigation;}
-	float	GetAttackSpeed() const {return attack_speed;}
 	bool	IsAnimal() const { return(bodytype == BT_Animal); }
 	uint16	GetPetSpellID() const {return pet_spell_id;}
 	void	SetPetSpellID(uint16 amt) {pet_spell_id = amt;}
 	uint32	GetMaxDamage(uint8 tlevel);
 	void	SetTaunting(bool tog) {taunting = tog;}
+	bool	IsTaunting() { return taunting; }
 	void	PickPocket(Client* thief);
 	void	StartSwarmTimer(uint32 duration) { swarm_timer.Start(duration); }
 	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, int16 charges, uint8 minlevel, uint8 maxlevel, bool equipit, bool wearchange = false);
@@ -273,7 +277,16 @@ public:
 	void	CheckSignal();
 	inline bool IsTargetableWithHotkey() const { return no_target_hotkey; }
 	int32 GetNPCHPRegen() const { return hp_regen + itembonuses.HPRegen + spellbonuses.HPRegen; }
+	int32 GetNPCManaRegen() const { return mana_regen + itembonuses.ManaRegen + spellbonuses.ManaRegen; }
+	int32 GetHPRegen();
+	int32 GetManaRegen();
 	inline const char* GetAmmoIDfile() const { return ammo_idfile; }
+	uint16	GetInnateProcSpellId() const { return innateProcSpellId;  }
+	void	AddPush(float heading, float magnitude);		// adds push to the push vector; call this for every melee hit
+	float	ApplyPushVector(bool noglance = false);			// actually push the mob and reset the push vector. checks map collision
+	void	ResetPushTimer() { push_timer.Start(1000); }
+	bool	CheckPushTimer() { return push_timer.Check(false); }
+	void	TriggerPushTimer() { push_timer.Trigger(); }
 
 	//waypoint crap
 	int					GetMaxWp() const { return max_wp; }
@@ -287,15 +300,15 @@ public:
 	void				StopWandering();
 	void				ResumeWandering();
 	void				PauseWandering(int pausetime);
-	void				MoveTo(float mtx, float mty, float mtz, float mth, bool saveguardspot);
-	void				GetClosestWaypoint(std::list<wplist> &wp_list, int count, float m_x, float m_y, float m_z);
+	void				MoveTo(const glm::vec4& position, bool saveguardspot);
+	void				GetClosestWaypoint(std::list<wplist> &wp_list, int count, const glm::vec3& location);
 
 	uint32				GetEquipment(uint8 material_slot) const;	// returns item id
 	int32				GetEquipmentMaterial(uint8 material_slot) const;
 
 	void				NextGuardPosition();
 	void				SaveGuardSpot(bool iClearGuardSpot = false);
-	inline bool			IsGuarding() const { return(guard_heading != 0); }
+	inline bool			IsGuarding() const { return(m_GuardPoint.w != 0); }
 	void				SaveGuardSpotCharm();
 	void				RestoreGuardSpotCharm();
 	void				AI_SetRoambox(float iDist, float iRoamDist, uint32 iDelay = 2500, uint32 iMinDelay = 2500);
@@ -331,7 +344,7 @@ public:
 
 	/* Only allows players that killed corpse to loot */
 	const bool HasPrivateCorpse() const { return NPCTypedata->private_corpse; }
-
+	const bool IsAggroOnPC() const { return NPCTypedata->aggro_pc; }
 	const bool IsUnderwaterOnly() const { return NPCTypedata->underwater; }
 	const char* GetRawNPCTypeName() const { return NPCTypedata->name; }
 
@@ -354,7 +367,7 @@ public:
 
 	inline void SetHealScale(float amt)		{ healscale = amt; }
 	inline float GetHealScale()					{ return healscale; }
-	
+
 	inline void SetSpellFocusDMG(int32 NewSpellFocusDMG) {SpellFocusDMG = NewSpellFocusDMG;}
 	inline int32 GetSpellFocusDMG() const { return SpellFocusDMG;}
 
@@ -370,6 +383,9 @@ public:
 	void	AISpellsList(Client *c);
 
 	bool IsRaidTarget() const { return raid_target; };
+
+	uint16 GetPrimaryMeleeTexture() { return d_melee_texture1; }
+	uint16 GetSecondaryMeleeTexture() { return d_melee_texture2; }
 
 protected:
 
@@ -387,6 +403,7 @@ protected:
 	uint16	wp_m;
 
 	int32	npc_faction_id;
+	int32	precharm_npc_faction_id;
 	int32	primary_faction;
 
 	Timer	attacked_timer;		//running while we are being attacked (damaged)
@@ -395,6 +412,7 @@ protected:
 	Timer	knightattack_timer;
 	Timer	assist_timer;		//ask for help from nearby mobs
 	Timer	qglobal_purge_timer;
+	Timer	push_timer;			// melee push vector and map collision LoS check
 
 	bool	combat_event;	//true if we are in combat, false otherwise
 	Timer	sendhpupdate_timer;
@@ -403,17 +421,18 @@ protected:
 
 	uint32	npc_spells_id;
 	uint8	casting_spell_AIindex;
-	Timer*	AIautocastspell_timer;
+	std::unique_ptr<Timer> AIautocastspell_timer;
 	uint32*	pDontCastBefore_casting_spell;
 	std::vector<AISpells_Struct> AIspells;
 	bool HasAISpell;
 	virtual bool AICastSpell(Mob* tar, uint8 iChance, uint16 iSpellTypes);
 	virtual bool AIDoSpellCast(uint8 i, Mob* tar, int32 mana_cost, uint32* oDontDoAgainBefore = 0);
 	AISpellsVar_Struct AISpellVar;
-	
+
 	uint32	npc_spells_effects_id;
 	std::vector<AISpellsEffects_Struct> AIspellsEffects;
 	bool HasAISpellEffects;
+	uint16	innateProcSpellId;		// store the innate proc spell id so we can distinguish between item procs and innate procs
 
 	uint32	max_dmg;
 	uint32	min_dmg;
@@ -440,8 +459,8 @@ protected:
 	void _ClearWaypints();
 	int max_wp;
 	int save_wp;
-	float guard_x, guard_y, guard_z, guard_heading;
-	float guard_x_saved, guard_y_saved, guard_z_saved, guard_heading_saved;
+	glm::vec4 m_GuardPoint;
+	glm::vec4 m_GuardPointSaved;
 	EmuAppearance guard_anim;
 	float roambox_max_x;
 	float roambox_max_y;
@@ -456,8 +475,8 @@ protected:
 	uint16	skills[HIGHEST_SKILL+1];
 
 	uint32	equipment[EmuConstants::EQUIPMENT_SIZE];	//this is an array of item IDs
-	uint16	d_meele_texture1;			//this is an item Material value
-	uint16	d_meele_texture2;			//this is an item Material value (offhand)
+	uint16	d_melee_texture1;			//this is an item Material value
+	uint16	d_melee_texture2;			//this is an item Material value (offhand)
 	const char*	ammo_idfile;			//this determines projectile graphic "IT###" (see item field 'idfile')
 	uint8	prim_melee_type;			//Sets the Primary Weapon attack message and animation
 	uint8	sec_melee_type;				//Sets the Secondary Weapon attack message and animation
@@ -472,6 +491,7 @@ protected:
 private:
 	uint32	loottable_id;
 	bool	p_depop;
+	glm::vec3 push_vector;
 };
 
 #endif

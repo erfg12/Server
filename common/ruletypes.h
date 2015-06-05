@@ -20,37 +20,36 @@
 
 
 
-RULE_CATEGORY( Character )
+RULE_CATEGORY(Character)
+RULE_BOOL(Character, CanCreate, true)
 RULE_INT ( Character, MaxLevel, 65 )
 RULE_BOOL ( Character, PerCharacterQglobalMaxLevel, false) // This will check for qglobal 'CharMaxLevel' character qglobal (Type 5), if player tries to level beyond that point, it will not go beyond that level
 RULE_INT ( Character, MaxExpLevel, 0 ) //Sets the Max Level attainable via Experience
 RULE_INT ( Character, DeathExpLossLevel, 10 )	// Any level greater than this will lose exp on death
 RULE_INT ( Character, DeathExpLossMaxLevel, 255 )	// Any level greater than this will no longer lose exp on death
 RULE_INT ( Character, DeathItemLossLevel, 10 )
-RULE_INT ( Character, DeathExpLossMultiplier, 3) //Adjust how much exp is lost
-RULE_BOOL( Character, UseDeathExpLossMult, false ) //Adjust to use the above multiplier or to use code default.
 RULE_INT ( Character, CorpseDecayTimeMS, 604800000 ) // 7 days
+RULE_INT ( Character, EmptyCorpseDecayTimeMS, 10800000 ) // 3 hours
 RULE_INT ( Character, CorpseResTimeMS, 10800000 ) // time before cant res corpse(3 hours)
+RULE_INT ( Character, DuelCorpseResTimeMS, 600000 ) // time before cant res corpse after a duel (10 minutes)
+RULE_INT ( Character, CorpseOwnerOnlineTimeMS, 30000 ) // how often corpse will check if its owner is online
 RULE_BOOL( Character, LeaveCorpses, true )
 RULE_BOOL( Character, LeaveNakedCorpses, true )
 RULE_INT ( Character, MaxDraggedCorpses, 2 )
 RULE_REAL( Character, DragCorpseDistance, 400) // If the corpse is <= this distance from the player, it won't move
-RULE_REAL( Character, ExpMultiplier, 0.5 )
-RULE_REAL( Character, AAExpMultiplier, 0.5 )
-RULE_REAL( Character, GroupExpMultiplier, 0.5 )
+RULE_REAL( Character, ExpMultiplier, 1.0 )
+RULE_REAL( Character, AAExpMultiplier, 1.0 )
+RULE_REAL( Character, GroupExpMultiplier, 1.0 )
 RULE_REAL( Character, RaidExpMultiplier, 0.2 )
-RULE_BOOL( Character, UseXPConScaling, true )
-RULE_INT ( Character, LightBlueModifier, 40 )
-RULE_INT ( Character, BlueModifier, 90 )
-RULE_INT ( Character, WhiteModifier, 100 )
-RULE_INT ( Character, YellowModifier, 125 )
-RULE_INT ( Character, RedModifier, 150 )
+RULE_BOOL ( Character, SmoothEXPLoss, true)
+RULE_REAL ( Character, EXPLossMultiplier, 1.0)
 RULE_INT ( Character, AutosaveIntervalS, 240 )	//0=disabled
 RULE_INT ( Character, HPRegenMultiplier, 100)
 RULE_INT ( Character, ManaRegenMultiplier, 100)
 RULE_INT ( Character, EnduranceRegenMultiplier, 100)
-RULE_INT ( Character, ConsumptionMultiplier, 100) //item's hunger restored = this value * item's food level, 100 = normal, 50 = people eat 2x as fast, 200 = people eat 2x as slow
 RULE_INT ( Character, ConsumptionValue, 6000) //How "full" each consumption of food or drink will make the player. EQEmu default is 6000.
+RULE_REAL ( Character, FoodLossPerUpdate, 75) // How much food/water you lose per stamina update
+RULE_INT ( Character, FamishedLevel, 120) // When famished reaches this value, we lose endurance and stop regen on HP/mana
 RULE_BOOL( Character, HealOnLevel, false)
 RULE_BOOL( Character, ManaOnLevel, false)
 RULE_BOOL( Character, FeignKillsPet, false)
@@ -86,8 +85,6 @@ RULE_INT ( Character, KillsPerRaidLeadershipAA, 250) // Number of dark blues or 
 RULE_INT ( Character, MaxFearDurationForPlayerCharacter, 4) //4 tics, each tic calculates every 6 seconds.
 RULE_INT ( Character, MaxCharmDurationForPlayerCharacter, 15)
 RULE_INT ( Character, BaseHPRegenBonusRaces, 4352)	//a bitmask of race(s) that receive the regen bonus. Iksar (4096) & Troll (256) = 4352. see common/races.h for the bitmask values
-RULE_BOOL ( Character, UseRaceClassExpBonuses, true)	// Setting this to true will enable Class and Racial experience rate bonuses
-RULE_BOOL ( Character, UseNewStatsWindow, false)		// New stats window shows everything
 RULE_BOOL ( Character, ItemCastsUseFocus, false) // If true, this allows item clickies to use focuses that have limited max levels on them
 RULE_INT ( Character, MinStatusForNoDropExemptions, 80) // This allows status x and higher to trade no drop items.
 RULE_INT ( Character, SkillCapMaxLevel, 65 )	// Sets the Max Level used for Skill Caps (from skill_caps table). -1 makes it use MaxLevel rule value. It is set to 75 because PEQ only has skillcaps up to that level, and grabbing the players' skill past 75 will return 0, breaking all skills past that level. This helps servers with obsurd level caps (75+ level cap) function without any modifications.
@@ -96,12 +93,13 @@ RULE_BOOL ( Character, CheckCursorEmptyWhenLooting, true ) // If true, a player 
 RULE_BOOL ( Character, MaintainIntoxicationAcrossZones, true ) // If true, alcohol effects are maintained across zoning and logging out/in.
 RULE_BOOL ( Character, EnableDiscoveredItems, false ) // If enabled, it enables EVENT_DISCOVER_ITEM and also saves character names and timestamps for the first time an item is discovered.
 RULE_BOOL ( Character, KeepLevelOverMax, false) // Don't delevel a character that has somehow gone over the level cap
-RULE_REAL ( Character, FoodLossPerUpdate, 75) // How much food/water you lose per stamina update
 RULE_INT ( Character, BaseInstrumentSoftCap, 36) // Softcap for instrument mods, 36 commonly referred to as "3.6" as well.
 RULE_INT ( Character, BaseRunSpeedCap, 150) // Base Run Speed Cap, on live it's 158% which will give you a runspeed of 1.580 hard capped to 225.
-RULE_BOOL (Character, StripBuffsOnLowHP, true)
 RULE_REAL (Character, BaseRunSpeed, 0.7)
 RULE_REAL (Character, BaseWalkSpeed, 0.46)
+RULE_REAL(Character, EnvironmentDamageMulipliter, 1)
+RULE_BOOL(Character, ForageNeedFoodorDrink, false)
+RULE_BOOL(Character, ForageCommonFoodorDrink, false)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )
@@ -111,6 +109,7 @@ RULE_INT ( Guild, PlayerCreationLimit, 1)		// Only allow use of the UF+ window i
 RULE_INT ( Guild, PlayerCreationRequiredStatus, 0)	// Required admin status.
 RULE_INT ( Guild, PlayerCreationRequiredLevel, 0)	// Required Level of the player attempting to create the guild.
 RULE_INT ( Guild, PlayerCreationRequiredTime, 0)	// Required Time Entitled On Account (in Minutes) to create the guild.
+RULE_INT ( Guild, MaxGuilds, 32)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Skills )
@@ -126,8 +125,11 @@ RULE_BOOL( Pets, UnTargetableSwarmPet, false )
 RULE_BOOL( Pets, SwarmPetNotTargetableWithHotKey, false ) //On SOF+ clients this a semi-hack to make swarm pets not F8 targetable.
 RULE_CATEGORY_END()
 
-RULE_CATEGORY( GM )
-RULE_INT ( GM, MinStatusToSummonItem, 250)
+RULE_CATEGORY(GM)
+RULE_INT(GM, GMWhoList, 80)
+RULE_INT(GM, NoCombatLow, 2)
+RULE_INT(GM, NoCombatHigh, 2)	// effectively disables this for now
+RULE_INT ( GM, MinStatusToUseGMItem, 80)
 RULE_INT ( GM, MinStatusToZoneAnywhere, 250 )
 RULE_CATEGORY_END()
 
@@ -143,8 +145,8 @@ RULE_INT ( World, AddMaxClientsStatus, -1 ) // Accounts with status >= this rule
 RULE_BOOL ( World, MaxClientsSetByStatus, false) // If True, IP Limiting will be set to the status on the account as long as the status is > MaxClientsPerIP
 RULE_BOOL ( World, ClearTempMerchantlist, false) // Clears temp merchant items when world boots.
 RULE_BOOL ( World, DeleteStaleCorpeBackups, true) // Deletes stale corpse backups older than 2 weeks.
-RULE_INT ( World, AccountSessionLimit, -1 ) //Max number of characters allowed on at once from a single account (-1 is disabled)
-RULE_INT ( World, ExemptAccountLimitStatus, -1 ) //Min status required to be exempt from multi-session per account limiting (-1 is disabled)
+RULE_INT ( World, AccountSessionLimit, 1 ) //Max number of characters allowed on at once from a single account (-1 is disabled)
+RULE_INT ( World, ExemptAccountLimitStatus, 100 ) //Min status required to be exempt from multi-session per account limiting (-1 is disabled)
 RULE_BOOL ( World, GMAccountIPList, false) // Check ip list against GM Accounts, AntiHack GM Accounts.
 RULE_INT ( World, MinGMAntiHackStatus, 1 ) //Minimum GM status to check against AntiHack list
 RULE_INT ( World, SoFStartZoneID, -1 ) //Sets the Starting Zone for SoF Clients separate from Titanium Clients (-1 is disabled)
@@ -152,16 +154,17 @@ RULE_INT ( World, PVPSettings, 0) // Sets the PVP settings for the server, 1 = R
 RULE_BOOL (World, IsGMPetitionWindowEnabled, false)
 RULE_INT (World, FVNoDropFlag, 0) // Sets the Firiona Vie settings on the client. If set to 2, the flag will be set for GMs only, allowing trading of no-drop items.
 RULE_BOOL (World, IPLimitDisconnectAll, false)
-RULE_BOOL( World, AnnounceJoinQuits, false) //Broadcasts player logins and log outs if true.
 RULE_INT (World, TellQueueSize, 20) 
 RULE_BOOL (World, UseDBUpdate, false) //Automatic Database Upgrade Script
+RULE_BOOL (World, AdjustRespawnTimes, true) //Determines if spawntimes with a boot time variable take effect or not. Set to false in the db for emergency patches.
+RULE_INT (World, BootHour, 0) // Sets the in-game hour world will set when it first boots. 0-24 are valid options, where 0 disables this rule.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Zone )
 RULE_INT ( Zone, NPCPositonUpdateTicCount, 32 ) //ms between intervals of sending a position update to the entire zone.
 RULE_INT ( Zone, ClientLinkdeadMS, 180000) //the time a client remains link dead on the server after a sudden disconnection
 RULE_INT ( Zone, GraveyardTimeMS, 1200000) //ms time until a player corpse is moved to a zone's graveyard, if one is specified for the zone
-RULE_BOOL ( Zone, EnableShadowrest, 0 ) // enables or disables the shadowrest zone feature for player corpses. Default is turned on.
+RULE_BOOL ( Zone, EnableShadowrest, true ) // enables or disables the shadowrest zone feature for player corpses. Default is turned on.
 RULE_BOOL ( Zone, UsePlayerCorpseBackups, true) // Keeps backups of player corpses.
 RULE_INT ( Zone, MQWarpExemptStatus, -1 ) // Required status level to exempt the MQWarpDetector. Set to -1 to disable this feature.
 RULE_INT ( Zone, MQZoneExemptStatus, -1 ) // Required status level to exempt the MQZoneDetector. Set to -1 to disable this feature.
@@ -178,12 +181,25 @@ RULE_INT ( Zone, PEQZoneReuseTime, 900 )	//How long, in seconds, until you can r
 RULE_INT ( Zone, PEQZoneDebuff1, 4454 )		//First debuff casted by #peqzone Default is Cursed Keeper's Blight.
 RULE_INT ( Zone, PEQZoneDebuff2, 2209 )		//Second debuff casted by #peqzone Default is Tendrils of Apathy.
 RULE_BOOL ( Zone, UsePEQZoneDebuffs, true )	//Will determine if #peqzone will debuff players or not when used.
-RULE_REAL ( Zone, HotZoneBonus, 0.75 )
+RULE_REAL ( Zone, HotZoneBonus, 0.5 )
 RULE_INT ( Zone, ReservedInstances, 30 ) //Will reserve this many instance ids for globals... probably not a good idea to change this while a server is running.
 RULE_BOOL ( Zone, LevelBasedEXPMods, false) // Allows you to use the level_exp_mods table in consideration to your players EXP hits
 RULE_INT ( Zone, WeatherTimer, 600) // Weather timer when no duration is available
 RULE_INT (Zone, SpawnEventMin, 5) // When strict is set in spawn_events, specifies the max EQ minutes into the trigger hour a spawn_event will fire.
+RULE_REAL ( Zone, GroupEXPRange, 500 )
+RULE_BOOL ( Zone, IdleWhenEmpty, true) // After timer is expired, if zone is empty it will idle. Boat zones are excluded, as this will break boat functionality.
+RULE_INT ( Zone, IdleTimer, 600000) // 10 minutes
 RULE_CATEGORY_END()
+
+RULE_CATEGORY( AlKabor )
+RULE_BOOL( AlKabor, AllowPetPull, false) // Allow Green Pet Pull
+RULE_BOOL ( AlKabor, StripBuffsOnLowHP, true)
+RULE_BOOL ( AlKabor, OutOfRangeGroupXPBonus, true)
+RULE_BOOL ( AlKabor, GroupEXPBonuses, false)
+RULE_BOOL ( AlKabor, Count6thGroupMember, false)
+RULE_BOOL ( AlKabor, GreensGiveXPToGroup, true)
+RULE_CATEGORY_END()
+
 
 RULE_CATEGORY( Map )
 //enable these to help prevent mob hopping when they are pathing
@@ -195,11 +211,9 @@ RULE_REAL ( Map, FixPathingZMaxDeltaMoving, 20 )	//at runtime while pathing: max
 RULE_REAL ( Map, FixPathingZMaxDeltaWaypoint, 20 )	//at runtime at each waypoint: max change in Z to allow the BestZ code to apply.
 RULE_REAL ( Map, FixPathingZMaxDeltaSendTo, 20 )	//at runtime in SendTo: max change in Z to allow the BestZ code to apply.
 RULE_REAL ( Map, FixPathingZMaxDeltaLoading, 45 )	//while loading each waypoint: max change in Z to allow the BestZ code to apply.
-RULE_BOOL ( Map, UseClosestZ, true)			// Move mobs to the nearest Z above or below, rather than just the nearest below.
-							// Only set UseClosestZ true if all your .map files generated from EQGs were created
-							// with azone2.
-							//
-RULE_INT ( Map, FindBestZHeightAdjust, 1)		// Adds this to the current Z before seeking the best Z position
+RULE_INT ( Map, FindBestZHeightAdjust, 1)		// Adds this to the current Z before seeking the best Z position. If this is too high, mobs bounce when pathing.
+RULE_REAL ( Map, BestZSizeMax, 10.0) // When calculating bestz using size, this is our size cap. Setting this too high causes dragons and giants to hop.
+RULE_REAL ( Map, BestZMultiplier, 0.625) // This is our multiplier for the bestz calculation.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Pathing )
@@ -235,13 +249,15 @@ RULE_CATEGORY_END()
 
 RULE_CATEGORY( Watermap )
 // enable these to use the water detection code. Requires Water Maps generated by awater utility
+// WARNING: Bestz in water is the ocean floor, so if you have NPCs that float near the top (sharks, boats) enabling these rules will break them!
 RULE_BOOL ( Watermap, CheckWaypointsInWaterWhenLoading, false ) // Does not apply BestZ as waypoints are loaded if they are in water
 RULE_BOOL ( Watermap, CheckForWaterAtWaypoints, false)		// Check if a mob has moved into/out of water when at waypoints and sets flymode
 RULE_BOOL ( Watermap, CheckForWaterWhenMoving, false)		// Checks if a mob has moved into/out of water each time it's loc is recalculated
 RULE_BOOL ( Watermap, CheckForWaterOnSendTo, false)		// Checks if a mob has moved into/out of water on SendTo
 RULE_BOOL ( Watermap, CheckForWaterWhenFishing, true)		// Only lets a player fish near water (if a water map exists for the zone)
 RULE_REAL ( Watermap, FishingRodLength, 30)			// How far in front of player water must be for fishing to work
-RULE_REAL ( Watermap, FishingLineLength, 40)			// If water is more than this far below the player, it is considered too far to fish
+RULE_REAL ( Watermap, FishingLineLength, 28)			// If water is more than this far below the player, it is considered too far to fish
+RULE_REAL ( Watermap, FishingLineExtension, 12)		// In some zones, setting a longer length causes the line to go underworld. This gives us a variable to work with in areas that need a longer line.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Spells )
@@ -303,8 +319,8 @@ RULE_INT ( Spells, AI_IdleNoSpellMinRecast, 500) // AI spell recast time(MS) che
 RULE_INT ( Spells, AI_IdleNoSpellMaxRecast, 2000) // AI spell recast time(MS) check when no spell is cast while chasing target. (max time in random)
 RULE_INT ( Spells, AI_IdleBeneficialChance, 100) // Chance while idle to do a beneficial spell on self or others.
 RULE_BOOL ( Spells, SHDProcIDOffByOne, true) // pre June 2009 SHD spell procs were off by 1, they stopped doing this in June 2009 (so UF+ spell files need this false)
-RULE_BOOL ( Spells, Jun182014HundredHandsRevamp, false) // this should be true for if you import a spell file newer than June 18, 2014
 RULE_BOOL ( Spells, SwarmPetTargetLock, false) // Use old method of swarm pets target locking till target dies then despawning.
+RULE_BOOL ( Spells, NPCUseRecastVariance, false) // If recast_delay is set to >= 0 NPCs will use a variance of between 1000 and 4000 ticks.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Combat )
@@ -321,7 +337,7 @@ RULE_BOOL ( Combat, UseIntervalAC, true)
 RULE_INT ( Combat, PetAttackMagicLevel, 30)
 RULE_BOOL ( Combat, EnableFearPathing, true)
 RULE_INT ( Combat, FleeHPRatio, 25)	  //HP % when a NPC starts to flee.
-RULE_REAL ( Combat, FleeMultiplier, 3.0) // Determines how quickly a NPC will slow down while fleeing. Decrease multiplier to slow NPC down quicker.
+RULE_REAL ( Combat, FleeMultiplier, 3.25) // Determines how quickly a NPC will slow down while fleeing. Decrease multiplier to slow NPC down quicker.
 RULE_BOOL ( Combat, FleeIfNotAlone, false) // If false, mobs won't flee if other mobs are in combat with it.
 RULE_BOOL ( Combat, AdjustProcPerMinute, true)
 RULE_REAL ( Combat, AvgProcsPerMinute, 2.0)
@@ -399,6 +415,8 @@ RULE_INT ( Combat, ArcheryBonusChance, 50)
 RULE_INT ( Combat, BerserkerFrenzyStart, 35)
 RULE_INT ( Combat, BerserkerFrenzyEnd, 45)
 RULE_BOOL ( Combat, OneProcPerWeapon, true) //If enabled, One proc per weapon per round
+RULE_REAL ( Combat, PushBackAmount, 1.5)
+RULE_BOOL ( Combat, NewACCurves, true)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( NPC )
@@ -417,12 +435,14 @@ RULE_BOOL ( NPC, SmartLastFightingDelayMoving, true)
 RULE_BOOL ( NPC, ReturnNonQuestNoDropItems, false)	// Returns NO DROP items on NPCs that don't have an EVENT_TRADE sub in their script
 RULE_INT ( NPC, StartEnrageValue, 9) // % HP that an NPC will begin to enrage
 RULE_BOOL ( NPC, LiveLikeEnrage, false) // If set to true then only player controlled pets will enrage
-RULE_REAL ( NPC, SpeedMultiplier, 31.0 ) //this is used to multiply an NPCs movement rate, yeilding map units..
+RULE_REAL ( NPC, SpeedMultiplier, 50.0 ) //This is used to multiply an NPCs movement rate, yeilding map units..
+RULE_INT ( NPC, RunAnimRatio, 10 )	//This changes their animation based on their movement speed.
+RULE_REAL ( NPC, WalkSpeedMultiplier, 50.0 ) //Same as above for walking.
+RULE_INT ( NPC, WalkAnimRatio, 10 ) //Same as above for walking. Probably okay to combine with the runspeed rule.
 RULE_BOOL ( NPC, EnableMeritBasedFaction, false) // If set to true, faction will given in the same way as experience (solo/group/raid)
-RULE_INT ( NPC, RunAnimRatio, 37 )	//This is the multiplier of eqemu speed to get client speed
-									//tweak this if pathing mobs seem to jump forward or backwards
-									//this should prolly be dynamic based on ping time or something.. who knows
-									//Values found in the emu somewhere at one point in time: 36, 43
+RULE_INT ( NPC, NPCTemplateID, 153076)
+RULE_BOOL ( NPC, BoatsRunByDefault, true) // Mainly to make it easier to adjust boats' timing on the fly.
+RULE_BOOL(NPC, CheckSoWBuff, false)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY ( Aggro )
@@ -437,12 +457,12 @@ RULE_INT ( Aggro, PetSpellAggroMod, 10 )
 RULE_REAL ( Aggro, TunnelVisionAggroMod, 0.75 ) //people not currently the top hate generate this much hate on a Tunnel Vision mob
 RULE_INT ( Aggro, MaxStunProcAggro, 400 ) // Set to -1 for no limit. Maxmimum amount of aggro that a stun based proc will add.
 RULE_INT ( Aggro, IntAggroThreshold, 75 ) // Int <= this will aggro regardless of level difference.
+RULE_BOOL ( Aggro, UseLevelAggro, true) // Level 18+ and Undead will aggro regardless of level difference. (this will disabled Rule:IntAggroThreshold if set to true)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY ( Chat )
 RULE_BOOL ( Chat, ServerWideOOC, true)
 RULE_BOOL ( Chat, ServerWideAuction, true)
-RULE_BOOL ( Chat, EnableVoiceMacros, true)
 RULE_BOOL ( Chat, EnableMailKeyIPVerification, true)
 RULE_BOOL ( Chat, EnableAntiSpam, true)
 RULE_BOOL ( Chat, SuppressCommandErrors, false) // Do not suppress by default
@@ -488,10 +508,11 @@ RULE_CATEGORY_END()
 RULE_CATEGORY ( EventLog )
 RULE_BOOL ( EventLog, RecordSellToMerchant, false ) // Record sales from a player to an NPC merchant in eventlog table
 RULE_BOOL ( EventLog, RecordBuyFromMerchant, false ) // Record purchases by a player from an NPC merchant in eventlog table
+RULE_BOOL ( EventLog, SkipCommonPacketLogging, true ) // Doesn't log OP_MobHealth or OP_ClientUpdate
 RULE_CATEGORY_END()
 
 RULE_CATEGORY ( AA )
-RULE_INT ( AA, ExpPerPoint, 23976503)	//Amount of exp per AA. Is the same as the amount of exp to go from level 51 to level 52.
+RULE_INT ( AA, ExpPerPoint, 23976496) //Amount of exp per AA, if AAPercent is 100%. Otherwise, we use the standard XP formula for 52.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Console )
@@ -515,7 +536,6 @@ RULE_BOOL( QueryServ, PlayerLogLevels, false) // Logs Player Leveling/Deleveling
 RULE_BOOL( QueryServ, PlayerLogAARate, false) // Logs Player AA Experience Rates 
 RULE_BOOL( QueryServ, PlayerLogQGlobalUpdate, false) // Logs Player QGlobal Updates
 RULE_BOOL( QueryServ, PlayerLogTaskUpdates, false) // Logs Player Task Updates
-RULE_BOOL( QueryServ, PlayerLogKeyringAddition, false) // Log PLayer Keyring additions
 RULE_BOOL( QueryServ, PlayerLogAAPurchases, false) // Log Player AA Purchases
 RULE_BOOL( QueryServ, PlayerLogTradeSkillEvents, false) // Log Player Tradeskill Transactions
 RULE_BOOL( QueryServ, PlayerLogIssuedCommandes, false ) // Log Player Issued Commands
@@ -523,9 +543,15 @@ RULE_BOOL( QueryServ, PlayerLogMoneyTransactions, false) // Log Player Money Tra
 RULE_BOOL( QueryServ, PlayerLogAlternateCurrencyTransactions, false) // Log Ploayer Alternate Currency Transactions
 RULE_CATEGORY_END()
 
+RULE_CATEGORY( Groundspawns )
+RULE_INT ( Groundspawns, DecayTime, 300000 )	// Decay time of player dropped items.
+RULE_INT ( Groundspawns, DisarmDecayTime, 300000 )	// Decay time of weapons dropped due to disarm
+RULE_INT ( Groundspawns, FullInvDecayTime, 300000 )	// Decay time of items dropped due to full inventory (trades/merchants)
+RULE_BOOL ( Groundspawns, RandomSpawn, true )	// Determines if groundspawns with random spanw locs will periodically despawn and respawn elsewhere.
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL
 #undef RULE_BOOL
 #undef RULE_CATEGORY_END
-

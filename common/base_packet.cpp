@@ -15,12 +15,11 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "debug.h"
+
+#include "global_define.h"
 #include "base_packet.h"
 #include "misc.h"
 #include "packet_dump.h"
-
-
 
 BasePacket::BasePacket(const unsigned char *buf, uint32 len)
 {
@@ -56,7 +55,7 @@ void BasePacket::build_raw_header_dump(char *buffer, uint16 seq) const
 		buffer += sprintf(buffer, "%s.%06lu ",temp,timestamp.tv_usec);
 	}
 	if (src_ip) {
-		std::string sIP,dIP;;
+		std::string sIP,dIP;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
 		buffer += sprintf(buffer, "[%s:%d->%s:%d]\n",sIP.c_str(),src_port,dIP.c_str(),dst_port);
@@ -80,7 +79,7 @@ void BasePacket::build_header_dump(char *buffer) const
 void BasePacket::DumpRawHeaderNoTime(uint16 seq, FILE *to) const
 {
 	if (src_ip) {
-		std::string sIP,dIP;;
+		std::string sIP,dIP;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
 		fprintf(to, "[%s:%d->%s:%d] ",sIP.c_str(),src_port,dIP.c_str(),dst_port);

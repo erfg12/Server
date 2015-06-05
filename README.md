@@ -1,8 +1,6 @@
-Alkabor Database: https://drive.google.com/folderview?id=0B5FZHGN6aazfVEh0d1czZmw5MUU&usp=sharing
+Alkabor Database: https://drive.google.com/folderview?id=0B3zT6wvZcAZIfkMyay1hUUt3S0FRNVZsaUczTlY0VWRJRnJFeGxTUEhKQkFfdk5pRVVmYVE&usp=sharing
 
-Alkabor Quests: http://code.google.com/p/peqmacquests/
+Our login server requires OpenSSL: https://www.openssl.org/related/binaries.html
 
-Maps: https://code.google.com/p/eqmacemu-maps/
-
-For installation, follow instructions on EQEmu wiki as other than login we are using compatible EQEmu code. 
+For the rest, follow instructions on EQEmu (https://github.com/EQEmu/Server/blob/master/README.md) as other than login we are using compatible EQEmu code. 
 

@@ -13,7 +13,6 @@ enum PlayerGenericLogEventTypes {
 	Player_Log_Deaths,
 	Player_Log_Connect_State,
 	Player_Log_Levels,
-	Player_Log_Keyring_Addition,
 	Player_Log_QGlobal_Update,
 	Player_Log_Task_Updates,
 	Player_Log_AA_Purchases,

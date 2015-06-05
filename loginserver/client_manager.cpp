@@ -139,6 +139,7 @@ void ClientManager::ProcessDisconnect()
 		EQStreamInterface *c = (*iter)->GetConnection();
 		if(c->CheckState(CLOSED))
 		{
+			c->ReleaseFromUse();
 			server_log->Log(log_network, "Client disconnected from the server, removing client.");
 			delete (*iter);
 			iter = clients.erase(iter);

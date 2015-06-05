@@ -23,7 +23,7 @@ target to center around.
 
 */
 
-#include "../common/debug.h"
+class Zone;
 
 #ifdef _WINDOWS
     #define snprintf	_snprintf
@@ -32,7 +32,17 @@ target to center around.
     #define strcasecmp	_stricmp
 #endif
 
-#include "masterentity.h"
+#include "../common/races.h"
+#include "beacon.h"
+#include "entity.h"
+#include "mob.h" 
+
+
+#ifdef BOTS
+#include "bot.h"
+#endif
+
+
 #include "../common/spdat.h"
 
 extern EntityList entity_list;
@@ -43,8 +53,8 @@ extern Zone* zone;
 Beacon::Beacon(Mob *at_mob, int lifetime)
 :Mob
 (
-	nullptr, nullptr, 0, 0, 0, INVISIBLE_MAN, 0, BT_NoTarget, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	nullptr, nullptr, 0, 0, 0, INVISIBLE_MAN, 0, BT_NoTarget, 0, 0, 0, 0, 0, at_mob->GetPosition(), 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ),
 		remove_timer(lifetime),
 		spell_timer(0)
@@ -56,12 +66,6 @@ Beacon::Beacon(Mob *at_mob, int lifetime)
 	resist_adjust = 0;
 	spell_iterations = 0;
 	caster_id = 0;
-
-	// copy location
-	x_pos = at_mob->GetX();
-	y_pos = at_mob->GetY();
-	z_pos = at_mob->GetZ();
-	heading = at_mob->GetHeading();
 
 	if(lifetime)
 	{

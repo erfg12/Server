@@ -1,0 +1,29 @@
+#!/bin/
+
+serverdir=eqemu
+user=tak
+#############################NOTHING BELOW THIS NEEDS TO BE EDITED!#############################
+path=/home/$user/$serverdir
+
+#### Kill server and make sure all processes are gone.
+cd $path
+./EQServer.sh stop
+rm *.pid
+
+#### Lets make sure all launchers are dead!
+killall world
+killall queryserv
+killall ucs
+killall eqlauncha
+killall eqlaunchb
+killall eqlaunchc
+killall eqlaunchd
+killall eqlaunche
+killall eqlaunchf
+killall eqlaunch
+killall zone
+killall loginserver
+
+#### Start back up now.
+./EQServer.sh start
+./EQServer.sh status

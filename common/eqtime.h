@@ -29,6 +29,7 @@ public:
 	uint32 getEQTimeZoneHr() { return timezone/60; }
 	uint32 getEQTimeZoneMin() { return timezone%60; }
 	bool IsNightTime();
+	bool IsInbetweenTime(uint8 mintime, uint8 maxtime);
 
 	//Set functions
 	int setEQTimeOfDay(TimeOfDay_Struct start_eq, time_t start_real);

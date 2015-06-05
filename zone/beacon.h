@@ -19,10 +19,13 @@
 #ifndef BEACON_H
 #define BEACON_H
 
-#include "entity.h"
 #include "mob.h"
 #include "../common/types.h"
 #include "../common/timer.h"
+
+class Group;
+class Raid;
+struct ExtraAttackOptions;
 
 class Beacon : public Mob
 {
@@ -31,7 +34,7 @@ public:
 	~Beacon();
 
 	//abstract virtual function implementations requird by base abstract class
-	virtual bool Death(Mob* killerMob, int32 damage, uint16 spell_id, SkillUseTypes attack_skill) { return true; }
+	virtual bool Death(Mob* killerMob, int32 damage, uint16 spell_id, SkillUseTypes attack_skill, uint8 killedby = 0) { return true; }
 	virtual void Damage(Mob* from, int32 damage, uint16 spell_id, SkillUseTypes attack_skill, bool avoidable = true, int8 buffslot = -1, bool iBuffTic = false) { return; }
 	virtual bool Attack(Mob* other, int Hand = MainPrimary, bool FromRiposte = false, bool IsStrikethrough = false, bool IsFromSpell = false,
 		ExtraAttackOptions *opts = nullptr) { return false; }

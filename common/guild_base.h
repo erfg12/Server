@@ -21,9 +21,6 @@ public:
 	//fields from `guild_members`
 	uint32	guild_id;
 	uint8	rank;
-	bool	tribute_enable;
-	uint32	total_tribute;
-	uint32	last_tribute;		//timestamp
 	bool	banker;
 	bool	alt;
 	std::string	public_note;

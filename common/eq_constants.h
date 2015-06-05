@@ -19,6 +19,54 @@
 #define EQ_CONSTANTS_H
 
 #include "skills.h"
+#include "types.h"
+
+/*
+** Light Types
+**
+*/
+enum LightTypes
+{
+	lightTypeNone = 0,
+	lightTypeCandle,
+	lightTypeTorch,
+	lightTypeTinyGlowingSkull,
+	lightTypeSmallLantern,
+	lightTypeSteinOfMoggok,
+	lightTypeLargeLantern,
+	lightTypeFlamelessLantern,
+	lightTypeGlobeOfStars,
+	lightTypeLightGlobe,
+	lightTypeLightstone,
+	lightTypeGreaterLightstone,
+	lightTypeFireBeetleEye,
+	lightTypeColdlight,
+	lightTypeUnknown1,
+	lightTypeUnknown2
+};
+
+#define LIGHT_TYPES_COUNT 16
+
+/*
+** Light Levels
+**
+*/
+enum LightLevels
+{
+	lightLevelUnlit = 0,
+	lightLevelCandle,
+	lightLevelTorch,
+	lightLevelSmallMagic,
+	lightLevelRedLight,
+	lightLevelBlueLight,
+	lightLevelSmallLantern,
+	lightLevelMagicLantern,
+	lightLevelLargeLantern,
+	lightLevelLargeMagic,
+	lightLevelBrilliant
+};
+
+#define LIGHT_LEVELS_COUNT 11
 
 /*
 **	Item attributes
@@ -32,7 +80,6 @@ enum ItemAttributes : uint32
 	ItemAttrArtifact		= 0x00000002,
 	ItemAttrSummoned		= 0x00000004,
 	ItemAttrMagic			= 0x00000008,
-	ItemAttrAugment			= 0x00000010,
 	ItemAttrPendingLore		= 0x00000020,
 	ItemAttrUnknown			= 0xFFFFFFFF
 };
@@ -104,24 +151,6 @@ enum ItemUseTypes : uint8
 /*----*/	ItemTypeUnknown6,
 /*----*/	ItemTypeUnknown7,
 /*5522*/	ItemTypeMartial,
-/*----*/	ItemTypeUnknown8,
-/*----*/	ItemTypeUnknown9,
-/*----*/	ItemTypeUnknown10,
-/*----*/	ItemTypeUnknown11,
-/*----*/	ItemTypeSinging,
-/*5750*/	ItemTypeAllInstrumentTypes,
-/*5776*/	ItemTypeCharm,
-/*----*/	ItemTypeDye,
-/*----*/	ItemTypeAugmentation,
-/*----*/	ItemTypeAugmentationSolvent,
-/*----*/	ItemTypeAugmentationDistiller,
-/*----*/	ItemTypeUnknown12,
-/*----*/	ItemTypeFellowshipKit,
-/*----*/	ItemTypeUnknown13,
-/*----*/	ItemTypeRecipe,
-/*----*/	ItemTypeAdvancedRecipe,
-/*----*/	ItemTypeJournal,		// only one(1) database entry
-/*5881*/	ItemTypePerfectedAugmentationDistiller,
 /*----*/	_ItemTypeCount
 
 /*
@@ -196,14 +225,6 @@ enum ContainerUseTypes : uint8
 /*3444*/	BagTypeValeForge,				// Halfling
 /*3446*/	BagTypeErudForge,
 /*----*/	BagTypeTradersSatchel,			// <*Database Reference Only> (db: Yellow Trader's Satchel Token?)
-/*5785*/	BagTypeGuktaForge,				// Froglok (no database entries as of peq rev 69)
-/*3359*/	BagTypeAugmentationSealer,
-/*----*/	BagTypeIceCreamChurn,			// <*Database Reference Only>
-/*6325*/	BagTypeTransformationmold,		// Ornamentation
-/*6340*/	BagTypeDetransformationmold,	// Ornamentation Stripper
-/*5400*/	BagTypeUnattuner,
-/*7684*/	BagTypeTradeskillBag,
-/*7692*/	BagTypeCollectibleBag,
 /*----*/	_BagTypeCount
 };
 
@@ -220,6 +241,14 @@ enum {
 	ET_ClickEffect2 = 5,	//name unknown
 	ET_Focus = 6,
 	ET_Scroll = 7
+};
+
+enum ItemQuantityTypes
+{
+	Quantity_Unknown = 0,
+	Quantity_Normal = 1,
+	Quantity_Charges = 2,
+	Quantity_Stacked = 3
 };
 
 //SpawnAppearance types:
@@ -243,7 +272,6 @@ enum {
 #define AT_Split		28	// 0 = normal, 1 = autosplit on
 #define AT_Size			29	// spawn's size
 #define AT_NPCName		31	// change PC's name's color to NPC color 0 = normal, 1 = npc name
-#define AT_ShowHelm		43	// 0 = do not show helmet graphic, 1 = show graphic
 #define AT_DamageState	44	// The damage state of a destructible object (0 through 4)
 //#define AT_Trader		300	// Bazzar Trader Mode
 
@@ -295,7 +323,7 @@ typedef enum {
 #define MT_NonMelee				283
 #define MT_WornOff				284
 #define MT_MoneySplit			285
-#define MT_LootMessages			286
+#define MT_LootMessages			286 // Filters under Damage Shield?
 #define MT_DiceRoll				287
 #define MT_OtherSpells			288
 #define MT_SpellFailure			289
@@ -338,7 +366,7 @@ typedef enum {
 #define MT_ItemLink				326
 #define MT_RaidSay				327
 #define MT_MyPet				328
-#define MT_DS					329
+#define MT_DS					329 //White text (should be non-melee) unknown filter
 #define MT_Leadership			330
 #define MT_PetFlurry			331
 #define MT_PetCrit				332
@@ -351,20 +379,20 @@ typedef enum {
 #define MT_StrikeThrough		339
 #define MT_Stun					340
 
-//from showeq
+//Unused numbers are either White, Grey, or LightGrey. After 20, all are LightGrey until 256.
 enum ChatColor
 {
-	CC_Default					= 0,
-	CC_DarkGrey					= 1,
-	CC_DarkGreen				= 2,
-	CC_DarkBlue					= 3,
-	CC_Purple					= 5,
-	CC_LightGrey				= 6,
-	CC_LightSilver				= 12,
-	CC_Red						= 13,
-	CC_LightGreen				= 14,
-	CC_Yellow					= 15,
-	CC_Cyan						= 18,
+	CC_Default					= 0, // Normal
+	CC_Grey						= 1, 
+	CC_Green					= 2, // Auction/OOC
+	CC_Blue						= 4, // Skills/Spells/Emote
+	CC_Purple					= 5, // Item Tags
+	CC_LightGrey				= 6, 
+	CC_Red						= 13, // Shout/Fizzles
+	CC_LightGreen				= 14, // Guild
+	CC_Yellow					= 15, // Spell Worn Off/Broadcast
+	CC_LightBlue				= 16, 
+	CC_Cyan						= 18, // Group/Raid
 	CC_User_Say					= 256,
 	CC_User_Tell				= 257,
 	CC_User_Group				= 258,
@@ -432,7 +460,7 @@ enum ChatColor
 	CC_User_EchoChat8			= 322,
 	CC_User_EchoChat9			= 323,
 	CC_User_EchoChat10			= 324,
-	CC_User_UnusedAtThisTime	= 325,
+	CC_User_UnusedAtThisTime	= 325, //Yellow
 	CC_User_ItemTags			= 326,
 	CC_User_RaidSay				= 327,
 	CC_User_MyPet				= 328,
@@ -449,35 +477,23 @@ enum ChatColor
 
 
 typedef enum {
-	FilterNone = 0,
-	FilterGuildChat = 1,		//0=hide, 1=show
-	FilterSocials = 2,			//0=hide, 1=show
-	FilterGroupChat = 3,		//0=hide, 1=show
-	FilterShouts = 4,			//0=hide, 1=show
-	FilterAuctions = 5,			//0=hide, 1=show
-	FilterOOC = 6,				//0=hide, 1=show
-	FilterBadWords = 7,			//0=hide, 1=show
-	FilterPCSpells = 8,			//0=show, 1=hide, 2=group only
-	FilterNPCSpells = 9,		//0=show, 1=hide
-	FilterBardSongs = 10,		//0=show, 1=mine only, 2=group only, 3=hide
-	FilterSpellCrits = 11,		//0=show, 1=mine only, 2=hide
-	FilterMeleeCrits = 12,		//0=show, 1=hide
-	FilterSpellDamage = 13,		//0=show, 1=mine only, 2=hide
-	FilterMyMisses = 14,		//0=hide, 1=show
-	FilterOthersMiss = 15,		//0=hide, 1=show
-	FilterOthersHit = 16,		//0=hide, 1=show
-	FilterMissedMe = 17,		//0=hide, 1=show
-	FilterDamageShields = 18,	//0=show, 1=hide
-	FilterDOT = 19,				//0=show, 1=hide
-	FilterPetHits = 20,			//0=show, 1=hide
-	FilterPetMisses = 21,		//0=show, 1=hide
-	FilterFocusEffects = 22,	//0=show, 1=hide
-	FilterPetSpells = 23,		//0=show, 1=hide
-	FilterHealOverTime = 24,	//0=show, 1=hide
-	FilterUnknown25 = 25,
-	FilterUnknown26 = 26,
-	FilterUnknown27 = 27,
-	FilterUnknown28 = 28,
+	FilterDamageShields = 0,	//0 is on 1 is off
+	FilterNPCSpells = 1,		//0 is on - doesn't send packet	
+	FilterPCSpells = 2,			//0 is on 1 is off 2 is group
+	FilterBardSongs = 3,		//0 is on 1 is self 2 is group 3 is off
+	FilterNone = 4,				//0 is on
+	FilterGuildChat = 5,		//0 is off 1 is on		
+	FilterSocials = 6,			//0 is off 1 is on
+	FilterGroupChat = 7,		//0 is off 1 is on	
+	FilterShouts = 8,		    //0 is off 1 is on
+	FilterAuctions = 9,		    //0 is off 1 is on
+	FilterOOC = 10,				//0 is off 1 is on
+	FilterMyMisses = 11,		//0 is off 1 is on
+	FilterOthersMiss = 12,		//0 is off 1 is on
+	FilterOthersHit = 13,		//0 is off 1 is on
+	FilterMissedMe = 14,		//0 is off 1 is on
+	FilterSpellCrits = 15,		//0 is on 1 is self 2 is off
+	FilterMeleeCrits = 16,		//0 is on 1 is self 2 is off
 	_FilterCount
 } eqFilterType;
 
@@ -772,7 +788,6 @@ enum InventoryMainTypes : int16 {
 #define MAP_BEGIN	0
 #define MAIN_BEGIN	0
 #define SUB_BEGIN	0
-#define AUG_BEGIN	0
 
 namespace legacy {
 	// this is for perl and other legacy systems
@@ -814,7 +829,6 @@ namespace legacy {
 		MainCursor			= 30,
 		MainCursor_END		= (int16)0xFFFE, // I hope no one is using this...
 		SLOT_TRADESKILL		= 1000,
-		SLOT_AUGMENT		= 1001,
 		SLOT_INVALID		= (int16)0xFFFF,
 
 		SLOT_POSSESSIONS_BEGIN	= 0,
@@ -828,11 +842,8 @@ namespace legacy {
 		SLOT_PERSONAL_BAGS_BEGIN	= 251,
 		SLOT_PERSONAL_BAGS_END		= 330,
 
-		MainCursor_BAG_BEGIN		= 331,
-		MainCursor_BAG_END			= 340,
-
-		SLOT_TRIBUTE_BEGIN	= 400,
-		SLOT_TRIBUTE_END	= 404,
+		MainCursor_BAG_BEGIN		= 330,
+		MainCursor_BAG_END			= 339,
 
 		SLOT_BANK_BEGIN			= 2000,
 		SLOT_BANK_END			= 2007,
@@ -853,6 +864,195 @@ namespace legacy {
 		SLOT_WORLD_END		= 4009
 	} InventorySlot;
 }
+
+enum Zones
+{
+	qeynos=1,
+	qeynos2=2,
+	qrg=3,
+	qeytoqrg=4,
+	highpass=5,
+	highkeep=6,
+	freportn=8,
+	freportw=9,
+	freporte=10,
+	runnyeye=11,
+	qey2hh1=12,
+	northkarana=13,
+	southkarana=14,
+	eastkarana=15,
+	beholder=16,
+	blackburrow=17,
+	paw=18,
+	rivervale=19,
+	kithicor=20,
+	commons=21,
+	ecommons=22,
+	erudnint=23,
+	erudnext=24,
+	nektulos=25,
+	cshome=26,
+	lavastorm=27,
+	nektropos=28,
+	halas=29,
+	everfrost=30,
+	soldunga=31,
+	soldungb=32,
+	misty=33,
+	nro=34,
+	sro=35,
+	befallen=36,
+	oasis=37,
+	tox=38,
+	hole=39,
+	neriaka=40,
+	neriakb=41,
+	neriakc=42,
+	neriakd=43,
+	najena=44,
+	qcat=45,
+	innothule=46,
+	feerrott=47,
+	cazicthule=48,
+	oggok=49,
+	rathemtn=50,
+	lakerathe=51,
+	grobb=52,
+	aviak=53,
+	gfaydark=54,
+	akanon=55,
+	steamfont=56,
+	lfaydark=57,
+	crushbone=58,
+	mistmoore=59,
+	kaladima=60,
+	felwithea=61,
+	felwitheb=62,
+	unrest=63,
+	kedge=64,
+	guktop=65,
+	gukbottom=66,
+	kaladimb=67,
+	butcher=68,
+	oot=69,
+	cauldron=70,
+	airplane=71,
+	fearplane=72,
+	permafrost=73,
+	kerraridge=74,
+	paineel=75,
+	hateplane=76,
+	arena=77,
+	fieldofbone=78,
+	warslikswood=79,
+	soltemple=80,
+	droga=81,
+	cabwest=82,
+	swampofnohope=83,
+	firiona=84,
+	lakeofillomen=85,
+	dreadlands=86,
+	burningwood=87,
+	kaesora=88,
+	sebilis=89,
+	citymist=90,
+	skyfire=91,
+	frontiermtns=92,
+	overthere=93,
+	emeraldjungle=94,
+	trakanon=95,
+	timorous=96,
+	kurn=97,
+	erudsxing=98,
+	stonebrunt=100,
+	warrens=101,
+	karnor=102,
+	chardok=103,
+	dalnir=104,
+	charasis=105,
+	cabeast=106,
+	nurga=107,
+	veeshan=108,
+	veksar=109,
+	iceclad=110,
+	frozenshadow=111,
+	velketor=112,
+	kael=113,
+	skyshrine=114,
+	thurgadina=115,
+	eastwastes=116,
+	cobaltscar=117,
+	greatdivide=118,
+	wakening=119,
+	westwastes=120,
+	crystal=121,
+	necropolis=123,
+	templeveeshan=124,
+	sirens=125,
+	mischiefplane=126,
+	growthplane=127,
+	sleeper=128,
+	thurgadinb=129,
+	erudsxing2=130,
+	shadowhaven=150,
+	bazaar=151,
+	nexus=152,
+	echo=153,
+	acrylia=154,
+	sharvahl=155,
+	paludal=156,
+	fungusgrove=157,
+	vexthal=158,
+	sseru=159,
+	katta=160,
+	netherbian=161,
+	ssratemple=162,
+	griegsend=163,
+	thedeep=164,
+	shadeweaver=165,
+	hollowshade=166,
+	grimling=167,
+	mseru=168,
+	letalis=169,
+	twilight=170,
+	thegrey=171,
+	tenebrous=172,
+	maiden=173,
+	dawnshroud=174,
+	scarlet=175,
+	umbral=176,
+	akheva=179,
+	arena2=180,
+	jaggedpine=181,
+	tutorial = 183,
+	load=184,
+	load2=185,
+	clz=190,
+	codecay=200,
+	pojustice=201,
+	poknowledge=202,
+	potranquility=203,
+	ponightmare=204,
+	podisease=205,
+	poinnovation=206,
+	potorment=207,
+	povalor=208,
+	bothunder=209,
+	postorms=210,
+	hohonora=211,
+	solrotower=212,
+	powar=213,
+	potactics=214,
+	poair=215,
+	powater=216,
+	pofire=217,
+	poeartha=218,
+	potimea=219,
+	hohonorb=220,
+	nightmareb=221,
+	poearthb=222,
+	potimeb=223,
+};
 
 static const uint32 MAX_SPELL_DB_ID_VAL = 65535;
 

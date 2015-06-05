@@ -15,7 +15,8 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include <iostream>
 #include <string.h>
 #include <stdio.h>
@@ -33,6 +34,8 @@
 #include "worldserver.h"
 #include "web_interface.h"
 
+EQEmuLogSys Log;
+
 extern std::map<std::string, per_session_data_eqemu*> sessions;
 
 WorldServer::WorldServer(std::string shared_key)
@@ -44,7 +47,7 @@ WorldServer::~WorldServer(){
 }
 
 void WorldServer::OnConnected(){
-	_log(WEB_INTERFACE__INIT, "Connected to World.");
+	Log.Out(Logs::Detail, Logs::WebInterface_Server, "Connected to World.");
 	WorldConnection::OnConnected();
 }
 
@@ -55,7 +58,7 @@ void WorldServer::Process(){
 
 	ServerPacket *pack = nullptr;
 	while((pack = tcpc.PopPacket())){
-		_log(WEB_INTERFACE__TRACE, "Received Opcode: %4X", pack->opcode);
+		Log.Out(Logs::Detail, Logs::WebInterface_Server, "Received Opcode: %4X", pack->opcode);
 		switch(pack->opcode) {
 			case 0: { break; }
 			case ServerOP_KeepAlive: { break; }

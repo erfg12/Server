@@ -15,23 +15,13 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include "masterentity.h"
-#include "worldserver.h"
-#include "net.h"
+
 #include "../common/database.h"
-#include "../common/spdat.h"
-#include "../common/packet_dump.h"
-#include "../common/packet_functions.h"
-#include "petitions.h"
-#include "../common/serverinfo.h"
-#include "../common/zone_numbers.h"
-#include "../common/moremath.h"
 #include "../common/guilds.h"
 #include "../common/string_util.h"
+
 #include "guild_mgr.h"
-#include "string_ids.h"
-#include "npc_ai.h"
+#include "worldserver.h"
 
 extern WorldServer worldserver;
 
@@ -59,8 +49,7 @@ void Client::SendGuildMOTD(bool GetGuildMOTDReply) {
 
 	}
 
-	mlog(GUILDS__OUT_PACKETS, "Sending OP_GuildMOTD of length %d", outapp->size);
-	mpkt(GUILDS__OUT_PACKET_TRACE, outapp);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending OP_GuildMOTD of length %d", outapp->size);
 
 	FastQueuePacket(&outapp);
 }
@@ -69,10 +58,10 @@ void Client::SendGuildSpawnAppearance() {
 	if (!IsInAGuild()) {
 		// clear guildtag
 		SendAppearancePacket(AT_GuildID, GUILD_NONE);
-		mlog(GUILDS__OUT_PACKETS, "Sending spawn appearance for no guild tag.");
+		Log.Out(Logs::Detail, Logs::Guilds, "Sending spawn appearance for no guild tag.");
 	} else {
 		uint8 rank = guild_mgr.GetDisplayedRank(GuildID(), GuildRank(), CharacterID());
-		mlog(GUILDS__OUT_PACKETS, "Sending spawn appearance for guild %d at rank %d", GuildID(), rank);
+		Log.Out(Logs::Detail, Logs::Guilds, "Sending spawn appearance for guild %d at rank %d", GuildID(), rank);
 		SendAppearancePacket(AT_GuildID, GuildID());
 		SendAppearancePacket(AT_GuildRank, rank);
 	}
@@ -88,43 +77,40 @@ void Client::SendGuildList() {
 	outapp->pBuffer = reinterpret_cast<uchar*>(guildstruct);
 
 	if(outapp->pBuffer == nullptr) {
-		mlog(GUILDS__ERROR, "Unable to make guild list!");
+		Log.Out(Logs::Detail, Logs::Guilds, "Unable to make guild list!");
 		return;
 	}
 
-	mlog(GUILDS__OUT_PACKETS, "Sending OP_GuildsList of length %d", outapp->size);
-	mpkt(GUILDS__OUT_PACKET_TRACE, outapp);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending OP_GuildsList of length %d", outapp->size);
 
 	FastQueuePacket(&outapp);
 }
 
 void Client::SendPlayerGuild() {
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_GuildAdded);
-	OldGuildPlayerEntry_Struct* gle=(OldGuildPlayerEntry_Struct*)outapp->pBuffer;
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_GuildAdded, sizeof(OldGuildUpdate_Struct));
+	OldGuildUpdate_Struct* gu=(OldGuildUpdate_Struct*)outapp->pBuffer;
 
 	int16 guid = this->GuildID();
 	std::string tmp;
 		
 	if(guild_mgr.GetGuildNameByID(guid,tmp))
 	{
-		const char * ctmp = tmp.c_str();
-		memcpy(gle->name,ctmp,64);
-		gle->guildID=guid;
-		gle->ID=guid;
-		gle->exists=1;
+		Log.Out(Logs::Detail, Logs::Guilds, "SendPlayerGuild(): GUID: %d Name: %s", guid, tmp.c_str());
+		gu->guildID=guid;
+		memcpy(gu->entry.name,tmp.c_str(),64);
+		gu->entry.guildID=guid;
+		gu->entry.exists=1;
 	}
 	else
 	{
-		gle->guildID=0xFFFFFFFF;
-		gle->ID=0xFFFFFFFF;
-		gle->exists=0;
+		gu->entry.guildID=0xFFFFFFFF;
+		gu->entry.exists=0;
 	}
 
-	gle->unknown1=0xFFFFFFFF;
-	gle->unknown3=0xFFFFFFFF;
+	gu->entry.unknown1=0xFFFFFFFF;
+	gu->entry.unknown3=0xFFFFFFFF;
 
-	mlog(GUILDS__OUT_PACKETS, "Sending OP_GuildAdded of length %d", outapp->size);
-	mpkt(GUILDS__OUT_PACKET_TRACE, outapp);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending OP_GuildAdded of length %d guildID %d", outapp->size, gu->entry.guildID);
 
 	FastQueuePacket(&outapp);
 }
@@ -138,7 +124,7 @@ void Client::RefreshGuildInfo()
 
 	CharGuildInfo info;
 	if(!guild_mgr.GetCharInfo(CharacterID(), info)) {
-		mlog(GUILDS__ERROR, "Unable to obtain guild char info for %s (%d)", GetName(), CharacterID());
+		Log.Out(Logs::Detail, Logs::Guilds, "Unable to obtain guild char info for %s (%d)", GetName(), CharacterID());
 		return;
 	}
 

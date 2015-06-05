@@ -20,13 +20,37 @@
 
 #pragma pack(1)
 
-struct LoginChatMessage_Struct {
-	short Unknown0;
-	uint32 Unknown1;
-	uint32 Unknown2;
-	uint32 Unknown3;
-	uint8 Unknown4;
-	char ChatMessage[1];
+struct ServerList_Struct {
+	uint16	numservers;
+	uint8	unknown1;
+	uint8	unknown2;
+	uint8	showusercount; // 0xFF = show numbers, 0x0 = show "UP"
+	uchar	data[0];
+};
+
+struct ServerListServerFlags_Struct {
+	uint8 greenname;
+	uint32 usercount;
+	uint8 unknown[8];
+};
+
+struct ServerListEndFlags_Struct {
+	uint32 admin;
+	uint8 zeroes_a[8];
+	uint8 kunark;
+	uint8 velious;
+	uint8 zeroes_b[11];
+};
+
+struct SessionId_Struct {
+	char	session_id[10];
+	char	unused[7];
+	uint32	unknown; // legends? dunno, seen a 4 here, so gonna use that for now
+};
+
+struct LoginServerInfo_Struct {
+	uint8	crypt[40];
+	uint8	unknown[0];	// in here is the server name you just logged out of, variable length
 };
 
 struct Update_Struct {
@@ -37,106 +61,6 @@ struct Update_Struct {
 struct LoginCrypt_struct {
 	char	username[20];
 	char	password[20];
-};
-
-struct SessionId_Struct {
-  char	session_id[10];
-  char	unused[7];
-  int32	unknown; // legends? dunno, seen a 4 here, so gonna use that for now
-};
-
-struct ServerListServerFlags_Struct {
-	int8 greenname;
-	int32 usercount;
-	int8 unknown[8];
-};
-
-struct ServerListEndFlags_Struct {
-	int32 admin;
-	int8 zeroes_a[8];
-	int8 kunark;
-	int8 velious;
-	int8 zeroes_b[11];
-};
-
-
-struct LoginServerInfo_Struct {
-	int8	crypt[40];
-	int8	unknown[0];	// in here is the server name you just logged out of, variable length
-};
-
-struct LoginLoginRequest_Struct {
-	short unknown1;
-	short unknown2;
-	short unknown3;
-	short unknown4;
-	short unknown5;
-	char unknown6[16];
-};
-
-struct LoginLoginAccepted_Struct {
-	short unknown1;
-	short unknown2;
-	short unknown3;
-	short unknown4;
-	short unknown5;
-	char encrypt[80];
-};
-
-struct Login_ReplyBlock_Struct
-{
-	char message; //0x01
-	char unknown2[7]; //0x00
-	uint32 lsid;
-	char key[11]; //10 char + null term;
-	uint32 failed_attempts;
-	char unknown3[4];	//0x00, 0x00, 0x00, 0x03
-	char unknown4[4];	//0x00, 0x00, 0x00, 0x02
-	char unknown5[4];	//0xe7, 0x03, 0x00, 0x00
-	char unknown6[4];	//0xff, 0xff, 0xff, 0xff
-	char unknown7[4];	//0xa0, 0x05, 0x00, 0x00
-	char unknown8[4];	//0x00, 0x00, 0x00, 0x02
-	char unknown9[4];	//0xff, 0x03, 0x00, 0x00
-	char unknown10[4];	//0x00, 0x00, 0x00, 0x00
-	char unknown11[4];	//0x63, 0x00, 0x00, 0x00
-	char unknown12[4];	//0x01, 0x00, 0x00, 0x00
-	char unknown13[4];	//0x00, 0x00, 0x00, 0x00
-	char unknown14[4];	//0x00, 0x00, 0x00, 0x00
-};
-
-struct LoginLoginFailed_Struct {
-	short unknown1;
-	short unknown2;
-	short unknown3;
-	short unknown4;
-	short unknown5;
-	char unknown6[74];
-};
-
-struct ServerList_Struct {
-	uint16	numservers;
-	uint8	unknown1;
-	uint8	unknown2;
-	uint8	showusercount; // 0xFF = show numbers, 0x0 = show "UP"
-	uchar	data[0];
-};
-
-
-struct TrilogyServerList_Struct {
-	uint8	numservers;
-	uint8	unknown1;
-	uint8	unknown2;
-	uint8	showusercount; // 0xFF = show numbers, 0x0 = show "UP"
-	uchar	data[0];
-};
-
-struct ServerListHeader_Struct {
-
-	uint32 Unknown1;
-	uint32 Unknown2;
-	uint32 Unknown3;
-	uint32 Unknown4;
-	uint32 NumberOfServers;
 };
 
 struct PlayEverquestRequest_Struct

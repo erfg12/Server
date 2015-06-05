@@ -1,4 +1,4 @@
-#include "debug.h"
+#include "global_define.h"
 #include <map>
 #include <string>
 
@@ -6,13 +6,12 @@ std::map<unsigned long, std::string> opcode_map;
 
 std::string get_opcode_name(unsigned long opcode)
 {
-std::map<unsigned long, std::string>::iterator itr;;
+std::map<unsigned long, std::string>::iterator itr;
 
 	return (itr=opcode_map.find(opcode))!=opcode_map.end() ? itr->second : "OP_Unknown";
 }
 void load_opcode_names()
 {
-	opcode_map[0x01d5]="LiveOP_Dye";
 	opcode_map[0x0168]="LiveOP_Stamina";
 	opcode_map[0x014d]="LiveOP_ControlBoat";
 	opcode_map[0x003e]="LiveOP_MobUpdate";
@@ -29,7 +28,6 @@ void load_opcode_names()
 	opcode_map[0x009d]="LiveOP_Sneak";
 	opcode_map[0x0079]="LiveOP_ExpUpdate";
 	opcode_map[0x01ea]="LiveOP_RespondAA";
-	opcode_map[0x01c9]="LiveOP_SendAAStats";
 	opcode_map[0x01e9]="LiveOP_AAAction";
 	opcode_map[0x00bb]="LiveOP_BoardBoat";
 	opcode_map[0x00bc]="LiveOP_LeaveBoat";
@@ -45,8 +43,6 @@ void load_opcode_names()
 	opcode_map[0x0133]="LiveOP_GuildDelete";
 	opcode_map[0x01e8]="LiveOP_Trader";
 	opcode_map[0x01c4]="LiveOP_BecomeTrader";
-	opcode_map[0x006e]="LiveOP_TraderItemUpdate";
-	opcode_map[0x017c]="LiveOP_TraderDelItem";
 	opcode_map[0x01eb]="LiveOP_TraderShop";
 	opcode_map[0x01ca]="LiveOP_TraderBuy";
 	opcode_map[0x01ac]="LiveOP_PetCommands";

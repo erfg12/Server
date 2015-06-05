@@ -18,7 +18,6 @@
 #ifndef SPAWNGROUP_H
 #define SPAWNGROUP_H
 
-#include "../common/linked_list.h"
 #include "../common/types.h"
 
 #include <map>
@@ -27,10 +26,12 @@
 class SpawnEntry
 {
 public:
-	SpawnEntry(uint32 in_NPCType, int in_chance, uint8 in_npc_spawn_limit );
+	SpawnEntry(uint32 in_NPCType, int in_chance, uint8 in_npc_spawn_limit, uint8 in_mintime, uint8 in_maxtime );
 	~SpawnEntry() { }
 	uint32 NPCType;
 	int chance;
+	uint8 mintime;
+	uint8 maxtime;
 
 	//this is a cached value from npc_types, for speed
 	uint8 npc_spawn_limit; //max # of this entry which can be spawned in this zone

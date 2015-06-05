@@ -1,23 +1,27 @@
 #ifndef _EQSTREAM_H
 #define _EQSTREAM_H
 
-#include <string>
 #include <vector>
 #include <map>
 #include <queue>
 #include <deque>
+
 #ifndef WIN32
 #include <netinet/in.h>
 #endif
-#include "eq_stream_type.h"
+
+#include "../common/misc.h"
+#include "../common/opcodemgr.h"
+#include "../common/timer.h"
+
 #include "eq_packet.h"
 #include "eq_stream_intf.h"
+#include "eq_stream_type.h"
 #include "mutex.h"
-#include "../common/opcodemgr.h"
-#include "../common/misc.h"
-#include "../common/condition.h"
-#include "../common/timer.h"
 #include "queue.h"
+
+class EQApplicationPacket;
+class EQProtocolPacket;
 
 #define FLAG_COMPRESSED	0x01
 #define FLAG_ENCODED	0x04
@@ -83,7 +87,6 @@ struct ACK_INFO
 		dbASQ_high = dbASQ_low = 0;
 		dwGSQ = 0;
 		dwGSQcount = 0;
-		dwStarted = 0;
 	}
 
 	uint16   dwARQ;			// Comment: Current request ack
@@ -91,7 +94,6 @@ struct ACK_INFO
 	uint16	dbASQ_low  : 8;	//TODO: What is this one?
 	uint16   dwGSQ;			// Comment: Main sequence number SHORT#2
 	uint16	dwGSQcount;
-	uint16	dwStarted;
 
 };
 
@@ -128,7 +130,6 @@ struct SessionStats {
 #pragma pack()
 
 class OpcodeManager;
-class EQStreamPair;
 class EQRawApplicationPacket;
 
 class Fragment
@@ -482,15 +483,16 @@ class EQOldStream : public EQStreamInterface {
 
 		void InboundQueueClear();
 		void OutboundQueueClear();
-		void PacketQueueClear();
+		void ClearOldPackets();
 
 		std::deque<EQOldPacket*>			  SendQueue;	//Store packets thats on the send que
-		MyQueue<EQRawApplicationPacket>           OutQueue;	//parced packets ready to go out of this class
+		std::vector<EQRawApplicationPacket *> OutQueue;	//parced packets ready to go out of this class
 
 
 	private:
 		bool ProcessPacket(EQOldPacket* pack, bool from_buffer=false);
 		void CheckBufferedPackets();
+		EQRawApplicationPacket *MakeApplicationPacket(EQOldPacket *p);
 
 		FragmentGroupList fragment_group_list;
 		std::vector<EQOldPacket *> buffered_packets; // Buffer of incoming packets
@@ -530,7 +532,7 @@ class EQOldStream : public EQStreamInterface {
 		virtual void RemoveData();
 		virtual bool CheckState(EQStreamState state) { return GetState() == state; }
 		virtual std::string Describe() const { return("Direct EQOldStream"); }
-		virtual bool IsInUse() { bool flag; MInUse.lock(); flag=(active_users>0); MInUse.unlock(); if(IsWriting()) return true; return flag; }
+		virtual bool IsInUse() { bool flag; MInUse.lock(); flag=(active_users>0); MInUse.unlock(); return flag; }
 		bool IsWriting() { return isWriting; }
 		void SetWriting(bool var) { isWriting = var; } 
 		inline void PutInUse() { MInUse.lock(); active_users++; MInUse.unlock(); }
@@ -561,6 +563,7 @@ class EQOldStream : public EQStreamInterface {
 		ACK_INFO    SACK; //Server -> client info.
 		ACK_INFO    CACK; //Client -> server info.
 		uint16       dwLastCACK;
+		bool sent_Start;
 
 		Timer* no_ack_received_timer;
 		Timer* no_ack_sent_timer;

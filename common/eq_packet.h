@@ -19,9 +19,8 @@
 #define _EQPACKET_H
 
 #include "base_packet.h"
-#include "eq_stream_type.h"
-#include "op_codes.h"
 #include "platform.h"
+#include <iostream>
 
 #ifdef STATIC_OPCODE
 	typedef unsigned short EmuOpcode;
@@ -29,6 +28,8 @@
 #else
 #include "emu_opcodes.h"
 #endif
+
+class EQOldStream;
 
 /************ PACKETS ************/
 struct EQPACKET_HDR_INFO
@@ -57,10 +58,6 @@ struct FRAGMENT_INFO
 	uint16 dwCurr;	//TODO: What is this one?
 	uint16 dwTotal;	//TODO: What is this one?
 };
-
-class EQStream;
-class EQOldStream;
-class EQStreamPair;
 
 class EQPacket : public BasePacket {
 	friend class EQStream;
@@ -145,25 +142,9 @@ public:
 public:
 	void  DecodePacket(uint16 length, uchar *pPacket);
 	uint32 ReturnPacket(uchar** data, EQOldStream* netcon);
-
-	void AddAdditional(int size, uchar *pAdd) 
-	{   
-		// if pExtra exsists, delete it
-		if(!this->pExtra)
-		{
-			safe_delete_array(this->pExtra);//delete[] this->pExtra;
-		}
-
-		// create a new instance
-		this->pExtra = new uchar[size];
-
-		// copy the size of pAdd to pExtra
-		memcpy( (void*)this->pExtra, (void*) pAdd, size);
-	}       
-
+	EQRawApplicationPacket *MakeAppPacket() const;
 	void Clear(void) 
 	{  
-		// Clear & zero out Fields
 		*((uint16*)&HDR)		   = 0;
 		this->dwSEQ            = 0;        
 		this->dwARSP           = 0;
@@ -264,6 +245,7 @@ protected:
 };
 
 extern void DumpPacket(const EQApplicationPacket* app, bool iShowInfo = false);
-
+extern std::string DumpPacketToString(const EQApplicationPacket* app);
+extern std::string DumpProtocolPacketToString(const EQProtocolPacket* app);
 
 #endif

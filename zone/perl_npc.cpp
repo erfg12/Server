@@ -27,7 +27,7 @@
 
 #include "../common/features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "embperl.h"
 
 #ifdef seed
@@ -1345,7 +1345,8 @@ XS(XS_NPC_MoveTo)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->MoveTo(mtx, mty, mtz, mth, saveguard);
+        auto position = glm::vec4(mtx, mty, mtz, mth);
+		THIS->MoveTo(position, saveguard);
 	}
 	XSRETURN_EMPTY;
 }
@@ -1545,7 +1546,7 @@ XS(XS_NPC_GetSpawnPointX)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetSpawnPointX();
+		RETVAL = THIS->GetSpawnPoint().x;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -1572,7 +1573,7 @@ XS(XS_NPC_GetSpawnPointY)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetSpawnPointY();
+		RETVAL = THIS->GetSpawnPoint().y;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -1599,7 +1600,7 @@ XS(XS_NPC_GetSpawnPointZ)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetSpawnPointZ();
+		RETVAL = THIS->GetSpawnPoint().z;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -1626,7 +1627,7 @@ XS(XS_NPC_GetSpawnPointH)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetSpawnPointH();
+		RETVAL = THIS->GetSpawnPoint().w;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -1653,7 +1654,7 @@ XS(XS_NPC_GetGuardPointX)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetGuardPointX();
+		RETVAL = THIS->GetGuardPoint().x;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -1680,7 +1681,7 @@ XS(XS_NPC_GetGuardPointY)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetGuardPointY();
+		RETVAL = THIS->GetGuardPoint().y;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -1707,7 +1708,7 @@ XS(XS_NPC_GetGuardPointZ)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
 
-		RETVAL = THIS->GetGuardPointZ();
+		RETVAL = THIS->GetGuardPoint().z;
 		XSprePUSH; PUSHn((double)RETVAL);
 	}
 	XSRETURN(1);
@@ -2093,32 +2094,6 @@ XS(XS_NPC_GetSlowMitigation)
 	XSRETURN(1);
 }
 
-XS(XS_NPC_GetAttackSpeed); /* prototype to pass -Wmissing-prototypes */
-XS(XS_NPC_GetAttackSpeed)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: NPC::GetAttackSpeed(THIS)");
-	{
-		NPC *		THIS;
-		float		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "NPC")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(NPC *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type NPC");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->GetAttackSpeed();
-		XSprePUSH; PUSHn((double)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_NPC_GetAccuracyRating); /* prototype to pass -Wmissing-prototypes */
 XS(XS_NPC_GetAccuracyRating)
 {
@@ -2293,7 +2268,6 @@ XS(boot_NPC)
 		newXSproto(strcpy(buf, "GetSpellFocusDMG"), XS_NPC_GetSpellFocusDMG, file, "$");
 		newXSproto(strcpy(buf, "GetSpellFocusHeal"), XS_NPC_GetSpellFocusHeal, file, "$");
 		newXSproto(strcpy(buf, "GetSlowMitigation"), XS_NPC_GetSlowMitigation, file, "$");
-		newXSproto(strcpy(buf, "GetAttackSpeed"), XS_NPC_GetAttackSpeed, file, "$");
 		newXSproto(strcpy(buf, "GetAccuracyRating"), XS_NPC_GetAccuracyRating, file, "$");
 		newXSproto(strcpy(buf, "GetSpawnKillCount"), XS_NPC_GetSpawnKillCount, file, "$");
 		newXSproto(strcpy(buf, "GetScore"), XS_NPC_GetScore, file, "$");

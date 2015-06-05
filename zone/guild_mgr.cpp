@@ -15,14 +15,15 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
-#include "guild_mgr.h"
-#include "zonedb.h"
-#include "worldserver.h"
+
 #include "../common/servertalk.h"
 #include "../common/string_util.h"
+
 #include "client.h"
 #include "entity.h"
+#include "guild_mgr.h"
+#include "worldserver.h"
+#include "zonedb.h"
 
 ZoneGuildManager guild_mgr;
 
@@ -30,7 +31,7 @@ extern WorldServer worldserver;
 extern volatile bool ZoneLoaded;
 
 void ZoneGuildManager::SendGuildRefresh(uint32 guild_id, bool name, bool motd, bool rank, bool relation) {
-	_log(GUILDS__REFRESH, "Sending guild refresh for %d to world, changes: name=%d, motd=%d, rank=d, relation=%d", guild_id, name, motd, rank, relation);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending guild refresh for %d to world, changes: name=%d, motd=%d, rank=d, relation=%d", guild_id, name, motd, rank, relation);
 	ServerPacket* pack = new ServerPacket(ServerOP_RefreshGuild, sizeof(ServerGuildRefresh_Struct));
 	ServerGuildRefresh_Struct *s = (ServerGuildRefresh_Struct *) pack->pBuffer;
 	s->guild_id = guild_id;
@@ -44,7 +45,7 @@ void ZoneGuildManager::SendGuildRefresh(uint32 guild_id, bool name, bool motd, b
 
 void ZoneGuildManager::SendCharRefresh(uint32 old_guild_id, uint32 guild_id, uint32 charid) {
 	if(guild_id == 0) {
-		_log(GUILDS__REFRESH, "Guild lookup for char %d when sending char refresh.", charid);
+		Log.Out(Logs::Detail, Logs::Guilds, "Guild lookup for char %d when sending char refresh.", charid);
 
 		CharGuildInfo gci;
 		if(!GetCharInfo(charid, gci)) {
@@ -54,7 +55,7 @@ void ZoneGuildManager::SendCharRefresh(uint32 old_guild_id, uint32 guild_id, uin
 		}
 	}
 
-	_log(GUILDS__REFRESH, "Sending char refresh for %d from guild %d to world", charid, guild_id);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending char refresh for %d from guild %d to world", charid, guild_id);
 
 	ServerPacket* pack = new ServerPacket(ServerOP_GuildCharRefresh, sizeof(ServerGuildCharRefresh_Struct));
 	ServerGuildCharRefresh_Struct *s = (ServerGuildCharRefresh_Struct *) pack->pBuffer;
@@ -87,7 +88,7 @@ void ZoneGuildManager::SendRankUpdate(uint32 CharID)
 }
 
 void ZoneGuildManager::SendGuildDelete(uint32 guild_id) {
-	_log(GUILDS__REFRESH, "Sending guild delete for guild %d to world", guild_id);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending guild delete for guild %d to world", guild_id);
 	ServerPacket* pack = new ServerPacket(ServerOP_DeleteGuild, sizeof(ServerGuildID_Struct));
 	ServerGuildID_Struct *s = (ServerGuildID_Struct *) pack->pBuffer;
 	s->guild_id = guild_id;
@@ -169,9 +170,6 @@ uint8 *ZoneGuildManager::MakeGuildMembers(uint32 guild_id, const char *prefix_na
 		PutField(class_);
 		PutField(rank);
 		PutField(time_last_on);
-		PutField(tribute_enable);
-		PutField(total_tribute);
-		PutField(last_tribute);
 		SlideStructString( note_buf, ci->public_note );
 		e->zoneinstance = 0;
 		e->zone_id = 0;	// Flag them as offline (zoneid 0) as world will update us with their online status afterwards.
@@ -259,12 +257,12 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack) {
 	switch(pack->opcode) {
 	case ServerOP_RefreshGuild: {
 		if(pack->size != sizeof(ServerGuildRefresh_Struct)) {
-			_log(GUILDS__ERROR, "Received ServerOP_RefreshGuild of incorrect size %d, expected %d", pack->size, sizeof(ServerGuildRefresh_Struct));
+			Log.Out(Logs::General, Logs::Error, "Received ServerOP_RefreshGuild of incorrect size %d, expected %d", pack->size, sizeof(ServerGuildRefresh_Struct));
 			return;
 		}
 		ServerGuildRefresh_Struct *s = (ServerGuildRefresh_Struct *) pack->pBuffer;
 
-		_log(GUILDS__REFRESH, "Received guild refresh from world for %d, changes: name=%d, motd=%d, rank=%d, relation=%d", s->guild_id, s->name_change, s->motd_change, s->rank_change, s->relation_change);
+		Log.Out(Logs::Detail, Logs::Guilds, "Received guild refresh from world for %d, changes: name=%d, motd=%d, rank=%d, relation=%d", s->guild_id, s->name_change, s->motd_change, s->rank_change, s->relation_change);
 
 		//reload all the guild details from the database.
 		RefreshGuild(s->guild_id);
@@ -293,12 +291,12 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack) {
 
 	case ServerOP_GuildCharRefresh: {
 		if(pack->size != sizeof(ServerGuildCharRefresh_Struct)) {
-			_log(GUILDS__ERROR, "Received ServerOP_RefreshGuild of incorrect size %d, expected %d", pack->size, sizeof(ServerGuildCharRefresh_Struct));
+			Log.Out(Logs::General, Logs::Error, "Received ServerOP_RefreshGuild of incorrect size %d, expected %d", pack->size, sizeof(ServerGuildCharRefresh_Struct));
 			return;
 		}
 		ServerGuildCharRefresh_Struct *s = (ServerGuildCharRefresh_Struct *) pack->pBuffer;
 
-		_log(GUILDS__REFRESH, "Received guild member refresh from world for char %d from guild %d", s->char_id, s->guild_id);
+		Log.Out(Logs::Detail, Logs::Guilds, "Received guild member refresh from world for char %d from guild %d", s->char_id, s->guild_id);
 
 		Client *c = entity_list.GetClientByCharID(s->char_id);
 
@@ -316,12 +314,12 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack) {
 
 	case ServerOP_DeleteGuild: {
 		if(pack->size != sizeof(ServerGuildID_Struct)) {
-			_log(GUILDS__ERROR, "Received ServerOP_DeleteGuild of incorrect size %d, expected %d", pack->size, sizeof(ServerGuildID_Struct));
+			Log.Out(Logs::General, Logs::Error, "Received ServerOP_DeleteGuild of incorrect size %d, expected %d", pack->size, sizeof(ServerGuildID_Struct));
 			return;
 		}
 		ServerGuildID_Struct *s = (ServerGuildID_Struct *) pack->pBuffer;
 
-		_log(GUILDS__REFRESH, "Received guild delete from world for guild %d", s->guild_id);
+		Log.Out(Logs::Detail, Logs::Guilds, "Received guild delete from world for guild %d", s->guild_id);
 
 		//clear all the guild tags.
 		entity_list.RefreshAllGuildInfo(s->guild_id);
@@ -347,10 +345,10 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack) {
 
 			if (!c || !c->IsInAGuild())
 			{
-				_log(GUILDS__ERROR,"Invalid Client or not in guild. ID=%i", FromID);
+				Log.Out(Logs::Detail, Logs::Guilds,"Invalid Client or not in guild. ID=%i", FromID);
 				break;
 			}
-			_log(GUILDS__IN_PACKETS,"Processing ServerOP_OnlineGuildMembersResponse");
+			Log.Out(Logs::Detail, Logs::Guilds,"Processing ServerOP_OnlineGuildMembersResponse");
 		}
 		break;
 	}
@@ -447,7 +445,7 @@ bool GuildApproval::ProcessApproval()
 {
 	if(owner && owner->GuildID() != 0)
 	{
-		owner->Message(10,"You are already in a guild! Guild request deleted.");
+		owner->Message(CC_Default,"You are already in a guild! Guild request deleted.");
 		return false;
 	}
 	if(deletion_timer->Check() || !owner)

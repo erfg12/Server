@@ -20,12 +20,10 @@
 
 #include "../common/worldconn.h"
 #include "../common/eq_packet_structs.h"
-#include <string>
 
-struct GuildJoin_Struct;
+class ServerPacket;
 class EQApplicationPacket;
 class Client;
-class Database;
 
 class WorldServer : public WorldConnection {
 public:
@@ -37,7 +35,6 @@ public:
 	bool SendChannelMessage(Client* from, const char* to, uint8 chan_num, uint32 guilddbid, uint8 language, const char* message, ...);
 	bool SendEmoteMessage(const char* to, uint32 to_guilddbid, uint32 type, const char* message, ...);
 	bool SendEmoteMessage(const char* to, uint32 to_guilddbid, int16 to_minstatus, uint32 type, const char* message, ...);
-	bool SendVoiceMacro(Client* From, uint32 Type, char* Target, uint32 MacroNumber, uint32 GroupOrRaidID = 0);
 	void SetZone(uint32 iZoneID, uint32 iInstanceID = 0);
 	uint32 SendGroupIdRequest();
 	bool RezzPlayer(EQApplicationPacket* rpack, uint32 rezzexp, uint32 dbid, uint16 opcode);

@@ -54,7 +54,6 @@
 #define BANKER 40
 #define MERCHANT 41
 #define DISCORD_MERCHANT 59
-#define LDON_TREASURE 62 //objects you can use /open on first seen in LDONs
 #define CORPSE_CLASS 62	//only seen on Danvi's Corpse in Akheva so far..
 
 const char* GetEQClassName(uint8 class_, uint8 level = 0);

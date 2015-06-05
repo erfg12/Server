@@ -7,14 +7,13 @@ SET(zone_sources
 	beacon.cpp
 	bonuses.cpp
 	client.cpp
-	client_logs.cpp
 	client_mods.cpp
 	client_packet.cpp
 	client_process.cpp
 	command.cpp
 	corpse.cpp
 	doors.cpp
-	effects.cpp 
+	effects.cpp
 	embparser.cpp
 	embparser_api.cpp
 	embperl.cpp
@@ -89,14 +88,15 @@ SET(zone_sources
 	perlpacket.cpp
 	petitions.cpp
 	pets.cpp
+	position.cpp
 	qglobals.cpp
 	queryserv.cpp
 	questmgr.cpp
 	quest_parser_collection.cpp
 	raids.cpp
 	raycast_mesh.cpp
-	#remote_call.cpp
-	#remote_call_subscribe.cpp
+	remote_call.cpp
+	remote_call_subscribe.cpp
 	spawn2.cpp
 	spawn2.h
 	spawngroup.cpp
@@ -107,13 +107,13 @@ SET(zone_sources
 	tradeskills.cpp
 	trading.cpp
 	trap.cpp
+	tune.cpp
 	water_map.cpp
 	water_map_v1.cpp
 	water_map_v2.cpp
 	waypoints.cpp
 	worldserver.cpp
 	zone.cpp
-	zone_logsys.cpp
 	zone_config.cpp
 	zonedb.cpp
 	zoning.cpp
@@ -124,7 +124,6 @@ SET(zone_headers
 	basic_functions.h
 	beacon.h
 	client.h
-	client_logs.h
 	client_packet.h
 	command.h
 	common.h
@@ -175,6 +174,7 @@ SET(zone_headers
 	perlpacket.h
 	petitions.h
 	pets.h
+	position.h
 	qglobals.h
 	quest_interface.h
 	queryserv.h
@@ -184,8 +184,8 @@ SET(zone_headers
 	raid.h
 	raids.h
 	raycast_mesh.h
-	#remote_call.h
-	#remote_call_subscribe.h
+	remote_call.h
+	remote_call_subscribe.h
 	skills.h
 	spawn2.cpp
 	spawn2.h

@@ -96,7 +96,6 @@ INr(OP_Begging);	//?
 IN(OP_Surname, Surname_Struct);
 INr(OP_YellForHelp);
 IN(OP_Assist, EntityId_Struct);		//generic
-IN(OP_GMTraining, GMTrainee_Struct);
 IN(OP_GMEndTraining, GMTrainEnd_Struct);
 IN(OP_GMTrainSkill, GMSkillChange_Struct);
 IN(OP_RequestDuel, Duel_Struct);
@@ -115,14 +114,11 @@ INz(OP_Hide);		//?
 INv(OP_ChannelMessage, ChannelMessage_Struct);
 IN(OP_WearChange, WearChange_Struct);
 IN(OP_DeleteSpawn, EntityId_Struct);	//client->server follows OP_SaveOnZoneReq
-IN(OP_SaveOnZoneReq, Save_Struct);		//follows OP_ZoneChange
-IN(OP_Save, Save_Struct);
 IN(OP_WhoAllRequest, Who_All_Struct);
 IN(OP_GMZoneRequest, GMZoneRequest_Struct);
 IN(OP_GMZoneRequest2, uint32);
 IN(OP_EndLootRequest, EntityId_Struct);	//follows OP_LootRequest
 IN(OP_LootRequest, EntityId_Struct);	//entity must be a corpse
-IN(OP_Dye, DyeStruct);
 IN(OP_LootItem, LootingItem_Struct);
 INr(OP_GuildDelete);	//?
 INz(OP_GetGuildsList);	//?
@@ -146,7 +142,6 @@ IN(OP_GMSummon, GMSummon_Struct);
 IN(OP_TradeRequest, TradeRequest_Struct);
 IN(OP_TradeRequestAck, TradeRequest_Struct);	//follows OP_TradeRequest
 IN(OP_CancelTrade, CancelTrade_Struct);
-IN(OP_TradeAcceptClick, TradeAccept_Struct);
 IN(OP_BoardBoat, EntityId_Struct);		//not really the struct, just 4 bytes
 INz(OP_LeaveBoat);		//?
 IN(OP_RandomReq, RandomReq_Struct);
@@ -190,7 +185,7 @@ INr(OP_PetitionRefresh);
 
 IN(OP_PetCommands, PetCommand_Struct);
 IN(OP_ReadBook, BookRequest_Struct);
-IN(OP_Emote, Emote_Struct);
+IN(OP_Emote, OldEmote_Struct);
 #ifdef DISJOINT_STATES
 IN(OP_SetServerFilter, SetServerFilter_Struct);
 #endif
@@ -237,8 +232,7 @@ OUTz(OP_LootComplete);		//follows OP_LootItem
 //OUTz(OP_TradeSkillCombine);
 
 OUTv(OP_ItemPacket, ItemPacket_Struct);
-OUTv(OP_ItemRecastDelay, ItemRecastDelay_Struct);
-OUTv(OP_FormattedMessage, FormattedMessage_Struct);
+OUTv(OP_FormattedMessage, OldFormattedMessage_Struct);
 OUTv(OP_InterruptCast, InterruptCast_Struct);
 OUTv(OP_ItemLinkResponse, ItemPacket_Struct);
 OUTv(OP_ZoneSpawns, Spawn_Struct);
@@ -248,7 +242,6 @@ OUTv(OP_SendZonepoints, ZonePoints);
 OUTv(OP_TributeInfo, TributeAbility_Struct);
 OUTv(OP_GuildTributeInfo, GuildTributeAbility_Struct);
 OUT(OP_SendMaxCharacters, MaxCharacters_Struct);
-OUT(OP_AAExpUpdate, AAExpUpdate_Struct);
 OUT(OP_Action, Action_Struct);
 OUT(OP_Animation, Animation_Struct);
 OUT(OP_BecomeTrader, BecomeTrader_Struct);
@@ -264,7 +257,6 @@ OUT(OP_GuildMOTD, GuildMOTD_Struct);
 OUT(OP_HPUpdate, SpawnHPUpdate_Struct);
 OUT(OP_LevelUpdate, LevelUpdate_Struct);
 OUT(OP_ManaUpdate, ManaUpdate_Struct);
-OUT(OP_MobHealth, MobHealth_Struct);
 OUT(OP_MoneyOnCorpse, moneyOnCorpseStruct);	//follows OP_LootRequest
 OUT(OP_MoneyUpdate, MoneyUpdate_Struct);
 OUT(OP_MoveDoor, MoveDoor_Struct);
@@ -276,32 +268,24 @@ OUT(OP_RaidUpdate, ZoneInSendName_Struct);
 //alt:OUTv(OP_RaidUpdate, RaidMembers_Struct);
 OUT(OP_RandomReply, RandomReply_Struct);
 OUT(OP_RequestClientZoneChange, RequestClientZoneChange_Struct);
-OUT(OP_RespondAA, AATable_Struct);
 OUT(OP_RezzRequest, Resurrect_Struct);
 OUT(OP_ShopDelItem, Merchant_DelItem_Struct);
 OUT(OP_SimpleMessage, SimpleMessage_Struct);
 OUT(OP_SkillUpdate, SkillUpdate_Struct);
 OUT(OP_Projectile, Arrow_Struct);
-OUT(OP_SpellEffect, SpellEffect_Struct);
 OUT(OP_Stamina, Stamina_Struct);
 OUT(OP_Stun, Stun_Struct);
 OUT(OP_TimeOfDay, TimeOfDay_Struct);
-OUT(OP_Track, Track_Struct);
 OUT(OP_TradeCoins, TradeCoin_Struct);
 OUT(OP_TradeMoneyUpdate, TradeMoneyUpdate_Struct);
-OUT(OP_TraderDelItem, TraderDelItem_Struct);
-OUT(OP_TraderItemUpdate, TraderItemUpdate_Struct);
 OUT(OP_TributeTimer, uint32);
 OUT(OP_Weather, Weather_Struct);
 OUT(OP_ZoneChange, ZoneChange_Struct);
-OUT(OP_ZoneInAvatarSet, ZoneInUnknown_Struct);
 
 //this is the set of opcodes which are allready listed
 //in the IN section above, but are also sent OUT
 #ifdef DISJOINT_DIRECTIONS
-OUTz(OP_Dye);
 OUTz(OP_GMKick);
-OUTz(OP_SendAAStats);		//follows OP_ReqNewZone
 OUTz(OP_SendExpZonein);		//follows OP_SendZonepoints
 
 OUTv(OP_ReadBook, BookText_Struct);

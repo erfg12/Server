@@ -27,7 +27,7 @@
 
 #include "../common/features.h"
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "embperl.h"
 
 #ifdef seed
@@ -872,13 +872,11 @@ XS(XS_Client_AddEXP); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_AddEXP)
 {
 	dXSARGS;
-	if (items < 2 || items > 4)
-		Perl_croak(aTHX_ "Usage: Client::AddEXP(THIS, add_exp, conlevel= 0xFF, resexp= false)");
+	if (items < 2)
+		Perl_croak(aTHX_ "Usage: Client::AddEXP(THIS, add_exp)");
 	{
 		Client *		THIS;
 		uint32		add_exp = (uint32)SvUV(ST(1));
-		uint8		conlevel;
-		bool		resexp;
 
 		if (sv_derived_from(ST(0), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -889,19 +887,7 @@ XS(XS_Client_AddEXP)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		if (items < 3)
-			conlevel = 0xFF;
-		else {
-			conlevel = (uint8)SvUV(ST(2));
-		}
-
-		if (items < 4)
-			resexp = false;
-		else {
-			resexp = (bool)SvTRUE(ST(3));
-		}
-
-		THIS->AddEXP(add_exp, conlevel, resexp);
+		THIS->AddQuestEXP(add_exp);
 	}
 	XSRETURN_EMPTY;
 }
@@ -991,7 +977,7 @@ XS(XS_Client_SetBindPoint)
 			new_z = (float)SvNV(ST(5));
 		}
 
-		THIS->SetBindPoint(to_zone, to_instance, new_x, new_y, new_z);
+		THIS->SetBindPoint(to_zone, to_instance, glm::vec3(new_x, new_y, new_z));
 	}
 	XSRETURN_EMPTY;
 }
@@ -1053,7 +1039,7 @@ XS(XS_Client_GetBindY)
 		if (items == 1)
 			index = 0;
 		else if (items == 2) {
-			index = (uint32)SvUV(ST(1));;
+			index = (uint32)SvUV(ST(1));
 		}
 
 		RETVAL = THIS->GetBindY(index);
@@ -1190,9 +1176,9 @@ XS(XS_Client_MovePC)
 		}
 		else {
 			if (THIS->IsNPC())
-				_log(CLIENT__ERROR, "Perl(XS_Client_MovePC) attempted to process a type NPC reference");
+				Log.Out(Logs::Detail, Logs::None, "[CLIENT] Perl(XS_Client_MovePC) attempted to process a type NPC reference");
 			else
-				_log(CLIENT__ERROR, "Perl(XS_Client_MovePC) attempted to process an Unknown type reference");
+				Log.Out(Logs::Detail, Logs::None, "[CLIENT] Perl(XS_Client_MovePC) attempted to process an Unknown type reference");
 
 			Perl_croak(aTHX_ "THIS is not of type Client");
 		}
@@ -1230,11 +1216,11 @@ XS(XS_Client_MovePCInstance)
 		}
 		else {
 			if (THIS->IsNPC())
-				_log(CLIENT__ERROR, "Perl(XS_Client_MovePCInstance) attempted to process a type NPC reference");
+				Log.Out(Logs::Detail, Logs::None, "[CLIENT] Perl(XS_Client_MovePCInstance) attempted to process a type NPC reference");
 			else
-				_log(CLIENT__ERROR, "Perl(XS_Client_MovePCInstance) attempted to process an Unknown type reference");
+				Log.Out(Logs::Detail, Logs::None, "[CLIENT] Perl(XS_Client_MovePCInstance) attempted to process an Unknown type reference");
 
-			Perl_croak(aTHX_ "THIS is not of type Client"); 
+			Perl_croak(aTHX_ "THIS is not of type Client");
 
 			Perl_croak(aTHX_ "THIS is not of type Client");
 		}
@@ -2966,17 +2952,12 @@ XS(XS_Client_SummonItem)
 {
 	dXSARGS;
 	if (items < 2 || items > 10)
-		Perl_croak(aTHX_ "Usage: Client::SummonItem(THIS, item_id, charges=0, attune=0, aug1=0, aug2=0, aug3=0, aug4=0, aug5=0, slot_id=30)");
+		Perl_croak(aTHX_ "Usage: Client::SummonItem(THIS, item_id, charges=0, attune=0, slot_id=30)");
 	{
 		Client *		THIS;
 		uint32		item_id = (uint32)SvUV(ST(1));
 		int16		charges = -1;
 		bool		attune = false;
-		uint32		aug1 = 0;
-		uint32		aug2 = 0;
-		uint32		aug3 = 0;
-		uint32		aug4 = 0;
-		uint32		aug5 = 0;
 		uint16		slot_id = 9999;
 
 		if (sv_derived_from(ST(0), "Client")) {
@@ -2995,25 +2976,10 @@ XS(XS_Client_SummonItem)
 			attune = (bool)SvTRUE(ST(3));
 		}
 		if (items > 4) {
-			aug1 = (uint32)SvUV(ST(4));
-		}
-		if (items > 5) {
-			aug2 = (uint32)SvUV(ST(5));
-		}
-		if (items > 6) {
-			aug3 = (uint32)SvUV(ST(6));
-		}
-		if (items > 7) {
-			aug4 = (uint32)SvUV(ST(7));
-		}
-		if (items > 8) {
-			aug5 = (uint32)SvUV(ST(8));
-		}
-		if (items > 9) {
-			slot_id = (uint16)SvUV(ST(9));
+			slot_id = (uint16)SvUV(ST(4));
 		}
 
-		THIS->SummonItem(item_id, charges, aug1, aug2, aug3, aug4, aug5, attune, slot_id);
+		THIS->SummonItem(item_id, charges, attune, slot_id);
 	}
 	XSRETURN_EMPTY;
 }
@@ -4017,57 +3983,6 @@ XS(XS_Client_GetStartZone)
 	XSRETURN(1);
 }
 
-XS(XS_Client_KeyRingAdd);
-XS(XS_Client_KeyRingAdd)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Client::KeyRingAdd(THIS, item_id)");
-	{
-		Client *	THIS;
-		uint32		item_id = (uint32)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		THIS->KeyRingAdd(item_id);;
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Client_KeyRingCheck);
-XS(XS_Client_KeyRingCheck)
-{
-	dXSARGS;
-	if (items != 2)
-		Perl_croak(aTHX_ "Usage: Client::KeyRingCheck(THIS, item_id)");
-	{
-		Client *	THIS;
-		bool		RETVAL;
-		uint32		item_id = (uint32)SvUV(ST(1));
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->KeyRingCheck(item_id);;
-		ST(0) = boolSV(RETVAL);
-		sv_2mortal(ST(0));
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Client_ReadBook); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_ReadBook)
 {
@@ -4093,58 +4008,6 @@ XS(XS_Client_ReadBook)
 XSRETURN_EMPTY;
 }
 
-XS(XS_Client_GetGroupPoints); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GetGroupPoints)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GetGroupPoints(THIS)");
-	{
-		Client *		THIS;
-		uint32		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->GetGroupPoints();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
-XS(XS_Client_GetRaidPoints); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_GetRaidPoints)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::GetRaidPoints(THIS)");
-	{
-		Client *		THIS;
-		uint32		RETVAL;
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		RETVAL = THIS->GetRaidPoints();
-		XSprePUSH; PUSHu((UV)RETVAL);
-	}
-	XSRETURN(1);
-}
-
 XS(XS_Client_LearnRecipe);
 XS(XS_Client_LearnRecipe)
 {
@@ -4164,7 +4027,7 @@ XS(XS_Client_LearnRecipe)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->LearnRecipe(recipe_id);;
+		THIS->LearnRecipe(recipe_id);
 	}
 	XSRETURN_EMPTY;
 }
@@ -5113,7 +4976,7 @@ XS(XS_Client_SilentMessage)
         {
                 Client *                THIS;
                 dXSTARG;
- 
+
                 if (sv_derived_from(ST(0), "Client")) {
                         IV tmp = SvIV((SV*)SvRV(ST(0)));
                         THIS = INT2PTR(Client *,tmp);
@@ -5124,7 +4987,7 @@ XS(XS_Client_SilentMessage)
                         Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
                 if(THIS->GetTarget() != NULL){
                         if(THIS->GetTarget()->IsNPC()){
-                                if (THIS->DistNoRootNoZ(*THIS->GetTarget()) <= 200) {
+                                if (DistanceSquaredNoZ(THIS->GetPosition(), THIS->GetTarget()->GetPosition()) <= 200) {
                                                 if(THIS->GetTarget()->CastToNPC()->IsMoving() && !THIS->GetTarget()->CastToNPC()->IsOnHatelist(THIS->GetTarget()))
                                                         THIS->GetTarget()->CastToNPC()->PauseWandering(RuleI(NPC, SayPauseTimeInSec));
                                         THIS->ChannelMessageReceived(8, 0, 100, SvPV_nolen(ST(1)));
@@ -5133,38 +4996,6 @@ XS(XS_Client_SilentMessage)
                 }
         }
         XSRETURN_EMPTY;
-}
-
-//Client::SendMarqueeMessage(uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, std::string msg)
-
-XS(XS_Client_SendMarqueeMessage); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_SendMarqueeMessage)
-{
-	dXSARGS;
-	if (items != 7)
-		Perl_croak(aTHX_ "Usage: Client::SendMarqueeMessage(THIS, type, priority, fade_in, fade_out, duration, msg)");
-	{
-		Client *		THIS;
-		uint32 type =	(uint32)SvUV(ST(1));
-		uint32 priority =	(uint32)SvUV(ST(2));
-		uint32 fade_in =	(uint32)SvUV(ST(3));
-		uint32 fade_out =	(uint32)SvUV(ST(4));
-		uint32 duration =	(uint32)SvUV(ST(5));
-		std::string msg = (std::string)SvPV_nolen(ST(6));
-		dXSTARG;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == NULL)
-			Perl_croak(aTHX_ "THIS is NULL, avoiding crash.");
-
-		THIS->SendMarqueeMessage(type, priority, fade_in, fade_out, duration, msg);
-	}
-	XSRETURN_EMPTY;
 }
 
 XS(XS_Client_QuestReward); /* prototype to pass -Wmissing-prototypes */
@@ -5406,11 +5237,7 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "GetModCharacterFactionLevel"), XS_Client_GetModCharacterFactionLevel, file, "$$");
 		newXSproto(strcpy(buf, "GetItemAt"), XS_Client_GetItemAt, file, "$$");
 		newXSproto(strcpy(buf, "GetStartZone"), XS_Client_GetStartZone, file, "$");
-		newXSproto(strcpy(buf, "KeyRingAdd"), XS_Client_KeyRingAdd, file, "$$");
-		newXSproto(strcpy(buf, "KeyRingCheck"), XS_Client_KeyRingCheck, file, "$$");
 		newXSproto(strcpy(buf, "ReadBook"), XS_Client_ReadBook, file, "$$$");
-		newXSproto(strcpy(buf, "GetGroupPoints"), XS_Client_GetGroupPoints, file, "$");
-		newXSproto(strcpy(buf, "GetRaidPoints"), XS_Client_GetRaidPoints, file, "$");
 		newXSproto(strcpy(buf, "LearnRecipe"), XS_Client_LearnRecipe, file, "$$");
 		newXSproto(strcpy(buf, "GetEndurance"), XS_Client_GetEndurance, file, "$");
 		newXSproto(strcpy(buf, "GetMaxEndurance"), XS_Client_GetMaxEndurance, file, "$");
@@ -5448,10 +5275,9 @@ XS(boot_Client)
         newXSproto(strcpy(buf, "SetConsumption"), XS_Client_SetConsumption, file, "$$$");
 		newXSproto(strcpy(buf, "SilentMessage"), XS_Client_SilentMessage, file, "$$");
 		newXSproto(strcpy(buf, "SendTargetCommand"), XS_Client_SendTargetCommand, file, "$$");
-		newXSproto(strcpy(buf, "SendMarqueeMessage"), XS_Client_SendMarqueeMessage, file, "$$$$$$$");
 		newXSproto(strcpy(buf, "QuestReward"), XS_Client_QuestReward, file, "$$;$$$$$$$");
 		newXSproto(strcpy(buf, "SendSpellAnim"), XS_Client_SendSpellAnim, file, "$$$");
-		
+
 		XSRETURN_YES;
 }
 

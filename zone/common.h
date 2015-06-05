@@ -17,7 +17,6 @@
 #define _BECOMENPCPET(x) (x && x->CastToMob()->GetOwner() && x->CastToMob()->GetOwner()->IsClient() && x->CastToMob()->GetOwner()->CastToClient()->IsBecomeNPC())
 
 #define USE_ITEM_SPELL_SLOT 10
-#define POTION_BELT_SPELL_SLOT 11
 #define DISCIPLINE_SPELL_SLOT 10
 #define ABILITY_SPELL_SLOT 9
 
@@ -132,7 +131,8 @@ enum {
 	DISABLE_MELEE = 39,
 	NPC_CHASE_DISTANCE = 40,
 	ALLOW_TO_TANK = 41,
-	MAX_SPECIAL_ATTACK = 42
+	PROX_AGGRO = 42,
+	MAX_SPECIAL_ATTACK = 43
 	
 };
 
@@ -186,6 +186,7 @@ struct Buffs_Struct {
 	int32	caston_z;
 	int32	ExtraDIChance;
 	int16	RootBreakChance; //Not saved to dbase
+	int16	instrumentmod;
 	bool	persistant_buff;
 	bool	client; //True if the caster is a client
 	bool	UpdateClient;
@@ -390,7 +391,6 @@ struct StatBonuses {
 	// AAs
 	int8	Packrat;							//weight reduction for items, 1 point = 10%
 	uint8	BuffSlotIncrease;					// Increases number of available buff slots
-	uint32	DelayDeath;							// how far below 0 hp you can go
 	int8	BaseMovementSpeed;					// Adjust base run speed, does not stack with other movement bonuses.
 	uint8	IncreaseRunSpeedCap;				// Increase max run speed above cap.
 	int32	DoubleSpecialAttack;				// Chance to to perform a double special attack (ie flying kick 2x)
@@ -515,6 +515,7 @@ typedef enum : uint16 {	//type arguments to DoAnim
 	LaughAt,
 	Cough,
 	WeirdDance,
+	HeadSideways,
 	Dance,
 	DontKnow,
 	Stuborne, // 60
@@ -549,6 +550,7 @@ typedef enum {
 
 typedef enum {
 	SingleTarget,	// causes effect to spell_target
+	Projectile,		// bolt spells, flare
 	AETarget,			// causes effect in aerange of target + target
 	AECaster,			// causes effect in aerange of 'this'
 	GroupSpell,		// causes effect to caster + target's group
@@ -556,21 +558,6 @@ typedef enum {
 	DirectionalAE,
 	CastActUnknown
 } CastAction_type;
-
-
-struct MercType {
-	uint32	Type;
-	uint32	ClientVersion;
-};
-
-struct MercData {
-	uint32	MercTemplateID;
-	uint32	MercType;				// From dbstr_us.txt - Apprentice (330000100), Journeyman (330000200), Master (330000300)
-	uint32	MercSubType;			// From dbstr_us.txt - 330020105^23^Race: Guktan<br>Type: Healer<br>Confidence: High<br>Proficiency: Apprentice, Tier V...
-	uint32	CostFormula;			// To determine cost to client
-	uint32	ClientVersion;				// Only send valid mercs per expansion
-	uint32	NPCID;
-};
 
 class ItemInst;
 class Mob;
@@ -597,10 +584,8 @@ public:
 	// Audit trade
 	void LogTrade();
 
-	// Debug only method
-	#if (EQDEBUG >= 9)
-		void DumpTrade();
-	#endif
+	void DumpTrade();
+
 
 public:
 	// Object state

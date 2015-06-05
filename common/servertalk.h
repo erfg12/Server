@@ -26,7 +26,6 @@
 #define ServerOP_KickPlayer			0x000D	// #kick
 
 #define ServerOP_RefreshGuild		0x000E	// Notice to all zoneservers to refresh their guild cache for ID# in packet (ServerGuildRefresh_Struct)
-#define ServerOP_VoiceMacro		0x000F
 //#define ServerOP_GuildInvite		0x0010
 #define ServerOP_DeleteGuild		0x0011	// ServerGuildID_Struct
 #define ServerOP_GuildRankUpdate	0x0012
@@ -34,7 +33,6 @@
 #define ServerOP_GuildMemberUpdate	0x0014
 #define ServerOP_RequestOnlineGuildMembers	0x0015
 #define ServerOP_OnlineGuildMembersResponse	0x0016
-#define ServerOP_LFGuildUpdate		0x0017
 
 #define ServerOP_FlagUpdate			0x0018	// GM Flag updated for character, refresh the memory cache
 #define ServerOP_GMGoto				0x0019
@@ -51,7 +49,7 @@
 #define ServerOP_AcceptWorldEntrance 0x0024
 #define ServerOP_ZAAuth				0x0025
 #define ServerOP_ZAAuthFailed		0x0026
-#define ServerOP_ZoneIncClient		0x0027	// Incomming client
+#define ServerOP_ZoneIncClient		0x0027	// Incoming client
 #define ServerOP_ClientListKA		0x0028
 #define ServerOP_ChangeWID			0x0029
 #define ServerOP_IPLookup			0x002A
@@ -77,6 +75,8 @@
 #define ServerOP_GroupJoin			0x003e //for joining ooz folks
 #define ServerOP_UpdateSpawn		0x003f
 #define ServerOP_SpawnStatusChange	0x0040
+#define ServerOP_ChangeGroupLeader	0x0041
+#define ServerOP_IsOwnerOnline		0x0042
 #define ServerOP_DepopAllPlayersCorpses	0x0061
 #define ServerOP_ReloadTitles		0x0062
 #define ServerOP_QGlobalUpdate		0x0063
@@ -112,6 +112,8 @@
 #define ServerOP_LFPUpdate			0x0213
 #define ServerOP_LFPMatches			0x0214
 #define ServerOP_ClientVersionSummary 0x0215
+#define ServerOP_Soulmark			0x0216
+#define ServerOP_AddSoulmark		0x0217
 #define ServerOP_LSInfo				0x1000
 #define ServerOP_LSStatus			0x1001
 #define ServerOP_LSClientAuth		0x1002
@@ -153,22 +155,22 @@
 #define ServerOP_UCSMailMessage 0x4001
 #define ServerOP_ReloadRules	0x4002
 #define ServerOP_ReloadRulesWorld	0x4003
-#define ServerOP_CameraShake	0x4004
 #define ServerOP_QueryServGeneric	0x4005
 #define ServerOP_CZSignalClient 0x4006
 #define ServerOP_CZSignalClientByName 0x4007
 #define ServerOP_CZMessagePlayer 0x4008
 #define ServerOP_ReloadWorld 0x4009
-
-#define ServerOP_QSPlayerLogTrades					0x4010
-#define ServerOP_QSPlayerLogHandins					0x4011
-#define ServerOP_QSPlayerLogNPCKills				0x4012
-#define ServerOP_QSPlayerLogDeletes					0x4013
-#define ServerOP_QSPlayerLogMoves					0x4014
-#define ServerOP_QSPlayerLogMerchantTransactions	0x4015
-#define ServerOP_QSSendQuery						0x4016
-#define ServerOP_CZSignalNPC						0x4017
-#define ServerOP_CZSetEntityVariableByNPCTypeID		0x4018
+#define ServerOP_ReloadLogs 0x4010
+/* Query Server OP Codes */
+#define ServerOP_QSPlayerLogTrades					0x5010
+#define ServerOP_QSPlayerLogHandins					0x5011
+#define ServerOP_QSPlayerLogNPCKills				0x5012
+#define ServerOP_QSPlayerLogDeletes					0x5013
+#define ServerOP_QSPlayerLogMoves					0x5014
+#define ServerOP_QSPlayerLogMerchantTransactions	0x5015
+#define ServerOP_QSSendQuery						0x5016
+#define ServerOP_CZSignalNPC						0x5017
+#define ServerOP_CZSetEntityVariableByNPCTypeID		0x5018
 
 #define ServerOP_WIRemoteCall 0x5001
 #define ServerOP_WIRemoteCallResponse 0x5002
@@ -176,8 +178,6 @@
 #define ServerOP_WIClientSession 0x5004
 #define ServerOP_WIClientSessionResponse 0x5005
 /* Query Serv Generic Packet Flag/Type Enumeration */
-enum { QSG_LFGuild = 0 }; enum {	QSG_LFGuild_PlayerMatches = 0, QSG_LFGuild_UpdatePlayerInfo, QSG_LFGuild_RequestPlayerInfo, QSG_LFGuild_UpdateGuildInfo, QSG_LFGuild_GuildMatches,
-	QSG_LFGuild_RequestGuildInfo };
 
 #define ServerOP_Speech			0x4513
 
@@ -289,7 +289,7 @@ struct ServerZoneStateChange_struct {
 	bool makestatic;
 };
 
-struct ServerZoneIncommingClient_Struct {
+struct ServerZoneIncomingClient_Struct {
 	uint32	zoneid;		// in case the zone shut down, boot it back up
 	uint16	instanceid; // instance id if it exists for booting up
 	uint32	ip;			// client's IP address
@@ -346,18 +346,6 @@ struct ServerEmoteMessage_Struct {
 	char	message[0];
 };
 
-struct ServerVoiceMacro_Struct {
-	char	From[64];
-	union {
-		char	To[64];
-		uint32	GroupID;
-		uint32	RaidID;
-	};
-	uint32	Type;
-	uint32	Voice;
-	uint32	MacroNumber;
-};
-
 struct ServerClientList_Struct {
 	uint8	remove;
 	uint32	wid;
@@ -384,6 +372,7 @@ struct ServerClientList_Struct {
 	uint8	LFGToLevel;
 	bool	LFGMatchFilter;
 	char	LFGComments[64];
+	bool	LD;
 };
 
 struct ServerClientListKeepAlive_Struct {
@@ -565,14 +554,15 @@ struct ServerPetitionUpdate_Struct {
 
 struct ServerWhoAll_Struct {
 	int16 admin;
-	uint32 fromid;
+	uint16 fromid;
 	char from[64];
 	char whom[64];
-	uint16 wrace; // FF FF = no race
-	uint16 wclass; // FF FF = no class
-	uint16 lvllow; // FF FF = no numbers
-	uint16 lvlhigh; // FF FF = no numbers
-	uint16 gmlookup; // FF FF = not doing /who all gm
+	int16 wrace; // FF FF = no race
+	int16 wclass; // FF FF = no class
+	int16 lvllow; // FF FF = no numbers
+	int16 lvlhigh; // FF FF = no numbers
+	int16 gmlookup; // FF FF = not doing /who all gm
+	int16 guildid; // FF FF = not doing /who all guild
 };
 
 struct ServerFriendsWho_Struct {
@@ -681,6 +671,7 @@ struct ServerGroupLeave_Struct {
 	uint16 instance_id;
 	uint32 gid;
 	char member_name[64];	//kick this member from the group
+	bool	checkleader;
 };
 
 struct ServerGroupJoin_Struct {
@@ -688,6 +679,14 @@ struct ServerGroupJoin_Struct {
 	uint16 instance_id;
 	uint32 gid;
 	char member_name[64];	//this person is joining the group
+};
+
+struct ServerGroupLeader_Struct {
+	uint32 zoneid;
+	uint16 instance_id;
+	uint32 gid;
+	char leader_name[64];
+	char oldleader_name[64];
 };
 
 struct ServerForceGroupUpdate_Struct {
@@ -892,12 +891,6 @@ struct ServerLeaderboardRequest_Struct
 	uint8 type;
 };
 
-struct ServerCameraShake_Struct
-{
-	uint32 duration; // milliseconds
-	uint32 intensity; // number from 1-10
-};
-
 struct ServerMailMessageHeader_Struct {
 	char from[64];
 	char to[64];
@@ -936,11 +929,6 @@ struct QSTradeItems_Struct {
 	uint16 to_slot;
 	uint32 item_id;
 	uint16 charges;
-	uint32 aug_1;
-	uint32 aug_2;
-	uint32 aug_3;
-	uint32 aug_4;
-	uint32 aug_5;
 };
 
 struct QSPlayerLogTrade_Struct {
@@ -959,11 +947,6 @@ struct QSHandinItems_Struct {
 	uint16 char_slot;
 	uint32 item_id;
 	uint16 charges;
-	uint32 aug_1;
-	uint32 aug_2;
-	uint32 aug_3;
-	uint32 aug_4;
-	uint32 aug_5;
 };
 
 struct QSPlayerLogHandin_Struct {
@@ -997,11 +980,6 @@ struct QSDeleteItems_Struct {
 	uint16 char_slot;
 	uint32 item_id;
 	uint16 charges;
-	uint32 aug_1;
-	uint32 aug_2;
-	uint32 aug_3;
-	uint32 aug_4;
-	uint32 aug_5;
 };
 
 struct QSPlayerLogDelete_Struct {
@@ -1016,11 +994,6 @@ struct QSMoveItems_Struct {
 	uint16 to_slot;
 	uint32 item_id;
 	uint16 charges;
-	uint32 aug_1;
-	uint32 aug_2;
-	uint32 aug_3;
-	uint32 aug_4;
-	uint32 aug_5;
 };
 
 struct QSPlayerLogMove_Struct {
@@ -1037,11 +1010,6 @@ struct QSTransactionItems_Struct {
 	uint16 char_slot;
 	uint32 item_id;
 	uint16 charges;
-	uint32 aug_1;
-	uint32 aug_2;
-	uint32 aug_3;
-	uint32 aug_4;
-	uint32 aug_5;
 };
 
 struct QSMerchantLogTransaction_Struct {
@@ -1077,6 +1045,18 @@ struct ReloadWorld_Struct{
 
 struct ServerRequestTellQueue_Struct {
 	char	name[64];
+};
+
+struct ServerRequestSoulMark_Struct {
+	char	name[64];
+	SoulMarkList_Struct entry;
+};
+
+struct ServerIsOwnerOnline_Struct {
+	char   name[64];	
+	uint32 corpseid;
+	uint16 zoneid;
+	uint8  online;
 };
 
 #pragma pack()

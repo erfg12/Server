@@ -21,17 +21,19 @@
 #ifdef EMBPERL
 #ifdef EMBPERL_XS
 
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "../common/misc_functions.h"
+#include "../common/eqemu_logsys.h"
+
 #include "embparser.h"
-#include "questmgr.h"
 #include "embxs.h"
 #include "entity.h"
-#include "zone.h"
 #include "queryserv.h"
+#include "questmgr.h"
+#include "zone.h"
 
 extern Zone* zone;
-extern QueryServ* QServ; 
+extern QueryServ* QServ;
 
 /*
 
@@ -218,11 +220,9 @@ XS(XS__spawn)
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
-	float	x = (float)SvNV(ST(3));
-	float	y = (float)SvNV(ST(4));
-	float	z = (float)SvNV(ST(5));
+	auto position = glm::vec4((float)SvNV(ST(3)), (float)SvNV(ST(4)), (float)SvNV(ST(5)), 0.0f);
 
-	Mob *r = quest_manager.spawn2(npc_type, grid, unused, x, y, z, 0);
+	Mob *r = quest_manager.spawn2(npc_type, grid, unused, position);
 	RETVAL = (r != nullptr) ? r->GetID() : 0;
 	XSprePUSH; PUSHu((UV)RETVAL);
 
@@ -242,12 +242,9 @@ XS(XS__spawn2)
 	int	npc_type = (int)SvIV(ST(0));
 	int	grid = (int)SvIV(ST(1));
 	int	unused = (int)SvIV(ST(2));
-	float	x = (float)SvNV(ST(3));
-	float	y = (float)SvNV(ST(4));
-	float	z = (float)SvNV(ST(5));
-	float	heading = (float)SvNV(ST(6));
+	auto position = glm::vec4((float)SvNV(ST(3)), (float)SvNV(ST(4)), (float)SvNV(ST(5)), (float)SvNV(ST(6)));
 
-	Mob *r = quest_manager.spawn2(npc_type, grid, unused, x, y, z, heading);
+	Mob *r = quest_manager.spawn2(npc_type, grid, unused, position);
 	RETVAL = (r != nullptr) ? r->GetID() : 0;
 	XSprePUSH; PUSHu((UV)RETVAL);
 
@@ -274,7 +271,7 @@ XS(XS__unique_spawn)
 	if(items == 7)
 		heading = (float)SvNV(ST(6));
 
-	Mob *r =  quest_manager.unique_spawn(npc_type, grid, unused, x, y, z, heading);
+	Mob *r =  quest_manager.unique_spawn(npc_type, grid, unused, glm::vec4(x, y, z, heading));
 	RETVAL = (r != nullptr) ? r->GetID() : 0;
 
 	XSprePUSH; PUSHu((UV)RETVAL);
@@ -1144,7 +1141,7 @@ XS(XS__createguild)
 		Perl_croak(aTHX_ "Usage: createguild(guild_name, leader)");
 
 		char *	guild_name = (char *)SvPV_nolen(ST(0));
-		char *	leader = (char *)SvPV_nolen(ST(1));		
+		char *	leader = (char *)SvPV_nolen(ST(1));
 
 	quest_manager.CreateGuild(guild_name, leader);
 
@@ -1291,11 +1288,9 @@ XS(XS__rebind)
 		Perl_croak(aTHX_ "Usage: rebind(zoneid, x, y, z)");
 
 	int	zoneid = (int)SvIV(ST(0));
-	float	x = (float)SvNV(ST(1));
-	float	y = (float)SvNV(ST(2));
-	float	z = (float)SvNV(ST(3));
+	auto location = glm::vec3((float)SvNV(ST(1)),(float)SvNV(ST(2)),(float)SvNV(ST(3)));
 
-	quest_manager.rebind(zoneid, x, y, z);
+	quest_manager.rebind(zoneid, location);
 
 	XSRETURN_EMPTY;
 }
@@ -1364,7 +1359,7 @@ XS(XS__moveto)
 	else
 		saveguard = false;
 
-	quest_manager.moveto(x, y, z, h, saveguard);
+	quest_manager.moveto(glm::vec4(x, y, z, h), saveguard);
 
 	XSRETURN_EMPTY;
 }
@@ -1446,7 +1441,7 @@ XS(XS__ChooseRandom)
 	if (items < 1)
 		Perl_croak(aTHX_ "Usage: ChooseRandom(... list ...)");
 
-	int index = MakeRandomInt(0, items-1);
+	int index = zone->random.Int(0, items-1);
 
 	SV *tmp = ST(0);
 	ST(0) = ST(index);
@@ -1674,12 +1669,9 @@ XS(XS__summonburriedplayercorpse)
 
 	bool RETVAL;
 	uint32	char_id = (int)SvIV(ST(0));
-	float	dest_x = (float)SvIV(ST(1));
-	float	dest_y = (float)SvIV(ST(2));
-	float	dest_z = (float)SvIV(ST(3));
-	float	dest_heading = (float)SvIV(ST(4));
+	auto position = glm::vec4((float)SvIV(ST(1)), (float)SvIV(ST(2)), (float)SvIV(ST(3)),(float)SvIV(ST(4)));
 
-	RETVAL = quest_manager.summonburriedplayercorpse(char_id, dest_x, dest_y, dest_z, dest_heading);
+	RETVAL = quest_manager.summonburriedplayercorpse(char_id, position);
 
 	ST(0) = boolSV(RETVAL);
 	sv_2mortal(ST(0));
@@ -1695,12 +1687,9 @@ XS(XS__summonallplayercorpses)
 
 	bool RETVAL;
 	uint32	char_id = (int)SvIV(ST(0));
-	float	dest_x = (float)SvIV(ST(1));
-	float	dest_y = (float)SvIV(ST(2));
-	float	dest_z = (float)SvIV(ST(3));
-	float	dest_heading = (float)SvIV(ST(4));
+	auto position = glm::vec4((float)SvIV(ST(1)),(float)SvIV(ST(2)),(float)SvIV(ST(3)),(float)SvIV(ST(4)));
 
-	RETVAL = quest_manager.summonallplayercorpses(char_id, dest_x, dest_y, dest_z, dest_heading);
+	RETVAL = quest_manager.summonallplayercorpses(char_id, position);
 
 	ST(0) = boolSV(RETVAL);
 	sv_2mortal(ST(0));
@@ -2074,10 +2063,10 @@ XS(XS__CreateGroundObject)
 	uint16 id = 0;
 
 	if(items == 5)
-		id = quest_manager.CreateGroundObject(itemid, x, y, z, heading);
+		id = quest_manager.CreateGroundObject(itemid, glm::vec4(x, y, z, heading));
 	else{
 		uint32 decay_time = (uint32)SvIV(ST(5));
-		id = quest_manager.CreateGroundObject(itemid, x, y, z, heading, decay_time);
+		id = quest_manager.CreateGroundObject(itemid, glm::vec4(x, y, z, heading), decay_time);
 	}
 
 	XSRETURN_IV(id);
@@ -2105,7 +2094,7 @@ XS(XS__CreateGroundObjectFromModel)
 	if (items > 6)
 		decay_time = (uint32)SvIV(ST(6));
 
-	id = quest_manager.CreateGroundObjectFromModel(modelname, x, y, z, heading, type, decay_time);
+	id = quest_manager.CreateGroundObjectFromModel(modelname, glm::vec4(x, y, z, heading), type, decay_time);
 	XSRETURN_IV(id);
 }
 
@@ -2316,12 +2305,12 @@ XS(XS__MovePCInstance)
 
 	if (items == 4)
 	{
-		quest_manager.MovePCInstance(zoneid, instanceid, x, y, z, 0.0f);
+		quest_manager.MovePCInstance(zoneid, instanceid, glm::vec4(x, y, z, 0.0f));
 	}
 	else
 	{
 		float heading = (float)SvNV(ST(5));
-		quest_manager.MovePCInstance(zoneid, instanceid, x, y, z, heading);
+		quest_manager.MovePCInstance(zoneid, instanceid, glm::vec4(x, y, z, heading));
 	}
 
 	XSRETURN_EMPTY;
@@ -2614,7 +2603,7 @@ XS(XS__GetZoneID)
 
 	char *zone = (char *)SvPV_nolen(ST(0));
 	int32 id = quest_manager.GetZoneID(zone);
-	
+
 	XSRETURN_IV(id);
 }
 
@@ -2627,7 +2616,7 @@ XS(XS__GetZoneLongName)
 	dXSTARG;
 	char *zone = (char *)SvPV_nolen(ST(0));
 	Const_char* RETVAL = quest_manager.GetZoneLongName(zone);
-	
+
 	sv_setpv(TARG, RETVAL); XSprePUSH; PUSHTARG;
 	XSRETURN(1);
 }
@@ -2757,7 +2746,17 @@ XS(XS__clear_npctype_cache)
 		int32 npctype_id = (int32)SvIV(ST(0));
 		quest_manager.ClearNPCTypeCache(npctype_id);
 	}
-	
+
+	XSRETURN_EMPTY;
+}
+
+XS(XS__reloadzonestaticdata);
+XS(XS__reloadzonestaticdata)
+{
+	dXSARGS;
+
+	quest_manager.ReloadZoneStaticData();
+
 	XSRETURN_EMPTY;
 }
 
@@ -2780,11 +2779,11 @@ XS(XS__qs_player_event);
 XS(XS__qs_player_event)
 {
 	dXSARGS;
-	if (items != 2){ 
+	if (items != 2){
 		Perl_croak(aTHX_ "Usage: qs_player_event(char_id, event_desc)");
 	}
 	else{
-		int	char_id = (int)SvIV(ST(0)); 
+		int	char_id = (int)SvIV(ST(0));
 		std::string event_desc = (std::string)SvPV_nolen(ST(1));
 		QServ->PlayerLogEvent(Player_Log_Quest, char_id, event_desc);
 	}
@@ -2819,12 +2818,43 @@ XS(XS__crosszonesignalnpcbynpctypeid)
 
 	if (items == 2) {
 		uint32 npctype_id = (uint32)SvIV(ST(0));
-		uint32 data = (uint32)SvIV(ST(1)); 
+		uint32 data = (uint32)SvIV(ST(1));
 		quest_manager.CrossZoneSignalNPCByNPCTypeID(npctype_id, data);
 	}
 
 	XSRETURN_EMPTY;
 }
+
+XS(XS__debug);
+XS(XS__debug)
+{
+	dXSARGS;
+	if (items != 1 && items != 2){
+		Perl_croak(aTHX_ "Usage: debug(message, [debug_level])");
+	}
+	else{
+		std::string log_message = (std::string)SvPV_nolen(ST(0));
+		uint8 debug_level = 1;
+
+		if (items == 2)
+			debug_level = (uint8)SvIV(ST(1));
+
+		if (debug_level > Logs::Detail)
+			return;
+
+		if (debug_level == Logs::General){
+			Log.Out(Logs::General, Logs::QuestDebug, log_message);
+		}
+		else if (debug_level == Logs::Moderate){
+			Log.Out(Logs::Moderate, Logs::QuestDebug, log_message);
+		}
+		else if (debug_level == Logs::Detail){
+			Log.Out(Logs::Detail, Logs::QuestDebug, log_message);
+		}
+	}
+	XSRETURN_EMPTY;
+}
+
 
 /*
 This is the callback perl will look for to setup the
@@ -2839,7 +2869,7 @@ EXTERN_C XS(boot_quest)
 	file[255] = '\0';
 
 	if(items != 1)
-		LogFile->write(EQEMuLog::Error, "boot_quest does not take any arguments.");
+		Log.Out(Logs::General, Logs::Error, "boot_quest does not take any arguments.");
 
 	char buf[128];	//shouldent have any function names longer than this.
 
@@ -2914,6 +2944,8 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "signalwith"), XS__signalwith, file);
 		newXS(strcpy(buf, "setglobal"), XS__setglobal, file);
 		newXS(strcpy(buf, "targlobal"), XS__targlobal, file);
+		newXS(strcpy(buf, "debug"), XS__debug, file);
+		newXS(strcpy(buf, "debug"), XS__debug, file);
 		newXS(strcpy(buf, "delglobal"), XS__delglobal, file);
 		newXS(strcpy(buf, "ding"), XS__ding, file);
 		newXS(strcpy(buf, "rebind"), XS__rebind, file);
@@ -2965,6 +2997,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "ze"), XS__ze, file);
 		newXS(strcpy(buf, "we"), XS__we, file);
 		newXS(strcpy(buf, "getlevel"), XS__getlevel, file);
+		newXS(strcpy(buf, "reloadzonestaticdata"), XS__reloadzonestaticdata, file);
 		newXS(strcpy(buf, "creategroundobject"), XS__CreateGroundObject, file);
 		newXS(strcpy(buf, "creategroundobjectfrommodel"), XS__CreateGroundObjectFromModel, file);
 		newXS(strcpy(buf, "createdoor"), XS__CreateDoor, file);
@@ -3008,8 +3041,8 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "enablerecipe"), XS__enablerecipe, file);
 		newXS(strcpy(buf, "disablerecipe"), XS__disablerecipe, file);
 		newXS(strcpy(buf, "clear_npctype_cache"), XS__clear_npctype_cache, file);
-		newXS(strcpy(buf, "qs_send_query"), XS__qs_send_query, file); 
-		newXS(strcpy(buf, "qs_player_event"), XS__qs_player_event, file); 
+		newXS(strcpy(buf, "qs_send_query"), XS__qs_send_query, file);
+		newXS(strcpy(buf, "qs_player_event"), XS__qs_player_event, file);
 		newXS(strcpy(buf, "crosszonesetentityvariablebynpctypeid"), XS__crosszonesetentityvariablebynpctypeid, file);
 		newXS(strcpy(buf, "crosszonesignalnpcbynpctypeid"), XS__crosszonesignalnpcbynpctypeid, file);
 		XSRETURN_YES;

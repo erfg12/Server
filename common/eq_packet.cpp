@@ -15,24 +15,28 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "debug.h"
-#include <stdio.h>
-#include <iostream>
-#include <iomanip>
+
+#include "crc16.h"
+#include "global_define.h"
+#include "crc32.h"
 #include "eq_packet.h"
+#include "eq_stream.h"
 #include "misc.h"
 #include "op_codes.h"
-#include "crc16.h"
-#include "crc32.h"
 #include "platform.h"
-#include "eq_stream.h"
+
+#include <sstream>
 #ifndef STATIC_OPCODE
 #include "opcodemgr.h"
 #endif
 #include "packet_dump.h"
 #include "packet_functions.h"
+
 #include <cstdlib>
 #include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <stdio.h>
 
 EQPacket::EQPacket(EmuOpcode op, const unsigned char *buf, uint32 len)
 :	BasePacket(buf, len),
@@ -61,7 +65,7 @@ void EQPacket::build_header_dump(char *buffer) const {
 void EQPacket::DumpRawHeaderNoTime(uint16 seq, FILE *to) const
 {
 	if (src_ip) {
-		std::string sIP,dIP;;
+		std::string sIP,dIP;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
 		fprintf(to, "[%s:%d->%s:%d] ",sIP.c_str(),src_port,dIP.c_str(),dst_port);
@@ -95,7 +99,7 @@ void EQProtocolPacket::build_header_dump(char *buffer) const
 void EQProtocolPacket::DumpRawHeaderNoTime(uint16 seq, FILE *to) const
 {
 	if (src_ip) {
-		std::string sIP,dIP;;
+		std::string sIP,dIP;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
 		fprintf(to, "[%s:%d->%s:%d] ",sIP.c_str(),src_port,dIP.c_str(),dst_port);
@@ -137,7 +141,7 @@ void EQApplicationPacket::build_header_dump(char *buffer) const
 void EQApplicationPacket::DumpRawHeaderNoTime(uint16 seq, FILE *to) const
 {
 	if (src_ip) {
-		std::string sIP,dIP;;
+		std::string sIP,dIP;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
 		fprintf(to, "[%s:%d->%s:%d] ",sIP.c_str(),src_port,dIP.c_str(),dst_port);
@@ -183,7 +187,7 @@ void EQRawApplicationPacket::build_header_dump(char *buffer) const
 void EQRawApplicationPacket::DumpRawHeaderNoTime(uint16 seq, FILE *to) const
 {
 	if (src_ip) {
-		std::string sIP,dIP;;
+		std::string sIP,dIP;
 		sIP=long2ip(src_ip);
 		dIP=long2ip(dst_ip);
 		fprintf(to, "[%s:%d->%s:%d] ",sIP.c_str(),src_port,dIP.c_str(),dst_port);
@@ -403,49 +407,51 @@ uint32 flag_offset=1,newlength;
 
 void EQProtocolPacket::ChatDecode(unsigned char *buffer, int size, int DecodeKey)
 {
-	if ((size >= 2) && buffer[1]!=0x01 && buffer[0]!=0x02 && buffer[0]!=0x1d) {
+	if ((size >= 2) && buffer[1]!=0x01 && buffer[0]!=0x02 && buffer[0]!=0x1d)
+	{
 		int Key=DecodeKey;
 		unsigned char *test=(unsigned char *)malloc(size);
-		buffer+=2;
-		size-=2;
+		buffer += 2;
+		size -= 2;
 
 		int i;
-		for (i = 0 ; i+4 <= size ; i+=4)
+		for (i = 0; i + 4 <= size; i += 4)
 		{
-			int pt = (*(int*)&buffer[i])^(Key);
+			int pt = (*(int*)&buffer[i]) ^ (Key);
 			Key = (*(int*)&buffer[i]);
-			*(int*)&test[i]=pt;
+			*(int*)&test[i] = pt;
 		}
-		unsigned char KC=Key&0xFF;
-		for ( ; i < size ; i++)
+		unsigned char KC = Key & 0xFF;
+		for (; i < size; i++)
 		{
-			test[i]=buffer[i]^KC;
+			test[i] = buffer[i] ^ KC;
 		}
-		memcpy(buffer,test,size);
+		memcpy(buffer, test, size);
 		free(test);
 	}
 }
 
 void EQProtocolPacket::ChatEncode(unsigned char *buffer, int size, int EncodeKey)
 {
-	if (buffer[1]!=0x01 && buffer[0]!=0x02 && buffer[0]!=0x1d) {
+	if (buffer[1]!=0x01 && buffer[0]!=0x02 && buffer[0]!=0x1d)
+	{
 		int Key=EncodeKey;
-		char *test=(char*)malloc(size);
+		char *test = (char*)malloc(size);
 		int i;
-		buffer+=2;
-		size-=2;
-		for ( i = 0 ; i+4 <= size ; i+=4)
+		buffer += 2;
+		size -= 2;
+		for (i = 0; i + 4 <= size; i += 4)
 		{
-			int pt = (*(int*)&buffer[i])^(Key);
+			int pt = (*(int*)&buffer[i]) ^ (Key);
 			Key = pt;
-			*(int*)&test[i]=pt;
+			*(int*)&test[i] = pt;
 		}
-		unsigned char KC=Key&0xFF;
-		for ( ; i < size ; i++)
+		unsigned char KC = Key & 0xFF;
+		for (; i < size; i++)
 		{
-			test[i]=buffer[i]^KC;
+			test[i] = buffer[i] ^ KC;
 		}
-		memcpy(buffer,test,size);
+		memcpy(buffer, test, size);
 		free(test);
 	}
 }
@@ -512,12 +518,14 @@ void DumpPacket(const EQApplicationPacket* app, bool iShowInfo) {
 EQOldPacket::EQOldPacket(const unsigned char *buf, uint32 len)
 {
 	// Clear Fields
+	pExtra = 0;
 	Clear();
 }
 
 EQOldPacket::EQOldPacket()
 {
 	// Clear Fields
+	pExtra = 0;
 	Clear();
 }
 
@@ -525,11 +533,11 @@ EQOldPacket::EQOldPacket()
 // deletes pExtra
 EQOldPacket::~EQOldPacket()
 {
-	//_log(NET__DEBUG, "Killing old packet"); 
 	if (pExtra)
 	{
-		safe_delete(pExtra);//delete pExtra;
+		safe_delete_array(pExtra);//delete pExtra;
 	}
+	Clear();
 }
 
 
@@ -759,10 +767,15 @@ uint32 EQOldPacket::ReturnPacket(uchar** data, EQOldStream* netcon) {
 	*data = new uchar[dwExtraSize + 39];
 	uchar* buf = *data;
 	uint32 o = 4;
+	bool clearFlags = false;
 	this->dwSEQ = netcon->SACK.dwGSQ;
 	*((uint16*)&buf[2]) = ntohs(netcon->SACK.dwGSQ++);
-	if (!netcon->SACK.dwGSQ)
-		netcon->SACK.dwGSQ = 1;
+
+	if(!netcon->SACK.dwGSQ)
+	{
+		netcon->SACK.dwGSQ = 120; //Magic number. Seems to cause the client to recover. I don't think this is right now /shrug
+	}
+
 	netcon->SACK.dwGSQcount++;
 
 	if (netcon->CACK.dwARQ) {
@@ -798,7 +811,7 @@ uint32 EQOldPacket::ReturnPacket(uchar** data, EQOldStream* netcon) {
         *((uint16*)&buf[o]) = ntohs(fraginfo.dwTotal);
 		o += 2;
 	}
-    if(HDR.a4_ASQ && HDR.a1_ARQ) {
+	if(HDR.a4_ASQ && HDR.a1_ARQ) {
 		*&buf[o++] = dbASQ_high;
 		*&buf[o++] = dbASQ_low;
 	}
@@ -816,5 +829,31 @@ uint32 EQOldPacket::ReturnPacket(uchar** data, EQOldStream* netcon) {
 	memcpy(buf, &HDR, 2);
 	*((uint32*)&buf[o]) = htonl(CRC32::Generate(buf, o));
 	o += 4;
+	netcon->sent_Start = true;
 	return o;
+}
+
+
+EQRawApplicationPacket *EQOldPacket::MakeAppPacket() const {
+
+
+	if(pExtra == 0 && dwExtraSize > 0)
+	{
+		return nullptr;
+	}
+
+	EQRawApplicationPacket *res = new EQRawApplicationPacket(dwOpCode, pExtra, dwExtraSize);
+	return(res);
+}
+
+std::string DumpPacketToString(const EQApplicationPacket* app){
+	std::ostringstream out;
+	out << DumpPacketHexToString(app->pBuffer, app->size);
+	return out.str();
+}
+
+std::string DumpProtocolPacketToString(const EQProtocolPacket *app){
+	std::ostringstream out;
+	out << DumpPacketHexToString(app->pBuffer, app->size);
+	return out.str();
 }

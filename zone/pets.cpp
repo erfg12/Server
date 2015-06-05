@@ -1,6 +1,3 @@
-/*
- * vim: set noexpandtab tabstop=4 shiftwidth=4 syntax=cpp:
-*/
 /*	EQEMu: Everquest Server Emulator
 	Copyright (C) 2001-2004 EQEMu Development Team (http://eqemu.org)
 
@@ -18,30 +15,24 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
+
+#include "../common/global_define.h"
 #include "../common/spdat.h"
-#include "masterentity.h"
-#include "../common/packet_dump.h"
-#include "../common/moremath.h"
-#include "../common/item.h"
-#include "zonedb.h"
-#include "worldserver.h"
-#include "../common/skills.h"
-#include "../common/bodytypes.h"
-#include "../common/classes.h"
 #include "../common/string_util.h"
+#include "../common/types.h"
+
+#include "entity.h"
+#include "client.h"
+#include "mob.h"
+
 #include "pets.h"
-#include <math.h>
-#include <assert.h>
+#include "zonedb.h"
+
 #ifndef WIN32
 #include <stdlib.h>
 #include "../common/unix.h"
 #endif
 
-#include "string_ids.h"
-
-///////////////////////////////////////////////////////////////////////////////
-// pet related functions
 
 const char *GetRandPetName()
 {
@@ -116,41 +107,41 @@ const char *GetRandPetName()
 		"Zibann","Zibarer","Zibartik","Zibekn","Zibn","Zibobn","Zobaner","Zobann",
 		"Zobarn","Zober","Zobn","Zonanab","Zonaner","Zonann","Zonantik","Zonarer",
 		"Zonartik","Zonobn","Zonobtik","Zontik","Ztik" };
-	int r = MakeRandomInt(0, (sizeof(petnames)/sizeof(const char *))-1);
+	int r = zone->random.Int(0, (sizeof(petnames)/sizeof(const char *))-1);
 	printf("Pet being created: %s\n",petnames[r]); // DO NOT COMMENT THIS OUT!
 	return petnames[r];
 }
 
 const FocusPetItem Pet::focusItems[FocusPetItemSize] = {
 	// Symbol of Ancient Summoning
-	{20508, 25, 75, 59, FocusPetType::ALL},
+	{20508, 25, 60, 40, FocusPetType::ALL},
 	// Dark Gloves of Summoning
-	{28144, 20, 75, 49, FocusPetType::ALL},
+	{28144, 20, 60, 40, FocusPetType::ALL},
 	// Encyclopedia Necrotheurgia
-	{11571, 10, 60, 41, FocusPetType::NECRO},
+	{11571, 10, 48, 40, FocusPetType::NECRO},
 	// Staff of Elemental Mastery: Water
-	{11569, 10, 60, 49, FocusPetType::WATER},
+	{11569, 10, 48, 40, FocusPetType::WATER},
 	// Staff of Elemental Mastery: Earth
-	{11567, 10, 60, 49, FocusPetType::EARTH},
+	{11567, 10, 48, 40, FocusPetType::EARTH},
 	// Staff of Elemental Mastery: Fire
-	{11566, 10, 60, 49, FocusPetType::FIRE},
+	{11566, 10, 48, 40, FocusPetType::FIRE},
 	// Staff of Elemental Mastery: Air
-	{11568, 10, 60, 49, FocusPetType::AIR},
+	{11568, 10, 48, 40, FocusPetType::AIR},
 	// Broom of Trilon
-	{6361, 5, 49, 4, FocusPetType::AIR},
+	{6360, 5, 48, 4, FocusPetType::AIR},
 	// Shovel of Ponz
-	{6361, 5, 49, 4, FocusPetType::EARTH},
+	{6361, 5, 48, 4, FocusPetType::EARTH},
 	// Torch of Alna
-	{6362, 5, 49, 4, FocusPetType::FIRE},
+	{6362, 5, 48, 4, FocusPetType::FIRE},
 	// Stein of Ulissa
-	{6363, 5, 49, 4, FocusPetType::WATER},
+	{6363, 5, 48, 4, FocusPetType::WATER},
 };
 
 FocusPetType Pet::GetPetItemPetTypeFromSpellId(uint16 spell_id) {
-	static const int firePets[]  = {626, 630, 634, 316, 399, 403, 395, 498, 571, 575, 622};
-	static const int airPets[]   = {627, 631, 635, 317, 396, 400, 404, 499, 572, 576, 623};
-	static const int earthPets[] = {624, 628, 632, 58, 397, 401, 335, 496, 569, 573, 620};
-	static const int waterPets[] = {625, 629, 633, 315, 398, 403, 336, 497, 570, 574, 621};
+	static const int firePets[]  = {626, 630, 634, 316, 399, 403, 395, 498, 571, 575, 622, 1673, 1677, 3322};
+	static const int airPets[]   = {627, 631, 635, 317, 396, 400, 404, 499, 572, 576, 623, 1674, 1678, 3371};
+	static const int earthPets[] = {624, 628, 632, 58, 397, 401, 335, 496, 569, 573, 620, 1675, 1671, 3324};
+	static const int waterPets[] = {625, 629, 633, 315, 398, 403, 336, 497, 570, 574, 621, 1676, 1672, 3320};
 
 	for(int i=0; i < sizeof(firePets)/ sizeof(firePets[0]); i++) {
 		if((int)spell_id == firePets[i]) {
@@ -195,23 +186,23 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 	//lookup our pets table record for this type
 	PetRecord record;
 	if(!database.GetPoweredPetEntry(pettype, petpower, &record)) {
-		Message(13, "Unable to find data for pet %s", pettype);
-		LogFile->write(EQEMuLog::Error, "Unable to find data for pet %s, check pets table.", pettype);
+		Message(CC_Red, "Unable to find data for pet %s", pettype);
+		Log.Out(Logs::General, Logs::Error, "Unable to find data for pet %s, check pets table.", pettype);
 		return;
 	}
 
 	//find the NPC data for the specified NPC type
 	const NPCType *base = database.GetNPCType(record.npc_type);
 	if(base == nullptr) {
-		Message(13, "Unable to load NPC data for pet %s", pettype);
-		LogFile->write(EQEMuLog::Error, "Unable to load NPC data for pet %s (NPC ID %d), check pets and npc_types tables.", pettype, record.npc_type);
+		Message(CC_Red, "Unable to load NPC data for pet %s", pettype);
+		Log.Out(Logs::General, Logs::Error, "Unable to load NPC data for pet %s (NPC ID %d), check pets and npc_types tables.", pettype, record.npc_type);
 		return;
 	}
 
 	int act_power = 0; // The actual pet power we'll use.
 	if (petpower == -1) {
 		if (this->IsClient()) {
-			//Message(13, "We are a client time to check for focus items");
+			//Message(CC_Red, "We are a client time to check for focus items");
 			uint16 focusItemId;
 			FocusPetItem petItem;
 			// Loop over all the focus items and figure out which on is the best to use
@@ -224,44 +215,56 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 				if(slot_id != INVALID_INDEX) {
 					//skip this focus item if its effect is out of rage for the pet we are casting
 					if(base->level >= petItem.min_level && base->level <= petItem.max_level) {
-						//Message(13, "Found Focus Item in Inventory: %d", slot_id);
+						if(EQDEBUG>8) Message(CC_Red, "Found Focus Item: %d in Inventory: %d", petItem.item_id, slot_id);
+						if(EQDEBUG>8) Message(CC_Red, "Npc spell levels: %d (%d - %d)", base->level, petItem.min_level, petItem.max_level);
 						slot = slot_id;
 						focusItemId = petItem.item_id;
 						break;
-					} //else {
-						//Message(13, "Moving on Pet base level is out of range: %d (%d - %d)", base->level, petItem.min_level, petItem.max_level);
-					//}
+					} else {
+						if(EQDEBUG>8) Message(CC_Red, "Moving on Pet base level is out of range: %d (%d - %d)", base->level, petItem.min_level, petItem.max_level);
+					}
 				}
 			}
 			// we have a focus item
-			if(focusItemId) 
+			if(focusItemId)
 			{
 				FocusPetType focusType;
 				// Symbol or Gloves can be used by all NEC, MAG, BST
 				if(petItem.pet_type == FocusPetType::ALL)
 				{
-					//Message(13, "Type is ALL");
+					//Message(CC_Red, "Type is ALL");
 					focusType = FocusPetType::ALL;
 				} else {
 					// make sure we can use the focus item as the class .. client should never let us fail this but for sanity!
 					if (GetClass() == MAGICIAN) {
-						//Message(13, "Looking up mage");
+						if(EQDEBUG>8) Message(CC_Red, "Looking up mage");
+						if(EQDEBUG>8) Message(CC_Red, "Looking up if spell: %d is allowed ot be focused", spell_id);
 						focusType = Pet::GetPetItemPetTypeFromSpellId(spell_id);
+						if(EQDEBUG>8) Message(CC_Red, "FocusType fround %i", focusType);
 					} else if (GetClass() == NECROMANCER) {
-						//Message(13, "We are a necro");
+						if(EQDEBUG>8) Message(CC_Red, "We are a necro");
 						focusType = FocusPetType::NECRO;
 					}
 				}
 				// Sets the power to be what the focus item has as a mod
+				if(EQDEBUG>8) {
+					Message(CC_Red, "Pet Item Type ALL is  %i", FocusPetType::ALL);
+					Message(CC_Red, "Pet Item Type FIRE is  %i", FocusPetType::FIRE);
+					Message(CC_Red, "Pet Item Type WATER is  %i", FocusPetType::WATER);
+					Message(CC_Red, "Pet Item Type AIR is  %i", FocusPetType::AIR);
+					Message(CC_Red, "Pet Item Type EARTH is  %i", FocusPetType::EARTH);
+					Message(CC_Red, "Pet Item Type NECRO is  %i", FocusPetType::NECRO);
+				}
+				if(EQDEBUG>8) Message(CC_Red, "Pet Item Type  %i", petItem.pet_type);
 				if (focusType == petItem.pet_type) {
-					//Message(13, "Setting power to: %d", petItem.power);
+					if(EQDEBUG>8) Message(CC_Red, "Setting power to: %d", petItem.power);
 					act_power = petItem.power;
 					scale_pet = true;
 				}
 				
 				if(act_power > 0)
 				{
-					Message(CC_Yellow, "Debug: You have cast a powered pet. Unadjusted pet power is: %i. HasItem returned: %i. If your pet is Godzilla, please report this message to cavedude or another devel.", act_power, slot);
+					if(EQDEBUG>8) Message(CC_Yellow, "Debug: You have cast a powered pet. Unadjusted pet power is: %i. HasItem returned: %i.", act_power, slot);
 
 					if(focusType == FocusPetType::NECRO ||focusType == FocusPetType::EARTH || focusType == FocusPetType::AIR
 					|| focusType == FocusPetType::FIRE || focusType == FocusPetType::WATER)
@@ -269,7 +272,7 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 						if(act_power > 10)
 							act_power = 10;
 					}
-					else	
+					else
 					{
 						if(act_power > 25)
 							act_power = 25;
@@ -283,7 +286,7 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 		scale_pet = true;
 	}
 
-	//Message(13, "Power is: %d", act_power);
+	if(EQDEBUG>8) Message(CC_Red, "Power is: %d", act_power);
 	// optional rule: classic style variance in pets. Achieve this by
 	// adding a random 0-4 to pet power, since it only comes in increments
 	// of five from focus effects.
@@ -343,7 +346,7 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 	} else if (record.petnaming == 2) {
 		strcpy(npc_type->name, this->GetName());
 		npc_type->name[21] = 0;
-		strcat(npc_type->name, "`s_Warder");
+		strcat(npc_type->name, "`s_warder");
 	} else if (record.petnaming == 4) {
 		// Keep the DB name
 	} else if (record.petnaming == 3 && IsClient()) {
@@ -380,7 +383,6 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 			npc_type->race = WOLF;
 			npc_type->texture = 0;
 			npc_type->gender = 1;
-			npc_type->size *= 2.0f;
 			npc_type->luclinface = 0;
 			break;
 		default:
@@ -396,28 +398,27 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 
 		// get a random npc id from the spawngroups assigned to this zone
 		auto query = StringFormat("SELECT npcID "
-                                    "FROM (spawnentry INNER JOIN spawn2 ON spawn2.spawngroupID = spawnentry.spawngroupID) "
-                                    "INNER JOIN npc_types ON npc_types.id = spawnentry.npcID "
-                                    "WHERE spawn2.zone = '%s' AND npc_types.bodytype NOT IN (11, 33, 66, 67) "
-                                    "AND npc_types.race NOT IN (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 44, "
-                                    "55, 67, 71, 72, 73, 77, 78, 81, 90, 92, 93, 94, 106, 112, 114, 127, 128, "
-                                    "130, 139, 141, 183, 236, 237, 238, 239, 254, 266, 329, 330, 378, 379, "
-                                    "380, 381, 382, 383, 404, 522) "
-                                    "ORDER BY RAND() LIMIT 1", zone->GetShortName());
-        auto results = database.QueryDatabase(query);
+									"FROM (spawnentry INNER JOIN spawn2 ON spawn2.spawngroupID = spawnentry.spawngroupID) "
+									"INNER JOIN npc_types ON npc_types.id = spawnentry.npcID "
+									"WHERE spawn2.zone = '%s' AND npc_types.bodytype NOT IN (11, 33, 66, 67) "
+									"AND npc_types.race NOT IN (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 44, "
+									"55, 67, 71, 72, 73, 77, 78, 81, 90, 92, 93, 94, 106, 112, 114, 127, 128, "
+									"130, 139, 141, 183, 236, 237, 238, 239, 254, 266, 329, 330, 378, 379, "
+									"380, 381, 382, 383, 404, 522) "
+									"ORDER BY RAND() LIMIT 1", zone->GetShortName());
+		auto results = database.QueryDatabase(query);
 		if (!results.Success()) {
-            // if the database query failed
-			LogFile->write(EQEMuLog::Error, "Error querying database for monster summoning pet in zone %s (%s)", zone->GetShortName(), results.ErrorMessage().c_str());
+			// if the database query failed
 		}
 
-        if (results.RowCount() != 0) {
-            auto row = results.begin();
-            monsterid = atoi(row[0]);
-        }
+		if (results.RowCount() != 0) {
+			auto row = results.begin();
+			monsterid = atoi(row[0]);
+		}
 
-        // since we don't have any monsters, just make it look like an earth pet for now
-        if (monsterid == 0)
-            monsterid = 567;
+		// since we don't have any monsters, just make it look like an earth pet for now
+		if (monsterid == 0)
+			monsterid = 567;
 
 		// give the summoned pet the attributes of the monster we found
 		const NPCType* monster = database.GetNPCType(monsterid);
@@ -429,7 +430,7 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 			npc_type->luclinface = monster->luclinface;
 			npc_type->helmtexture = monster->helmtexture;
 		} else
-			LogFile->write(EQEMuLog::Error, "Error loading NPC data for monster summoning pet (NPC ID %d)", monsterid);
+			Log.Out(Logs::General, Logs::Error, "Error loading NPC data for monster summoning pet (NPC ID %d)", monsterid);
 
 	}
 
@@ -452,6 +453,8 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 			}
 	}
 
+	npc->UpdateEquipmentLight();
+
 	// finally, override size if one was provided
 	if (in_size > 0.0f)
 		npc->size = in_size;
@@ -464,7 +467,7 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 into walls or objects (+10), this sometimes creates the "ghost" effect. I changed to +2 (as close as I
 could get while it still looked good). I also noticed this can happen if an NPC is spawned on the same spot of another or in a related bad spot.*/
 Pet::Pet(NPCType *type_data, Mob *owner, PetType type, uint16 spell_id, int16 power)
-: NPC(type_data, 0, owner->GetX()+2, owner->GetY()+2, owner->GetZ(), owner->GetHeading(), FlyMode3)
+: NPC(type_data, 0, owner->GetPosition() + glm::vec4(2.0f, 2.0f, 0.0f, 0.0f), FlyMode3)
 {
 	GiveNPCTypeData(type_data);
 	typeofpet = type;
@@ -472,6 +475,8 @@ Pet::Pet(NPCType *type_data, Mob *owner, PetType type, uint16 spell_id, int16 po
 	SetOwnerID(owner->GetID());
 	SetPetSpellID(spell_id);
 	taunting = true;
+
+	// Class should use npc constructor to set light properties
 }
 
 bool ZoneDatabase::GetPetEntry(const char *pet_type, PetRecord *into) {
@@ -483,31 +488,30 @@ bool ZoneDatabase::GetPoweredPetEntry(const char *pet_type, int16 petpower, PetR
 
 	if (petpower <= 0)
 		query = StringFormat("SELECT npcID, temp, petpower, petcontrol, petnaming, monsterflag, equipmentset "
-                            "FROM pets WHERE type='%s' AND petpower<=0", pet_type);
+							"FROM pets WHERE type='%s' AND petpower<=0", pet_type);
 	else
 		query = StringFormat("SELECT npcID, temp, petpower, petcontrol, petnaming, monsterflag, equipmentset "
                             "FROM pets WHERE type='%s' AND petpower<=%d ORDER BY petpower DESC LIMIT 1",
                             pet_type, petpower);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
-        LogFile->write(EQEMuLog::Error, "Error in GetPoweredPetEntry query '%s': %s", query.c_str(), results.ErrorMessage().c_str());
         return false;
     }
 
-    if (results.RowCount() != 1)
-        return false;
+	if (results.RowCount() != 1)
+		return false;
 
-    auto row = results.begin();
+	auto row = results.begin();
 
-    into->npc_type = atoi(row[0]);
-    into->temporary = atoi(row[1]);
-    into->petpower = atoi(row[2]);
-    into->petcontrol = atoi(row[3]);
-    into->petnaming = atoi(row[4]);
-    into->monsterflag = atoi(row[5]);
-    into->equipmentset = atoi(row[6]);
+	into->npc_type = atoi(row[0]);
+	into->temporary = atoi(row[1]);
+	into->petpower = atoi(row[2]);
+	into->petcontrol = atoi(row[3]);
+	into->petnaming = atoi(row[4]);
+	into->monsterflag = atoi(row[5]);
+	into->equipmentset = atoi(row[6]);
 
-    return true;
+	return true;
 }
 
 Mob* Mob::GetPet() {
@@ -703,41 +707,38 @@ bool ZoneDatabase::GetBasePetItems(int32 equipmentset, uint32 *items) {
 	// all of the result rows. Check if we have something in the slot
 	// already. If no, add the item id to the equipment array.
 	while (curset >= 0 && depth < 5) {
-        std::string  query = StringFormat("SELECT nested_set FROM pets_equipmentset WHERE set_id = '%s'", curset);
+		std::string  query = StringFormat("SELECT nested_set FROM pets_equipmentset WHERE set_id = '%s'", curset);
 		auto results = QueryDatabase(query);
 		if (!results.Success()) {
-            LogFile->write(EQEMuLog::Error, "Error in GetBasePetItems query '%s': %s", query.c_str(), results.ErrorMessage().c_str());
 			return false;
-        }
+		}
 
         if (results.RowCount() != 1) {
             // invalid set reference, it doesn't exist
-            LogFile->write(EQEMuLog::Error, "Error in GetBasePetItems equipment set '%d' does not exist", curset);
+            Log.Out(Logs::General, Logs::Error, "Error in GetBasePetItems equipment set '%d' does not exist", curset);
             return false;
         }
 
-        auto row = results.begin();
-        nextset = atoi(row[0]);
+		auto row = results.begin();
+		nextset = atoi(row[0]);
 
         query = StringFormat("SELECT slot, item_id FROM pets_equipmentset_entries WHERE set_id='%s'", curset);
         results = QueryDatabase(query);
-        if (!results.Success())
-            LogFile->write(EQEMuLog::Error, "Error in GetBasePetItems query '%s': %s", query.c_str(), results.ErrorMessage().c_str());
-        else {
+        if (results.Success()){
             for (row = results.begin(); row != results.end(); ++row)
             {
                 slot = atoi(row[0]);
 
-                if (slot >= EmuConstants::EQUIPMENT_SIZE)
-                    continue;
+				if (slot >= EmuConstants::EQUIPMENT_SIZE)
+					continue;
 
-                if (items[slot] == 0)
-                    items[slot] = atoi(row[1]);
-            }
-        }
+				if (items[slot] == 0)
+					items[slot] = atoi(row[1]);
+			}
+		}
 
-        curset = nextset;
-        depth++;
+		curset = nextset;
+		depth++;
 	}
 
 	return true;

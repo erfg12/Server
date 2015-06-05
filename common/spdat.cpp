@@ -69,16 +69,16 @@
 	and not SpellFinished().
 
 */
+#include "../common/eqemu_logsys.h"
 
-#include "debug.h"
-#include "spdat.h"
-#include "packet_dump.h"
-#include "moremath.h"
-#include "item.h"
-#include "skills.h"
-#include "bodytypes.h"
+
+
+#include "../common/eqemu_logsys.h" 
+
 #include "classes.h"
-#include <math.h>
+#include "races.h"
+#include "spdat.h"
+
 #ifndef WIN32
 #include <stdlib.h>
 #include "unix.h"
@@ -143,7 +143,7 @@ bool IsDamageSpell(uint16 spellid)
 	for (int o = 0; o < EFFECT_COUNT; o++) {
 		uint32 tid = spells[spellid].effectid[o];
 		if ((tid == SE_CurrentHPOnce || tid == SE_CurrentHP) &&
-				spells[spellid].targettype != ST_Tap && spells[spellid].buffduration < 1 &&
+				spells[spellid].buffduration < 1 &&
 				spells[spellid].base[o] < 0)
 			return true;
 	}
@@ -200,8 +200,12 @@ bool IsHasteSpell(uint16 spell_id)
 
 bool IsHarmonySpell(uint16 spell_id)
 {
-	// IsEffectInSpell(spell_id, SE_Lull) - Lull is not calculated anywhere atm
 	return (IsEffectInSpell(spell_id, SE_Harmony) || IsEffectInSpell(spell_id, SE_ChangeFrenzyRad));
+}
+
+bool IsPacifySpell(uint16 spell_id)
+{
+	return IsEffectInSpell(spell_id, SE_ChangeFrenzyRad);
 }
 
 bool IsPercentalHealSpell(uint16 spell_id)
@@ -235,16 +239,18 @@ bool IsBeneficialSpell(uint16 spell_id)
 			uint16 sai = spells[spell_id].SpellAffectIndex;
 
 			// If the resisttype is magic and SpellAffectIndex is Calm/memblur/dispell sight
-			// it's not beneficial
+			// it's not beneficial.
 			if (spells[spell_id].resisttype == RESIST_MAGIC) {
 				if (sai == SAI_Calm || sai == SAI_Dispell_Sight ||
 						sai == SAI_Memory_Blur || sai == SAI_Calm_Song)
 					return false;
 			} else {
-				// If the resisttype is not magic and spell is Bind Sight or Cast Sight
+				// If the resisttype is not magic and spell is Bind Sight or Cast Sight or Harmony
 				// It's not beneficial
-				if (sai == SAI_Dispell_Sight && spells[spell_id].skill == 18 &&
-						!IsEffectInSpell(spell_id, SE_VoiceGraft))
+				if ((sai == SAI_Calm && IsEffectInSpell(spell_id, SE_Harmony))
+					|| (sai == SAI_Calm_Song && IsEffectInSpell(spell_id, SE_BindSight))
+					|| (sai == SAI_Dispell_Sight && spells[spell_id].skill == 18 &&
+						!IsEffectInSpell(spell_id, SE_VoiceGraft)))
 					return false;
 			}
 		}
@@ -408,24 +414,54 @@ bool IsAERainNukeSpell(uint16 spell_id)
 	return false;
 }
 
+bool IsPureDispelSpell(uint16 spell_id)
+{
+	int i;
+
+	if (!IsValidSpell(spell_id))
+		return false;
+
+	for (i = 0; i < EFFECT_COUNT; i++)
+		if (!IsBlankSpellEffect(spell_id, i) && spells[spell_id].effectid[i] != SE_CancelMagic)
+			return false;
+
+	return true;
+}
+
 bool IsPartialCapableSpell(uint16 spell_id)
 {
 	if (spells[spell_id].no_partial_resist)
 		return false;
 	
-	if (IsPureNukeSpell(spell_id))
-		return true;
+	// return false if any spell includes an effect that isn't direct damage or dispel
+	// dragon AoEs have dispels but are partially resistable
+	for (int o = 0; o < EFFECT_COUNT; o++)
+	{
+		uint16 tid = spells[spell_id].effectid[o];
 
-	return false;
+		if (IsBlankSpellEffect(spell_id, o) || tid == SE_CancelMagic)
+			continue;
+
+		if ((tid != SE_CurrentHPOnce && tid != SE_CurrentHP )
+			|| spells[spell_id].buffduration > 0 || spells[spell_id].base[o] >= 0)
+			return false;
+	}
+
+	return true;
 }
 
 bool IsResistableSpell(uint16 spell_id)
 {
 	// for now only detrimental spells are resistable. later on i will
 	// add specific exceptions for the beneficial spells that are resistable
-	if (IsDetrimentalSpell(spell_id))
+	// Torven: dispels do not have a MR check; they have a different check that is entirely level based
+	if (IsDetrimentalSpell(spell_id) && !IsPureDispelSpell(spell_id) && 
+		!IsAllianceSpellLine(spell_id) && spells[spell_id].resisttype != RESIST_NONE)
+	{
 		return true;
+	}
 
+	Log.Out(Logs::Detail, Logs::Spells, "Spell %i is unresistable.", spell_id);
 	return false;
 }
 
@@ -495,7 +531,7 @@ bool IsBlankSpellEffect(uint16 spellid, int effect_index)
 }
 
 // checks some things about a spell id, to see if we can proceed
-bool IsValidSpell(uint32 spellid)
+bool IsValidSpell(uint16 spellid)
 {
 	if (SPDAT_RECORDS > 0 && spellid != 0 && spellid != 1 &&
 			spellid != 0xFFFFFFFF && spellid < SPDAT_RECORDS && spells[spellid].player_1[0])
@@ -846,7 +882,7 @@ DmgShieldType GetDamageShieldType(uint16 spell_id, int32 DSType)
 	// If we have a DamageShieldType for this spell from the damageshieldtypes table, return that,
 	// else, make a guess, based on the resist type. Default return value is DS_THORNS
 	if (IsValidSpell(spell_id)) {
-		_log(SPELLS__EFFECT_VALUES, "DamageShieldType for spell %i (%s) is %X\n", spell_id,
+		Log.Out(Logs::Detail, Logs::Spells, "DamageShieldType for spell %i (%s) is %X\n", spell_id,
 			spells[spell_id].name, spells[spell_id].DamageShieldType);
 
 		if (spells[spell_id].DamageShieldType)
@@ -870,16 +906,6 @@ DmgShieldType GetDamageShieldType(uint16 spell_id, int32 DSType)
 	return DS_THORNS;
 }
 
-bool IsLDoNObjectSpell(uint16 spell_id)
-{
-	if (IsEffectInSpell(spell_id, SE_AppraiseLDonChest) ||
-			IsEffectInSpell(spell_id, SE_DisarmLDoNTrap) ||
-			IsEffectInSpell(spell_id, SE_UnlockLDoNChest))
-		return true;
-
-	return false;
-}
-
 int32 GetSpellResistType(uint16 spell_id)
 {
 	return spells[spell_id].resisttype;
@@ -901,7 +927,7 @@ bool IsHealOverTimeSpell(uint16 spell_id)
 bool IsCompleteHealSpell(uint16 spell_id)
 {
 	if (spell_id == 13 || IsEffectInSpell(spell_id, SE_CompleteHeal) ||
-			IsPercentalHealSpell(spell_id) && !IsGroupSpell(spell_id))
+			(IsPercentalHealSpell(spell_id) && !IsGroupSpell(spell_id)))
 		return true;
 
 	return false;
@@ -1054,6 +1080,38 @@ bool IsPowerDistModSpell(uint16 spell_id)
 	return false;
 }
 
+bool IsRegeantFocus(uint16 spell_id)
+{
+	return IsEffectInSpell(spell_id, SE_ReduceReagentCost);
+}
+
+bool IsBoltSpell(uint16 spell_id)
+{
+	if(IsValidSpell(spell_id) && spells[spell_id].spell_category == 13)
+		return true;
+
+	return false;
+}
+
+bool RequiresComponents(uint16 spell_id)
+{
+	if(IsValidSpell(spell_id))
+	{
+		for (int t_count = 0; t_count < 4; t_count++) 
+		{
+			int32 component = spells[spell_id].components[t_count];
+
+			if (component == -1)
+				continue;
+
+			if(component > 0)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 uint32 GetPartialMeleeRuneReduction(uint32 spell_id)
 {
 	for (int i = 0; i < EFFECT_COUNT; ++i)
@@ -1151,3 +1209,37 @@ const char* GetSpellName(int16 spell_id)
     return spells[spell_id].name;
 }
 
+bool IsRacialIllusion(uint16 spell_id)
+{
+	for (int i = 0; i < EFFECT_COUNT; i++)
+	{
+		if(spells[spell_id].effectid[i] == SE_Illusion && (spells[spell_id].base[i] == HUMAN || 
+			spells[spell_id].base[i] == BARBARIAN || spells[spell_id].base[i] == ERUDITE || 
+			spells[spell_id].base[i] == WOOD_ELF || spells[spell_id].base[i] == HIGH_ELF || 
+			spells[spell_id].base[i] == DARK_ELF || spells[spell_id].base[i] == HALF_ELF || 
+			spells[spell_id].base[i] == DWARF || spells[spell_id].base[i] == TROLL || 
+			spells[spell_id].base[i] == OGRE || spells[spell_id].base[i] == HALFLING || 
+			spells[spell_id].base[i] == GNOME || spells[spell_id].base[i] == IKSAR || 
+			spells[spell_id].base[i] == VAHSHIR))
+			return true;
+	}
+	return false;
+}
+
+bool IsCorpseSummon(uint16 spell_id)
+{
+	return IsEffectInSpell(spell_id, SE_SummonCorpse);
+}
+
+bool IsSpeedBuff(uint16 spell_id)
+{
+	if(IsBeneficialSpell(spell_id))
+	{
+		for (int i = 0; i < EFFECT_COUNT; i++)
+		{
+			if(spells[spell_id].effectid[i] == SE_MovementSpeed && spells[spell_id].base[i] > 0)
+				return true;
+		}
+	}
+	return false;
+}

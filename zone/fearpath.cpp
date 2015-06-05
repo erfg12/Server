@@ -16,17 +16,13 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/debug.h"
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <cstdlib>
-
 #include "../common/rulesys.h"
-#include "../common/misc_functions.h"
+
 #include "map.h"
-#include "zone.h"
 #include "pathing.h"
+#include "water_map.h"
+#include "zone.h"
+
 #ifdef _WINDOWS
 #define snprintf	_snprintf
 #endif
@@ -94,14 +90,15 @@ void Mob::CheckFlee() {
 	{
 		if (RuleB(Combat, FleeIfNotAlone) ||
 			GetSpecialAbility(ALWAYS_FLEE) ||
-			(!RuleB(Combat, FleeIfNotAlone) && (entity_list.GetHatedCount(hate_top, this) == 0)))
+			(!RuleB(Combat, FleeIfNotAlone) && (entity_list.GetHatedCountByFaction(hate_top, this) == 0)))
 			StartFleeing();
 	}
 }
 
 void Mob::ProcessFlee()
 {
-
+	if (!flee_mode)
+		return;
 	//Stop fleeing if effect is applied after they start to run.
 	//When ImmuneToFlee effect fades it will turn fear back on and check if it can still flee.
 	if (flee_mode && (GetSpecialAbility(IMMUNE_FLEEING) || spellbonuses.ImmuneToFlee) &&
@@ -128,56 +125,34 @@ void Mob::ProcessFlee()
 	}
 }
 
-float Mob::GetFearSpeed()
-{
-	if (flee_mode) {
-		//we know ratio < FLEE_HP_RATIO
-		float speed = GetBaseRunspeed();
-		float ratio = GetHPRatio();
-		float multiplier = RuleR(Combat, FleeMultiplier);
-
-		if (GetSnaredAmount() > 40)
-			multiplier = multiplier / 6.0f;
-
-		speed = speed * ratio * multiplier / 100;
-
-		//NPC will eventually stop. Snares speeds this up.
-		if (speed < 0.09)
-			speed = 0.0001f;
-
-		return speed;
-	}
-	// fear and blind use their normal run speed
-	return GetRunspeed();
-}
-
 void Mob::CalculateNewFearpoint()
 {
 	if(RuleB(Pathing, Fear) && zone->pathing)
 	{
 		int Node = zone->pathing->GetRandomPathNode();
 
-		Map::Vertex Loc = zone->pathing->GetPathNodeCoordinates(Node);
+		glm::vec3 Loc = zone->pathing->GetPathNodeCoordinates(Node);
 
 		++Loc.z;
 
-		Map::Vertex CurrentPosition(GetX(), GetY(), GetZ());
+		glm::vec3 CurrentPosition(GetX(), GetY(), GetZ());
 
-		std::list<int> Route = zone->pathing->FindRoute(CurrentPosition, Loc);
+		std::deque<int> Route = zone->pathing->FindRoute(CurrentPosition, Loc);
 
 		if(Route.size() > 0)
 		{
-			fear_walkto_x = Loc.x;
-			fear_walkto_y = Loc.y;
-			fear_walkto_z = Loc.z;
+            m_FearWalkTarget = glm::vec3(Loc.x, Loc.y, Loc.z);
 			curfp = true;
 
-			mlog(PATHING__DEBUG, "Feared to node %i (%8.3f, %8.3f, %8.3f)", Node, Loc.x, Loc.y, Loc.z);
+			Log.Out(Logs::Detail, Logs::Pathing, "Feared to node %i (%8.3f, %8.3f, %8.3f)", Node, Loc.x, Loc.y, Loc.z);
 			return;
 		}
 
-		mlog(PATHING__DEBUG, "No path found to selected node. Falling through to old fear point selection.");
+		Log.Out(Logs::Detail, Logs::Pathing, "No path found to selected node. Falling through to old fear point selection.");
 	}
+
+	bool inliquid = (zone->HasWaterMap() && zone->watermap->InLiquid(glm::vec3(GetPosition())));
+	bool stay_inliquid = (inliquid && IsNPC() && CastToNPC()->IsUnderwaterOnly());
 
 	int loop = 0;
 	float ranx, rany, ranz;
@@ -186,10 +161,24 @@ void Mob::CalculateNewFearpoint()
 	{
 		int ran = 250 - (loop*2);
 		loop++;
-		ranx = GetX()+MakeRandomInt(0, ran-1)-MakeRandomInt(0, ran-1);
-		rany = GetY()+MakeRandomInt(0, ran-1)-MakeRandomInt(0, ran-1);
-		ranz = FindGroundZ(ranx,rany);
-		if (ranz == -999999)
+		ranx = GetX()+zone->random.Int(0, ran-1)-zone->random.Int(0, ran-1);
+		rany = GetY()+zone->random.Int(0, ran-1)-zone->random.Int(0, ran-1);
+		ranz = BEST_Z_INVALID;
+		glm::vec3 newloc(ranx, rany, GetZ());
+		glm::vec3 myloc(GetX(), GetY(), GetZ());
+
+		if (stay_inliquid) {
+			if(zone->zonemap->CheckLoS(myloc, newloc)) {
+				ranz = GetZ();
+				curfp = true;
+				break;
+			}
+		} else {
+			ranz = FindGroundZ(ranx,rany);
+			if (ranz != BEST_Z_INVALID)
+				ranz = SetBestZ(ranz);
+		}
+		if (ranz == BEST_Z_INVALID)
 			continue;
 		float fdist = ranz - GetZ();
 		if (fdist >= -12 && fdist <= 12 && CheckCoordLosNoZLeaps(GetX(),GetY(),GetZ(),ranx,rany,ranz))
@@ -199,14 +188,8 @@ void Mob::CalculateNewFearpoint()
 		}
 	}
 	if (curfp)
-	{
-		fear_walkto_x = ranx;
-		fear_walkto_y = rany;
-		fear_walkto_z = ranz;
-	}
+        m_FearWalkTarget = glm::vec3(ranx, rany, ranz);
 	else //Break fear
-	{
 		BuffFadeByEffect(SE_Fear);
-	}
 }
 

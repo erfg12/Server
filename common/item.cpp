@@ -16,7 +16,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "debug.h"
+#include "global_define.h"
 #include "string_util.h"
 #include "item.h"
 #include "database.h"
@@ -58,12 +58,8 @@ static inline int32 GetNextItemInstSerialNumber() {
 // class ItemInstQueue
 //
 ItemInstQueue::~ItemInstQueue() {
-	iter_queue cur, end;
-	cur = m_list.begin();
-	end = m_list.end();
-	for (; cur != end; ++cur) {
-		ItemInst *tmp = *cur;
-		safe_delete(tmp);
+	for (auto iter = m_list.begin(); iter != m_list.end(); ++iter) {
+		safe_delete(*iter);
 	}
 	m_list.clear();
 }
@@ -83,7 +79,7 @@ void ItemInstQueue::push_front(ItemInst* inst)
 // Remove item from front of queue
 ItemInst* ItemInstQueue::pop()
 {
-	if (m_list.size() == 0)
+	if (m_list.empty())
 		return nullptr;
 
 	ItemInst* inst = m_list.front();
@@ -94,7 +90,7 @@ ItemInst* ItemInstQueue::pop()
 // Look at item at front of queue
 ItemInst* ItemInstQueue::peek_front() const
 {
-	return (m_list.size() == 0) ? nullptr : m_list.front();
+	return (m_list.empty()) ? nullptr : m_list.front();
 }
 
 
@@ -102,45 +98,28 @@ ItemInst* ItemInstQueue::peek_front() const
 // class Inventory
 //
 Inventory::~Inventory() {
-	std::map<int16, ItemInst*>::iterator cur, end;
-
-	cur = m_worn.begin();
-	end = m_worn.end();
-	for (; cur != end; ++cur) {
-		ItemInst *tmp = cur->second;
-		safe_delete(tmp);
+	for (auto iter = m_worn.begin(); iter != m_worn.end(); ++iter) {
+		safe_delete(iter->second);
 	}
 	m_worn.clear();
 
-	cur = m_inv.begin();
-	end = m_inv.end();
-	for (; cur != end; ++cur) {
-		ItemInst *tmp = cur->second;
-		safe_delete(tmp);
+	for (auto iter = m_inv.begin(); iter != m_inv.end(); ++iter) {
+		safe_delete(iter->second);
 	}
 	m_inv.clear();
 
-	cur = m_bank.begin();
-	end = m_bank.end();
-	for (; cur != end; ++cur) {
-		ItemInst *tmp = cur->second;
-		safe_delete(tmp);
+	for (auto iter = m_bank.begin(); iter != m_bank.end(); ++iter) {
+		safe_delete(iter->second);
 	}
 	m_bank.clear();
 
-	cur = m_shbank.begin();
-	end = m_shbank.end();
-	for (; cur != end; ++cur) {
-		ItemInst *tmp = cur->second;
-		safe_delete(tmp);
+	for (auto iter = m_shbank.begin(); iter != m_shbank.end(); ++iter) {
+		safe_delete(iter->second);
 	}
 	m_shbank.clear();
 
-	cur = m_trade.begin();
-	end = m_trade.end();
-	for (; cur != end; ++cur) {
-		ItemInst *tmp = cur->second;
-		safe_delete(tmp);
+	for (auto iter = m_trade.begin(); iter != m_trade.end(); ++iter) {
+		safe_delete(iter->second);
 	}
 	m_trade.clear();
 }
@@ -325,7 +304,8 @@ bool Inventory::CheckNoDrop(int16 slot_id) {
 	if (inst->GetItem()->ItemClass == 1) {
 		for (uint8 i = SUB_BEGIN; i < EmuConstants::ITEM_CONTAINER_SIZE; i++) {
 			ItemInst* bagitem = GetItem(Inventory::CalcSlotId(slot_id, i));
-			if (bagitem && !bagitem->GetItem()->NoDrop) return true;
+			if (bagitem && !bagitem->GetItem()->NoDrop) 
+				return true;
 		}
 	}
 	return false;
@@ -606,6 +586,18 @@ int16 Inventory::FindFreeSlot(bool for_bag, bool try_cursor, uint8 min_size, boo
 			if (inst && inst->IsType(ItemClassContainer)
 				&& inst->GetItem()->BagSize >= min_size)
 			{
+				if(is_arrow && inst->GetItem()->BagType == BagTypeQuiver)
+				{
+					int16 base_slot_id = Inventory::CalcSlotId(i, SUB_BEGIN);
+
+					uint8 slots = inst->GetItem()->BagSlots;
+					uint8 j;
+					for (j = SUB_BEGIN; j<slots; j++) {
+						if (!GetItem(base_slot_id + j))
+							// Found available slot within bag
+							return (base_slot_id + j);
+					}
+				}
 				if (inst->GetItem()->BagType == BagTypeQuiver && inst->GetItem()->ItemType != ItemTypeArrow)
 				{
 					continue;
@@ -650,7 +642,11 @@ int16 Inventory::FindFreeSlotForTradeItem(const ItemInst* inst) {
 			if (!m_inv[free_slot])
 				return free_slot;
 
-		return MainCursor; // return cursor since bags do not stack and will not fit inside other bags..yet...)
+		// Do not queue on cursor.
+		if(!GetItem(MainCursor))
+			return MainCursor;
+		else
+			return INVALID_INDEX;
 	}
 
 	// step 2: find partial room for stackables
@@ -704,7 +700,7 @@ int16 Inventory::FindFreeSlotForTradeItem(const ItemInst* inst) {
 		for (int16 free_slot = EmuConstants::GENERAL_BEGIN; free_slot <= EmuConstants::GENERAL_END; ++free_slot) {
 			const ItemInst* main_inst = m_inv[free_slot];
 
-			if (!main_inst || (main_inst->GetItem()->BagType != BagTypeBandolier) || !main_inst->IsType(ItemClassContainer))
+			if (!main_inst || !main_inst->IsType(ItemClassContainer))
 				continue;
 
 			for (uint8 free_bag_slot = SUB_BEGIN; (free_bag_slot < main_inst->GetItem()->BagSlots) && (free_bag_slot < EmuConstants::ITEM_CONTAINER_SIZE); ++free_bag_slot)
@@ -725,7 +721,7 @@ int16 Inventory::FindFreeSlotForTradeItem(const ItemInst* inst) {
 		const ItemInst* main_inst = m_inv[free_slot];
 
 		if (main_inst && main_inst->IsType(ItemClassContainer)) {
-			if ((main_inst->GetItem()->BagSize < inst->GetItem()->Size) || (main_inst->GetItem()->BagType == BagTypeBandolier) || (main_inst->GetItem()->BagType == BagTypeQuiver))
+			if ((main_inst->GetItem()->BagSize < inst->GetItem()->Size) || (main_inst->GetItem()->BagType == BagTypeQuiver))
 				continue;
 
 			for (uint8 free_bag_slot = SUB_BEGIN; (free_bag_slot < main_inst->GetItem()->BagSlots) && (free_bag_slot < EmuConstants::ITEM_CONTAINER_SIZE); ++free_bag_slot)
@@ -734,8 +730,11 @@ int16 Inventory::FindFreeSlotForTradeItem(const ItemInst* inst) {
 		}
 	}
 
-	//return INVALID_INDEX; // everything else pushes to the cursor
-	return MainCursor;
+	// Do not queue on cursor.
+	if(!GetItem(MainCursor))
+		return MainCursor;
+	else
+		return INVALID_INDEX;
 }
 
 // Opposite of below: Get parent bag slot_id from a slot inside of bag
@@ -896,14 +895,6 @@ bool Inventory::SupportsClickCasting(int16 slot_id)
 	return false;
 }
 
-bool Inventory::SupportsPotionBeltCasting(int16 slot_id)
-{
-	if ((uint16)slot_id <= EmuConstants::GENERAL_END || slot_id == MainPowerSource || (slot_id >= EmuConstants::GENERAL_BAGS_BEGIN && slot_id <= EmuConstants::GENERAL_BAGS_END))
-		return true;
-
-	return false;
-}
-
 // Test whether a given slot can support a container item
 bool Inventory::SupportsContainers(int16 slot_id)
 {
@@ -951,6 +942,45 @@ int Inventory::GetSlotByItemInst(ItemInst *inst) {
 	return INVALID_INDEX;
 }
 
+uint8 Inventory::FindBrightestLightType()
+{
+	uint8 brightest_light_type = 0;
+
+	for (auto iter = m_worn.begin(); iter != m_worn.end(); ++iter) {
+		if ((iter->first < EmuConstants::EQUIPMENT_BEGIN || iter->first > EmuConstants::EQUIPMENT_END) && iter->first != MainPowerSource) { continue; }
+		if (iter->first == MainAmmo) { continue; }
+
+		auto inst = iter->second;
+		if (inst == nullptr) { continue; }
+		auto item = inst->GetItem();
+		if (item == nullptr) { continue; }
+
+		if (LightProfile_Struct::IsLevelGreater(item->Light, brightest_light_type))
+			brightest_light_type = item->Light;
+	}
+
+	uint8 general_light_type = 0;
+	for (auto iter = m_inv.begin(); iter != m_inv.end(); ++iter) {
+		if (iter->first < EmuConstants::GENERAL_BEGIN || iter->first > EmuConstants::GENERAL_END) { continue; }
+
+		auto inst = iter->second;
+		if (inst == nullptr) { continue; }
+		auto item = inst->GetItem();
+		if (item == nullptr) { continue; }
+
+		if (item->ItemClass != ItemClassCommon) { continue; }
+		if (item->Light < 9 || item->Light > 13) { continue; }
+
+		if (LightProfile_Struct::TypeToLevel(item->Light))
+			general_light_type = item->Light;
+	}
+
+	if (LightProfile_Struct::IsLevelGreater(general_light_type, brightest_light_type))
+		brightest_light_type = general_light_type;
+
+	return brightest_light_type;
+}
+
 void Inventory::dumpEntireInventory() {
 
 	dumpWornItems();
@@ -991,7 +1021,7 @@ int Inventory::GetSlotByItemInstCollection(const std::map<int16, ItemInst*> &col
 		}
 
 		if (t_inst && !t_inst->IsType(ItemClassContainer)) {
-			for (auto b_iter = t_inst->_begin(); b_iter != t_inst->_end(); ++b_iter) {
+			for (auto b_iter = t_inst->_cbegin(); b_iter != t_inst->_cend(); ++b_iter) {
 				if (b_iter->second == inst) {
 					return Inventory::CalcSlotId(iter->first, b_iter->first);
 				}
@@ -1002,13 +1032,10 @@ int Inventory::GetSlotByItemInstCollection(const std::map<int16, ItemInst*> &col
 	return -1;
 }
 
-void Inventory::dumpItemCollection(const std::map<int16, ItemInst*> &collection) {
-	iter_inst it;
-	iter_contents itb;
-	ItemInst* inst = nullptr;
-
-	for (it = collection.begin(); it != collection.end(); ++it) {
-		inst = it->second;
+void Inventory::dumpItemCollection(const std::map<int16, ItemInst*> &collection) 
+{
+	for (auto it = collection.cbegin(); it != collection.cend(); ++it) {
+		auto inst = it->second;
 		if (!inst || !inst->GetItem())
 			continue;
 
@@ -1019,14 +1046,14 @@ void Inventory::dumpItemCollection(const std::map<int16, ItemInst*> &collection)
 	}
 }
 
-void Inventory::dumpBagContents(ItemInst *inst, iter_inst *it) {
-	iter_contents itb;
+void Inventory::dumpBagContents(ItemInst *inst, std::map<int16, ItemInst*>::const_iterator *it)
+{
 
 	if (!inst || !inst->IsType(ItemClassContainer))
 		return;
 
 	// Go through bag, if bag
-	for (itb = inst->_begin(); itb != inst->_end(); ++itb) {
+	for (auto itb = inst->_cbegin(); itb != inst->_cend(); ++itb) {
 		ItemInst* baginst = itb->second;
 		if (!baginst || !baginst->GetItem())
 			continue;
@@ -1041,7 +1068,7 @@ void Inventory::dumpBagContents(ItemInst *inst, iter_inst *it) {
 // Internal Method: Retrieves item within an inventory bucket
 ItemInst* Inventory::_GetItem(const std::map<int16, ItemInst*>& bucket, int16 slot_id) const
 {
-	iter_inst it = bucket.find(slot_id);
+	auto it = bucket.find(slot_id);
 	if (it != bucket.end()) {
 		return it->second;
 	}
@@ -1095,7 +1122,7 @@ int16 Inventory::_PutItem(int16 slot_id, ItemInst* inst)
 	}
 
 	if (result == INVALID_INDEX) {
-		LogFile->write(EQEMuLog::Error, "Inventory::_PutItem: Invalid slot_id specified (%i)", slot_id);
+		Log.Out(Logs::General, Logs::Error, "Inventory::_PutItem: Invalid slot_id specified (%i)", slot_id);
 		Inventory::MarkDirty(inst); // Slot not found, clean up
 	}
 
@@ -1105,201 +1132,192 @@ int16 Inventory::_PutItem(int16 slot_id, ItemInst* inst)
 // Internal Method: Checks an inventory bucket for a particular item
 int16 Inventory::_HasItem(std::map<int16, ItemInst*>& bucket, int16 item_id, uint8 quantity)
 {
-	iter_inst it;
-	iter_contents itb;
-	ItemInst* inst = nullptr;
 	uint8 quantity_found = 0;
 
-	// Check item: After failed checks, check bag contents (if bag)
-	for (it = bucket.begin(); it != bucket.end(); ++it) {
-		inst = it->second;
-		if (inst) {
-			if (inst->GetID() == item_id) {
-				quantity_found += (inst->GetCharges() <= 0) ? 1 : inst->GetCharges();
-				if (quantity_found >= quantity)
-					return it->first;
-			}
-		}
-		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+	for (auto iter = bucket.begin(); iter != bucket.end(); ++iter) {
+		auto inst = iter->second;
+		if (inst == nullptr) { continue; }
 
-			for (itb = inst->_begin(); itb != inst->_end(); ++itb) {
-				ItemInst* baginst = itb->second;
-				if (baginst->GetID() == item_id) {
-					quantity_found += (baginst->GetCharges() <= 0) ? 1 : baginst->GetCharges();
-					if (quantity_found >= quantity)
-						return Inventory::CalcSlotId(it->first, itb->first);
-				}
+		if (inst->GetID() == item_id) {
+			quantity_found += (inst->GetCharges() <= 0) ? 1 : inst->GetCharges();
+			if (quantity_found >= quantity)
+				return iter->first;
+		}
+
+		if (!inst->IsType(ItemClassContainer)) { continue; }
+
+		for (auto bag_iter = inst->_cbegin(); bag_iter != inst->_cend(); ++bag_iter) {
+			auto bag_inst = bag_iter->second;
+			if (bag_inst == nullptr) { continue; }
+
+			if (bag_inst->GetID() == item_id) {
+				quantity_found += (bag_inst->GetCharges() <= 0) ? 1 : bag_inst->GetCharges();
+				if (quantity_found >= quantity)
+					return Inventory::CalcSlotId(iter->first, bag_iter->first);
 			}
 		}
 	}
 
-	// Not found
 	return INVALID_INDEX;
 }
 
 // Internal Method: Checks an inventory queue type bucket for a particular item
 int16 Inventory::_HasItem(ItemInstQueue& iqueue, int16 item_id, uint8 quantity)
 {
-	iter_queue it;
-	iter_contents itb;
+	// The downfall of this (these) queue procedure is that callers presume that when an item is
+	// found, it is presented as being available on the cursor. In cases of a parity check, this
+	// is sufficient. However, in cases where referential criteria is considered, this can lead
+	// to unintended results. Functionality should be observed when referencing the return value
+	// of this query
+
 	uint8 quantity_found = 0;
 
-	// Read-only iteration of queue
-	for (it = iqueue.begin(); it != iqueue.end(); ++it) {
-		ItemInst* inst = *it;
-		if (inst)
-		{
-			if (inst->GetID() == item_id) {
-				quantity_found += (inst->GetCharges() <= 0) ? 1 : inst->GetCharges();
-				if (quantity_found >= quantity)
-					return MainCursor;
-			}
-		}
-		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+	for (auto iter = iqueue.cbegin(); iter != iqueue.cend(); ++iter) {
+		auto inst = *iter;
+		if (inst == nullptr) { continue; }
 
-			for (itb = inst->_begin(); itb != inst->_end(); ++itb) {
-				ItemInst* baginst = itb->second;
-				if (baginst->GetID() == item_id) {
-					quantity_found += (baginst->GetCharges() <= 0) ? 1 : baginst->GetCharges();
-					if (quantity_found >= quantity)
-						return Inventory::CalcSlotId(MainCursor, itb->first);
-				}
+		if (inst->GetID() == item_id) {
+			quantity_found += (inst->GetCharges() <= 0) ? 1 : inst->GetCharges();
+			if (quantity_found >= quantity)
+				return MainCursor;
+		}
+
+		if (!inst->IsType(ItemClassContainer)) { continue; }
+
+		for (auto bag_iter = inst->_cbegin(); bag_iter != inst->_cend(); ++bag_iter) {
+			auto bag_inst = bag_iter->second;
+			if (bag_inst == nullptr) { continue; }
+
+			if (bag_inst->GetID() == item_id) {
+				quantity_found += (bag_inst->GetCharges() <= 0) ? 1 : bag_inst->GetCharges();
+				if (quantity_found >= quantity)
+					return Inventory::CalcSlotId(MainCursor, bag_iter->first);
 			}
 		}
+
+		// We only check the visible cursor due to lack of queue processing ability (client allows duplicate in limbo)
+		break;
 	}
 
-	// Not found
 	return INVALID_INDEX;
 }
 
 // Internal Method: Checks an inventory bucket for a particular item
 int16 Inventory::_HasItemByUse(std::map<int16, ItemInst*>& bucket, uint8 use, uint8 quantity)
 {
-	iter_inst it;
-	iter_contents itb;
-	ItemInst* inst = nullptr;
 	uint8 quantity_found = 0;
 
-	// Check item: After failed checks, check bag contents (if bag)
-	for (it = bucket.begin(); it != bucket.end(); ++it) {
-		inst = it->second;
-		if (inst && inst->IsType(ItemClassCommon) && inst->GetItem()->ItemType == use) {
+	for (auto iter = bucket.begin(); iter != bucket.end(); ++iter) {
+		auto inst = iter->second;
+		if (inst == nullptr) { continue; }
+
+		if (inst->IsType(ItemClassCommon) && inst->GetItem()->ItemType == use) {
 			quantity_found += (inst->GetCharges() <= 0) ? 1 : inst->GetCharges();
 			if (quantity_found >= quantity)
-				return it->first;
+				return iter->first;
 		}
 
-		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (!inst->IsType(ItemClassContainer)) { continue; }
 
-			for (itb = inst->_begin(); itb != inst->_end(); itb++) {
-				ItemInst* baginst = itb->second;
-				if (baginst && baginst->IsType(ItemClassCommon) && baginst->GetItem()->ItemType == use) {
-					quantity_found += (baginst->GetCharges() <= 0) ? 1 : baginst->GetCharges();
-					if (quantity_found >= quantity)
-						return Inventory::CalcSlotId(it->first, itb->first);
-				}
+		for (auto bag_iter = inst->_cbegin(); bag_iter != inst->_cend(); ++bag_iter) {
+			auto bag_inst = bag_iter->second;
+			if (bag_inst == nullptr) { continue; }
+
+			if (bag_inst->IsType(ItemClassCommon) && bag_inst->GetItem()->ItemType == use) {
+				quantity_found += (bag_inst->GetCharges() <= 0) ? 1 : bag_inst->GetCharges();
+				if (quantity_found >= quantity)
+					return Inventory::CalcSlotId(iter->first, bag_iter->first);
 			}
 		}
 	}
 
-	// Not found
 	return INVALID_INDEX;
 }
 
 // Internal Method: Checks an inventory queue type bucket for a particular item
 int16 Inventory::_HasItemByUse(ItemInstQueue& iqueue, uint8 use, uint8 quantity)
 {
-	iter_queue it;
-	iter_contents itb;
 	uint8 quantity_found = 0;
 
-	// Read-only iteration of queue
-	for (it = iqueue.begin(); it != iqueue.end(); ++it) {
-		ItemInst* inst = *it;
-		if (inst && inst->IsType(ItemClassCommon) && inst->GetItem()->ItemType == use) {
+	for (auto iter = iqueue.cbegin(); iter != iqueue.cend(); ++iter) {
+		auto inst = *iter;
+		if (inst == nullptr) { continue; }
+
+		if (inst->IsType(ItemClassCommon) && inst->GetItem()->ItemType == use) {
 			quantity_found += (inst->GetCharges() <= 0) ? 1 : inst->GetCharges();
 			if (quantity_found >= quantity)
 				return MainCursor;
 		}
 
-		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (!inst->IsType(ItemClassContainer)) { continue; }
 
-			for (itb = inst->_begin(); itb != inst->_end(); ++itb) {
-				ItemInst* baginst = itb->second;
-				if (baginst && baginst->IsType(ItemClassCommon) && baginst->GetItem()->ItemType == use) {
-					quantity_found += (baginst->GetCharges() <= 0) ? 1 : baginst->GetCharges();
-					if (quantity_found >= quantity)
-						return Inventory::CalcSlotId(MainCursor, itb->first);
-				}
+		for (auto bag_iter = inst->_cbegin(); bag_iter != inst->_cend(); ++bag_iter) {
+			auto bag_inst = bag_iter->second;
+			if (bag_inst == nullptr) { continue; }
+
+			if (bag_inst->IsType(ItemClassCommon) && bag_inst->GetItem()->ItemType == use) {
+				quantity_found += (bag_inst->GetCharges() <= 0) ? 1 : bag_inst->GetCharges();
+				if (quantity_found >= quantity)
+					return Inventory::CalcSlotId(MainCursor, bag_iter->first);
 			}
 		}
+
+		// We only check the visible cursor due to lack of queue processing ability (client allows duplicate in limbo)
+		break;
 	}
 
-	// Not found
 	return INVALID_INDEX;
 }
 
 int16 Inventory::_HasItemByLoreGroup(std::map<int16, ItemInst*>& bucket, uint32 loregroup)
 {
-	iter_inst it;
-	iter_contents itb;
-	ItemInst* inst = nullptr;
+	for (auto iter = bucket.begin(); iter != bucket.end(); ++iter) {
+		auto inst = iter->second;
+		if (inst == nullptr) { continue; }
 
-	// Check item: After failed checks, check bag contents (if bag)
-	for (it = bucket.begin(); it != bucket.end(); ++it) {
-		inst = it->second;
-		if (inst) {
-			if (inst->GetItem()->LoreGroup == loregroup)
-				return it->first;
+		if (inst->GetItem()->LoreGroup == loregroup)
+			return iter->first;
 
-		}
-		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
+		if (!inst->IsType(ItemClassContainer)) { continue; }
 
-			for (itb = inst->_begin(); itb != inst->_end(); ++itb) {
-				ItemInst* baginst = itb->second;
-				if (baginst && baginst->IsType(ItemClassCommon) && baginst->GetItem()->LoreGroup == loregroup)
-					return Inventory::CalcSlotId(it->first, itb->first);
+		for (auto bag_iter = inst->_cbegin(); bag_iter != inst->_cend(); ++bag_iter) {
+			auto bag_inst = bag_iter->second;
+			if (bag_inst == nullptr) { continue; }
 
-			}
+			if (bag_inst->IsType(ItemClassCommon) && bag_inst->GetItem()->LoreGroup == loregroup)
+				return Inventory::CalcSlotId(iter->first, bag_iter->first);
+
 		}
 	}
 
-	// Not found
 	return INVALID_INDEX;
 }
 
 // Internal Method: Checks an inventory queue type bucket for a particular item
 int16 Inventory::_HasItemByLoreGroup(ItemInstQueue& iqueue, uint32 loregroup)
 {
-	iter_queue it;
-	iter_contents itb;
+	for (auto iter = iqueue.cbegin(); iter != iqueue.cend(); ++iter) {
+		auto inst = *iter;
+		if (inst == nullptr) { continue; }
 
-	// Read-only iteration of queue
-	for (it = iqueue.begin(); it != iqueue.end(); ++it) {
-		ItemInst* inst = *it;
-		if (inst)
-		{
-			if (inst->GetItem()->LoreGroup == loregroup)
-				return MainCursor;
+		if (inst->GetItem()->LoreGroup == loregroup)
+			return MainCursor;
+
+		if (!inst->IsType(ItemClassContainer)) { continue; }
+
+		for (auto bag_iter = inst->_cbegin(); bag_iter != inst->_cend(); ++bag_iter) {
+			auto bag_inst = bag_iter->second;
+			if (bag_inst == nullptr) { continue; }
+
+			if (bag_inst->IsType(ItemClassCommon) && bag_inst->GetItem()->LoreGroup == loregroup)
+				return Inventory::CalcSlotId(MainCursor, bag_iter->first);
 
 		}
-		// Go through bag, if bag
-		if (inst && inst->IsType(ItemClassContainer)) {
 
-			for (itb = inst->_begin(); itb != inst->_end(); ++itb) {
-				ItemInst* baginst = itb->second;
-				if (baginst && baginst->IsType(ItemClassCommon) && baginst->GetItem()->LoreGroup == loregroup)
-					return Inventory::CalcSlotId(MainCursor, itb->first);
-			}
-		}
+		// We only check the visible cursor due to lack of queue processing ability (client allows duplicate in limbo)
+		break;
 	}
 
-	// Not found
 	return INVALID_INDEX;
 }
 
@@ -1381,8 +1399,7 @@ ItemInst::ItemInst(const ItemInst& copy)
 	m_instnodrop=copy.m_instnodrop;
 	m_merchantcount=copy.m_merchantcount;
 	// Copy container contents
-	iter_contents it;
-	for (it=copy.m_contents.begin(); it!=copy.m_contents.end(); ++it) {
+	for (auto it = copy.m_contents.begin(); it != copy.m_contents.end(); ++it) {
 		ItemInst* inst_old = it->second;
 		ItemInst* inst_new = nullptr;
 
@@ -1431,8 +1448,8 @@ bool ItemInst::IsType(ItemClassTypes item_class) const
 {
 	// Check usage type
 	if ((m_use_type == ItemInstWorldContainer) && (item_class == ItemClassContainer))
-
 		return true;
+
 	if (!m_item)
 		return false;
 
@@ -1442,11 +1459,17 @@ bool ItemInst::IsType(ItemClassTypes item_class) const
 // Is item stackable?
 bool ItemInst::IsStackable() const
 {
+	if (!m_item)
+		return false;
+
 	return m_item->Stackable;
 }
 
 bool ItemInst::IsCharged() const
 {
+	if (!m_item)
+		return false;
+
 	if (m_item->MaxCharges > 1)
 		return true;
 	else
@@ -1469,17 +1492,13 @@ bool ItemInst::IsEquipable(int16 slot_id) const
 		return false;
 
 	// another "shouldn't do" fix..will be fixed in future updates (requires code and database work)
-	if (slot_id == MainPowerSource) {
-		slot_id = MainGeneral1;
-		uint32 slot_mask = (1 << slot_id);
-		if (slot_mask & m_item->Slots)
-			return true;
-	}
+	int16 use_slot = INVALID_INDEX;
+	if (slot_id == MainPowerSource) { use_slot = MainGeneral1; }
+	if ((uint16)slot_id <= EmuConstants::EQUIPMENT_END) { use_slot = slot_id; }
 
-	if ((uint16)slot_id <= EmuConstants::EQUIPMENT_END) {
-		uint32 slot_mask = (1 << slot_id);
-		if (slot_mask & m_item->Slots)
-			return true;
+	if (use_slot != INVALID_INDEX) {
+		if (m_item->Slots & (1 << use_slot)) { return true; }
+		else if (slot_id == MainAmmo && (m_item->ItemType == ItemTypeSmallThrowing)) { return true; }
 	}
 
 	return false;
@@ -1488,10 +1507,9 @@ bool ItemInst::IsEquipable(int16 slot_id) const
 // Retrieve item inside container
 ItemInst* ItemInst::GetItem(uint8 index) const
 {
-	iter_contents it = m_contents.find(index);
+	auto it = m_contents.find(index);
 	if (it != m_contents.end()) {
-		ItemInst* inst = it->second;
-		return inst;
+		return it->second;
 	}
 
 	return nullptr;
@@ -1528,14 +1546,13 @@ void ItemInst::DeleteItem(uint8 index)
 // Hands over memory ownership to client of this function call
 ItemInst* ItemInst::PopItem(uint8 index)
 {
-	iter_contents it = m_contents.find(index);
-	if (it != m_contents.end()) {
-		ItemInst* inst = it->second;
+	auto iter = m_contents.find(index);
+	if (iter != m_contents.end()) {
+		ItemInst* inst = iter->second;
 		m_contents.erase(index);
-		return inst;
+		return inst; // Return pointer that needs to be deleted (or otherwise managed)
 	}
 
-	// Return pointer that needs to be deleted (or otherwise managed)
 	return nullptr;
 }
 
@@ -1543,12 +1560,8 @@ ItemInst* ItemInst::PopItem(uint8 index)
 void ItemInst::Clear()
 {
 	// Destroy container contents
-	iter_contents cur, end;
-	cur = m_contents.begin();
-	end = m_contents.end();
-	for (; cur != end; ++cur) {
-		ItemInst* inst = cur->second;
-		safe_delete(inst);
+	for (auto iter = m_contents.begin(); iter != m_contents.end(); ++iter) {
+		safe_delete(iter->second);
 	}
 	m_contents.clear();
 }
@@ -1557,7 +1570,7 @@ void ItemInst::Clear()
 void ItemInst::ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent)
 {
 	// Destroy container contents
-	iter_contents cur, end, del;
+	std::map<uint8, ItemInst*>::const_iterator cur, end, del;
 	cur = m_contents.begin();
 	end = m_contents.end();
 	for (; cur != end;) {
@@ -1592,6 +1605,9 @@ void ItemInst::ClearByFlags(byFlagSetting is_nodrop, byFlagSetting is_norent)
 
 uint8 ItemInst::FirstOpenSlot() const
 {
+	if (!m_item)
+		return INVALID_INDEX;
+
 	uint8 slots = m_item->BagSlots, i;
 	for (i = SUB_BEGIN; i < slots; i++) {
 		if (!GetItem(i))
@@ -1614,12 +1630,13 @@ uint8 ItemInst::GetTotalItemCount() const
 
 bool ItemInst::IsNoneEmptyContainer()
 {
-	if (m_item->ItemClass != ItemClassContainer)
+	if (!m_item || m_item->ItemClass != ItemClassContainer)
 		return false;
 
-	for (int i = SUB_BEGIN; i < m_item->BagSlots; ++i)
-		if (GetItem(i))
+	for (int index = SUB_BEGIN; index < m_item->BagSlots; ++index){
+		if (GetItem(index))
 			return true;
+	}
 
 	return false;
 }
@@ -1629,6 +1646,7 @@ bool ItemInst::IsWeapon() const
 {
 	if (!m_item || m_item->ItemClass != ItemClassCommon)
 		return false;
+
 	if (m_item->ItemType == ItemTypeArrow && m_item->Damage != 0)
 		return true;
 	else
@@ -1637,7 +1655,8 @@ bool ItemInst::IsWeapon() const
 
 bool ItemInst::IsAmmo() const {
 
-	if (!m_item) return false;
+	if (!m_item) 
+		return false;
 
 	if ((m_item->ItemType == ItemTypeArrow) ||
 		(m_item->ItemType == ItemTypeLargeThrowing) ||
@@ -1648,11 +1667,15 @@ bool ItemInst::IsAmmo() const {
 
 }
 
-const Item_Struct* ItemInst::GetItem() const {
-	if (!m_scaledItem)
-		return m_item;
-	else
+const Item_Struct* ItemInst::GetItem() const 
+{
+	if (!m_item)
+		return nullptr;
+
+	if (m_scaledItem)
 		return m_scaledItem;
+
+	return m_item;
 }
 
 const Item_Struct* ItemInst::GetUnscaledItem() const {
@@ -1735,6 +1758,7 @@ bool ItemInst::IsSlotAllowed(int16 slot_id) const {
 	else if (Inventory::SupportsContainers(slot_id)) { return true; }
 	else if (m_item->Slots & (1 << slot_id)) { return true; }
 	else if (slot_id == MainPowerSource && (m_item->Slots & (1 << 22))) { return true; } // got lazy... <watch>
+	else if (slot_id == MainAmmo && (m_item->ItemType == ItemTypeSmallThrowing || m_item->ItemType == ItemTypeLargeThrowing)) { return true; }
 	else if (slot_id != MainPowerSource && slot_id > EmuConstants::EQUIPMENT_END) { return true; }
 	else { return false; }
 }
@@ -1757,6 +1781,9 @@ void ItemInst::Initialize(SharedDatabase *db) {
 }
 
 void ItemInst::ScaleItem() {
+	if (!m_item)
+		return;
+
 	if (m_scaledItem) {
 		memcpy(m_scaledItem, m_item, sizeof(Item_Struct));
 	}
@@ -1919,11 +1946,11 @@ bool Item_Struct::IsEquipable(uint16 Race, uint16 Class_) const
 
 	for (int CurrentClass = 1; CurrentClass <= PLAYER_CLASS_COUNT; ++CurrentClass)
 	{
-		if (Classes_ % 2 == 1)
+		if (Classes_ & 1)
 		{
 			if (CurrentClass == Class_)
 			{
-					IsClass = true;
+				IsClass = true;
 				break;
 			}
 		}
@@ -1934,15 +1961,78 @@ bool Item_Struct::IsEquipable(uint16 Race, uint16 Class_) const
 
 	for (unsigned int CurrentRace = 1; CurrentRace <= PLAYER_RACE_COUNT; ++CurrentRace)
 	{
-		if (Races_ % 2 == 1)
+		if (Races_ & 1)
 		{
-				if (CurrentRace == Race_)
+			if (CurrentRace == Race_)
 			{
-					IsRace = true;
+				IsRace = true;
 				break;
 			}
 		}
 		Races_ >>= 1;
 	}
 	return (IsRace && IsClass);
+}
+
+//
+// struct LightProfile_Struct
+//
+uint8 LightProfile_Struct::TypeToLevel(uint8 lightType)
+{
+	switch (lightType) {
+	case lightTypeGlobeOfStars:
+		return lightLevelBrilliant;		// 10
+	case lightTypeFlamelessLantern:
+	case lightTypeGreaterLightstone:
+		return lightLevelLargeMagic;	// 9
+	case lightTypeLargeLantern:
+		return lightLevelLargeLantern;	// 8
+	case lightTypeSteinOfMoggok:
+	case lightTypeLightstone:
+		return lightLevelMagicLantern;	// 7
+	case lightTypeSmallLantern:
+		return lightLevelSmallLantern;	// 6
+	case lightTypeColdlight:
+	case lightTypeUnknown2:
+		return lightLevelBlueLight;		// 5
+	case lightTypeFireBeetleEye:
+	case lightTypeUnknown1:
+		return lightLevelRedLight;		// 4
+	case lightTypeTinyGlowingSkull:
+	case lightTypeLightGlobe:
+		return lightLevelSmallMagic;	// 3
+	case lightTypeTorch:
+		return lightLevelTorch;			// 2
+	case lightLevelCandle:
+		return lightLevelCandle;		// 1
+	default:
+		return lightLevelUnlit;			// 0
+	}
+}
+
+bool LightProfile_Struct::IsLevelGreater(uint8 leftType, uint8 rightType)
+{
+	static const uint8 light_levels[LIGHT_TYPES_COUNT] = {
+		lightLevelUnlit,			/* lightTypeNone */
+		lightLevelCandle,			/* lightTypeCandle */
+		lightLevelTorch,			/* lightTypeTorch */
+		lightLevelSmallMagic,		/* lightTypeTinyGlowingSkull */
+		lightLevelSmallLantern,		/* lightTypeSmallLantern */
+		lightLevelMagicLantern,		/* lightTypeSteinOfMoggok */
+		lightLevelLargeLantern,		/* lightTypeLargeLantern */
+		lightLevelLargeMagic,		/* lightTypeFlamelessLantern */
+		lightLevelBrilliant,		/* lightTypeGlobeOfStars */
+		lightLevelSmallMagic,		/* lightTypeLightGlobe */
+		lightLevelMagicLantern,		/* lightTypeLightstone */
+		lightLevelLargeMagic,		/* lightTypeGreaterLightstone */
+		lightLevelRedLight,			/* lightTypeFireBeetleEye */
+		lightLevelBlueLight,		/* lightTypeColdlight */
+		lightLevelRedLight,			/* lightTypeUnknown1 */
+		lightLevelBlueLight			/* lightTypeUnknown2 */
+	};
+
+	if (leftType >= LIGHT_TYPES_COUNT) { leftType = lightTypeNone; }
+	if (rightType >= LIGHT_TYPES_COUNT) { rightType = lightTypeNone; }
+
+	return (light_levels[leftType] > light_levels[rightType]);
 }

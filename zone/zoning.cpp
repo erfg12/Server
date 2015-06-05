@@ -15,18 +15,18 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/debug.h"
 
-#include "zone.h"
-#include "worldserver.h"
-#include "masterentity.h"
-#include "../common/packet_dump.h"
+#include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include "../common/packet_dump_file.h"
 #include "../common/rulesys.h"
 #include "../common/string_util.h"
-#include "string_ids.h"
-#include "quest_parser_collection.h"
+
 #include "queryserv.h"
+#include "quest_parser_collection.h"
+#include "string_ids.h"
+#include "worldserver.h"
+#include "zone.h"
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;
@@ -36,12 +36,12 @@ extern Zone* zone;
 void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	zoning = true;
 	if (app->size != sizeof(ZoneChange_Struct)) {
-		LogFile->write(EQEMuLog::Debug, "Wrong size: OP_ZoneChange, size=%d, expected %d", app->size, sizeof(ZoneChange_Struct));
+		Log.Out(Logs::General, Logs::None, "Wrong size: OP_ZoneChange, size=%d, expected %d", app->size, sizeof(ZoneChange_Struct));
 		return;
 	}
 
-#if EQDEBUG >= 11
-	LogFile->write(EQEMuLog::Debug, "Zone request from %s", GetName());
+#if EQDEBUG >= 5
+	Log.Out(Logs::General, Logs::None, "Zone request from %s", GetName());
 	DumpPacket(app);
 #endif
 	ZoneChange_Struct* zc=(ZoneChange_Struct*)app->pBuffer;
@@ -50,6 +50,9 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	uint16 target_instance_id = 0;
 	ZonePoint* zone_point = nullptr;
 	//figure out where they are going.
+	//we should never trust the client's logic, however, the client's information coupled with the server's information can help us determine locations they should be going to.
+	//try to figure it out for them.
+
 	if(zc->zoneID == 0) {
 		//client dosent know where they are going...
 		//try to figure it out for them.
@@ -86,8 +89,8 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 				//unable to find a zone point... is there anything else
 				//that can be a valid un-zolicited zone request?
 
-				Message(13, "Invalid unsolicited zone request.");
-				LogFile->write(EQEMuLog::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%d'.", GetName(), target_zone_id);
+				Message(CC_Red, "Invalid unsolicited zone request.");
+				Log.Out(Logs::General, Logs::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%d'.", GetName(), target_zone_id);
 				SendZoneCancel(zc);
 				return;
 			}
@@ -98,7 +101,6 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	}
 	else {
 		// This is to allow both 6.2 and Titanium clients to perform a proper zoning of the client when evac/succor
-		// WildcardX 27 January 2008
 		if(zone_mode == EvacToSafeCoords && zonesummon_id > 0)
 			target_zone_id = zonesummon_id;
 		else
@@ -110,11 +112,11 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		if(zone_mode == ZoneUnsolicited)
 		{
 
-			zone_point = zone->GetClosestZonePoint(GetX(), GetY(), GetZ(), target_zone_id, this, ZONEPOINT_ZONE_RANGE);
+			zone_point = zone->GetClosestZonePoint(glm::vec3(GetPosition()), target_zone_id, this, ZONEPOINT_ZONE_RANGE);
 			//if we didnt get a zone point, or its to a different zone,
 			//then we assume this is invalid.
 			if(!zone_point || zone_point->target_zone_id != target_zone_id) {
-				LogFile->write(EQEMuLog::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%d'.", GetName(), target_zone_id);
+				Log.Out(Logs::General, Logs::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%d'.", GetName(), target_zone_id);
 				SendZoneCancel(zc);
 				return;
 			}
@@ -126,14 +128,14 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		//make sure we are in it and it's unexpired.
 		if(!database.VerifyInstanceAlive(target_instance_id, CharacterID()))
 		{
-			Message(13, "Instance ID was expired or you were not in it.");
+			Message(CC_Red, "Instance ID was expired or you were not in it.");
 			SendZoneCancel(zc);
 			return;
 		}
 
 		if(!database.VerifyZoneInstance(target_zone_id, target_instance_id))
 		{
-			Message(13, "Instance ID was %u does not go with zone id %u", target_instance_id, target_zone_id);
+			Message(CC_Red, "Instance ID was %u does not go with zone id %u", target_instance_id, target_zone_id);
 			SendZoneCancel(zc);
 			return;
 		}
@@ -143,8 +145,8 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	const char *target_zone_name = database.GetZoneName(target_zone_id);
 	if(target_zone_name == nullptr) {
 		//invalid zone...
-		Message(13, "Invalid target zone ID.");
-		LogFile->write(EQEMuLog::Error, "Zoning %s: Unable to get zone name for zone id '%d'.", GetName(), target_zone_id);
+		Message(CC_Red, "Invalid target zone ID.");
+		Log.Out(Logs::General, Logs::Error, "Zoning %s: Unable to get zone name for zone id '%d'.", GetName(), target_zone_id);
 		SendZoneCancel(zc);
 		return;
 	}
@@ -156,8 +158,8 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	char flag_needed[128];
 	if(!database.GetSafePoints(target_zone_name, database.GetInstanceVersion(target_instance_id), &safe_x, &safe_y, &safe_z, &minstatus, &minlevel, flag_needed)) {
 		//invalid zone...
-		Message(13, "Invalid target zone while getting safe points.");
-		LogFile->write(EQEMuLog::Error, "Zoning %s: Unable to get safe coordinates for zone '%s'.", GetName(), target_zone_name);
+		Message(CC_Red, "Invalid target zone while getting safe points.");
+		Log.Out(Logs::General, Logs::Error, "Zoning %s: Unable to get safe coordinates for zone '%s'.", GetName(), target_zone_name);
 		SendZoneCancel(zc);
 		return;
 	}
@@ -177,33 +179,35 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	switch(zone_mode) {
 	case EvacToSafeCoords:
 	case ZoneToSafeCoords:
-		LogFile->write(EQEMuLog::Debug, "Zoning %s to safe coords (%f,%f,%f) in %s (%d)", GetName(), safe_x, safe_y, safe_z, target_zone_name, target_zone_id);
+		Log.Out(Logs::General, Logs::None, "Zoning %s to safe coords (%f,%f,%f) in %s (%d)", GetName(), safe_x, safe_y, safe_z, target_zone_name, target_zone_id);
 		dest_x = safe_x;
 		dest_y = safe_y;
 		dest_z = safe_z;
 		break;
 	case GMSummon:
-		dest_x = zonesummon_x;
-		dest_y = zonesummon_y;
-		dest_z = zonesummon_z;
+		dest_x = m_ZoneSummonLocation.x;
+		dest_y = m_ZoneSummonLocation.y;
+		dest_z = m_ZoneSummonLocation.z;
 		ignorerestrictions = 1;
 		break;
 	case GateToBindPoint:
 		dest_x = m_pp.binds[0].x;
 		dest_y = m_pp.binds[0].y;
 		dest_z = m_pp.binds[0].z;
+		dest_h = m_pp.binds[0].heading;
 		break;
 	case ZoneToBindPoint:
 		dest_x = m_pp.binds[0].x;
 		dest_y = m_pp.binds[0].y;
 		dest_z = m_pp.binds[0].z;
+		dest_h = m_pp.binds[0].heading;
 		ignorerestrictions = 1;	//can always get to our bind point? seems exploitable
 		break;
 	case ZoneSolicited: //we told the client to zone somewhere, so we know where they are going.
 		//recycle zonesummon variables
-		dest_x = zonesummon_x;
-		dest_y = zonesummon_y;
-		dest_z = zonesummon_z;
+		dest_x = m_ZoneSummonLocation.x;
+		dest_y = m_ZoneSummonLocation.y;
+		dest_z = m_ZoneSummonLocation.z;
 		break;
 	case ZoneUnsolicited: //client came up with this on its own.
 		//client requested a zoning... what are the cases when this could happen?
@@ -237,7 +241,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 
 		//could not find a valid reason for them to be zoning, stop it.
 		CheatDetected(MQZoneUnknownDest, 0.0, 0.0, 0.0);
-		LogFile->write(EQEMuLog::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%s'. Not near a zone point.", GetName(), target_zone_name);
+		Log.Out(Logs::General, Logs::Error, "Zoning %s: Invalid unsolicited zone request to zone id '%s'. Not near a zone point.", GetName(), target_zone_name);
 		SendZoneCancel(zc);
 		return;
 	default:
@@ -261,16 +265,20 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		//the flag needed string is not empty, meaning a flag is required.
 		if(Admin() < minStatusToIgnoreZoneFlags && !HasZoneFlag(target_zone_id))
 		{
-			Message(13, "You do not have the flag to enter %s.", target_zone_name);
+			Message(CC_Red, "You do not have the flag to enter %s.", target_zone_name);
 			myerror = ZONE_ERROR_NOEXPERIENCE;
 		}
 	}
 
-	if(myerror == 1) {
+	if(myerror == 1) 
+	{
 		//we have successfully zoned
 		DoZoneSuccess(zc, target_zone_id, target_instance_id, dest_x, dest_y, dest_z, dest_h, ignorerestrictions);
-	} else {
-		LogFile->write(EQEMuLog::Error, "Zoning %s: Rules prevent this char from zoning into '%s'", GetName(), target_zone_name);
+		UpdateZoneChangeCount(target_zone_id);
+	} 
+	else 
+	{
+		Log.Out(Logs::General, Logs::Error, "Zoning %s: Rules prevent this char from zoning into '%s'", GetName(), target_zone_name);
 		SendZoneError(zc, myerror);
 	}
 }
@@ -284,7 +292,7 @@ void Client::SendZoneCancel(ZoneChange_Struct *zc) {
 	ZoneChange_Struct *zc2 = (ZoneChange_Struct*)outapp->pBuffer;
 	strcpy(zc2->char_name, zc->char_name);
 	zc2->zoneID = zone->GetZoneID();
-	zc2->success = 1;
+	zc2->success = ZONE_ERROR_NOTREADY;
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
 
@@ -294,7 +302,7 @@ void Client::SendZoneCancel(ZoneChange_Struct *zc) {
 
 void Client::SendZoneError(ZoneChange_Struct *zc, int8 err)
 {
-	LogFile->write(EQEMuLog::Error, "Zone %i is not available because target wasn't found or character insufficent level", zc->zoneID);
+	Log.Out(Logs::General, Logs::Error, "Zone %i is not available because target wasn't found or character insufficent level", zc->zoneID);
 
 	SetPortExemption(true);
 
@@ -329,57 +337,41 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 	if(this->GetPet())
 		entity_list.RemoveFromHateLists(this->GetPet());
 
-	LogFile->write(EQEMuLog::Status, "Zoning '%s' to: %s (%i) - (%i) x=%f, y=%f, z=%f", m_pp.name, database.GetZoneName(zone_id), zone_id, instance_id, dest_x, dest_y, dest_z);
+	Log.Out(Logs::General, Logs::Status, "Zoning '%s' to: %s (%i) - (%i) x=%f, y=%f, z=%f", m_pp.name, database.GetZoneName(zone_id), zone_id, instance_id, dest_x, dest_y, dest_z);
 
 	//set the player's coordinates in the new zone so they have them
 	//when they zone into it
-	x_pos = dest_x; //these coordinates will now be saved when ~client is called
-	y_pos = dest_y;
-	z_pos = dest_z;
-	heading = dest_h; // Cripp: fix for zone heading
+	m_Position.x = dest_x; //these coordinates will now be saved when ~client is called
+	m_Position.y = dest_y;
+	m_Position.z = dest_z;
+	m_Position.w = dest_h / 2.0f; // fix for zone heading
 	m_pp.heading = dest_h;
 	m_pp.zone_id = zone_id;
 	m_pp.zoneInstance = instance_id;
 
 	//Force a save so its waiting for them when they zone
-	Save(2); 
+	Save(2);
 
-	if (zone_id == zone->GetZoneID() && instance_id == zone->GetInstanceID()) {
-		// No need to ask worldserver if we're zoning to ourselves (most
-		// likely to a bind point), also fixes a bug since the default response was failure
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneChange,sizeof(ZoneChange_Struct));
-		ZoneChange_Struct* zc2 = (ZoneChange_Struct*) outapp->pBuffer;
-		strcpy(zc2->char_name, GetName());
-		zc2->zoneID = zone_id;
-		zc2->instanceID = instance_id;
-		zc2->success = 1;
-		outapp->priority = 6;
-		FastQueuePacket(&outapp);
-
-		zone->StartShutdownTimer(AUTHENTICATION_TIMEOUT * 1000);
-	} else {
 	// vesuvias - zoneing to another zone so we need to the let the world server
 	//handle things with the client for a while
-		ServerPacket* pack = new ServerPacket(ServerOP_ZoneToZoneRequest, sizeof(ZoneToZone_Struct));
-		ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
-		ztz->response = 0;
-		ztz->current_zone_id = zone->GetZoneID();
-		ztz->current_instance_id = zone->GetInstanceID();
-		ztz->requested_zone_id = zone_id;
-		ztz->requested_instance_id = instance_id;
-		ztz->admin = admin;
-		ztz->ignorerestrictions = ignore_r;
-		strcpy(ztz->name, GetName());
-		ztz->guild_id = GuildID();
-		worldserver.SendPacket(pack);
-		safe_delete(pack);
-	}
+	SetZoningState();
+	ServerPacket* pack = new ServerPacket(ServerOP_ZoneToZoneRequest, sizeof(ZoneToZone_Struct));
+	ZoneToZone_Struct* ztz = (ZoneToZone_Struct*) pack->pBuffer;
+	ztz->response = 0;
+	ztz->current_zone_id = zone->GetZoneID();
+	ztz->current_instance_id = zone->GetInstanceID();
+	ztz->requested_zone_id = zone_id;
+	ztz->requested_instance_id = instance_id;
+	ztz->admin = admin;
+	ztz->ignorerestrictions = ignore_r;
+	strcpy(ztz->name, GetName());
+	ztz->guild_id = GuildID();
+	worldserver.SendPacket(pack);
+	safe_delete(pack);
 
 	//reset to unsolicited.
 	zone_mode = ZoneUnsolicited;
-	zonesummon_x = 0;
-	zonesummon_y = 0;
-	zonesummon_z = 0;
+	m_ZoneSummonLocation = glm::vec3();
 	zonesummon_id = 0;
 	zonesummon_ignorerestrictions = 0;
 }
@@ -390,7 +382,7 @@ void Client::MovePC(const char* zonename, float x, float y, float z, float headi
 
 //designed for in zone moving
 void Client::MovePC(float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
-	ProcessMovePC(zone->GetZoneID(), zone->GetInstanceID(), x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(zone->GetZoneID(), 0, x, y, z, heading, ignorerestrictions, zm);
 }
 
 void Client::MovePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
@@ -398,7 +390,7 @@ void Client::MovePC(uint32 zoneID, float x, float y, float z, float heading, uin
 }
 
 void Client::MovePC(uint32 zoneID, uint32 instanceID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm){
-	ProcessMovePC(zoneID, instanceID, x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 }
 
 
@@ -410,7 +402,7 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 	if(zoneID == 0)
 		zoneID = zone->GetZoneID();
 
-	if(zoneID == zone->GetZoneID() && instance_id == zone->GetInstanceID()) {
+	if(zoneID == zone->GetZoneID()) {
 		// TODO: Determine if this condition is necessary.
 		if(IsAIControlled()) {
 			GMMove(x, y, z);
@@ -429,32 +421,33 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 
 	switch(zm) {
 		case GateToBindPoint:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case GMSummon:
-			Message(15, "You have been summoned by a GM!");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			Message(CC_Yellow, "You have been summoned by a GM!");
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case ZoneToBindPoint:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case ZoneSolicited:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case SummonPC:
-			Message(15, "You have been summoned!");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			if(!GetGM())
+				Message(CC_Yellow, "You have been summoned!");
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case Rewind:
-			Message(15, "Rewinding to previous location.");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			Message(CC_Yellow, "Rewinding to previous location.");
+			ZonePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		default:
-			LogFile->write(EQEMuLog::Error, "Client::ProcessMovePC received a reguest to perform an unsupported client zone operation.");
+			Log.Out(Logs::General, Logs::Error, "Client::ProcessMovePC received a reguest to perform an unsupported client zone operation.");
 			break;
 	}
 }
@@ -472,68 +465,67 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 	SetPortExemption(true);
 
 	if(!pZoneName) {
-		Message(13, "Invalid zone number specified");
+		Message(CC_Red, "Invalid zone number specified");
 		safe_delete_array(pZoneName);
 		return;
 	}
 	iZoneNameLength = strlen(pZoneName);
+	glm::vec3 safePoint;
 
 	switch(zm) {
 		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
-			x = zone->safe_x();
-			y = zone->safe_y();
-			z = zone->safe_z();
+			safePoint = zone->GetSafePoint();
+			x = safePoint.x;
+			y = safePoint.y;
+			z = safePoint.z;
 			SetHeading(heading);
 			break;
 		case GMSummon:
-			zonesummon_x = x_pos = x;
-			zonesummon_y = y_pos = y;
-			zonesummon_z = z_pos = z;
+			m_Position = glm::vec4(x, y, z, heading);
+			m_ZoneSummonLocation = glm::vec3(m_Position);
 			SetHeading(heading);
 
 			zonesummon_id = zoneID;
 			zonesummon_ignorerestrictions = 1;
 			break;
 		case ZoneSolicited:
-			zonesummon_x = x;
-			zonesummon_y = y;
-			zonesummon_z = z;
+			m_ZoneSummonLocation = glm::vec3(x,y,z);
 			SetHeading(heading);
 
 			zonesummon_id = zoneID;
 			zonesummon_ignorerestrictions = ignorerestrictions;
 			break;
 		case GateToBindPoint:
-			x = x_pos = m_pp.binds[0].x;
-			y = y_pos = m_pp.binds[0].y;
-			z = z_pos = m_pp.binds[0].z;
+			x = m_Position.x = m_pp.binds[0].x;
+			y = m_Position.y = m_pp.binds[0].y;
+			z = m_Position.z = m_pp.binds[0].z;
 			heading = m_pp.binds[0].heading;
+			m_Position.w = heading / 2.0f;
 			break;
 		case ZoneToBindPoint:
-			x = x_pos = m_pp.binds[0].x;
-			y = y_pos = m_pp.binds[0].y;
-			z = z_pos = m_pp.binds[0].z;
+			x = m_Position.x = m_pp.binds[0].x;
+			y = m_Position.y = m_pp.binds[0].y;
+			z = m_Position.z = m_pp.binds[0].z;
 			heading = m_pp.binds[0].heading;
+			m_Position.w = heading / 2.0f;
 
 			zonesummon_ignorerestrictions = 1;
-			LogFile->write(EQEMuLog::Debug, "Player %s has died and will be zoned to bind point in zone: %s at LOC x=%f, y=%f, z=%f, heading=%f", GetName(), pZoneName, m_pp.binds[0].x, m_pp.binds[0].y, m_pp.binds[0].z, m_pp.binds[0].heading);
+			Log.Out(Logs::General, Logs::None, "Player %s has died and will be zoned to bind point in zone: %s at LOC x=%f, y=%f, z=%f, heading=%f", GetName(), pZoneName, m_pp.binds[0].x, m_pp.binds[0].y, m_pp.binds[0].z, m_pp.binds[0].heading);
 			break;
 		case SummonPC:
-			zonesummon_x = x_pos = x;
-			zonesummon_y = y_pos = y;
-			zonesummon_z = z_pos = z;
+			m_ZoneSummonLocation = glm::vec3(x, y, z);
+			m_Position = glm::vec4(m_ZoneSummonLocation, 0.0f);
 			SetHeading(heading);
 			break;
 		case Rewind:
-			LogFile->write(EQEMuLog::Debug, "%s has requested a /rewind from %f, %f, %f, to %f, %f, %f in %s", GetName(), x_pos, y_pos, z_pos, rewind_x, rewind_y, rewind_z, zone->GetShortName());
-			zonesummon_x = x_pos = x;
-			zonesummon_y = y_pos = y;
-			zonesummon_z = z_pos = z;
+			Log.Out(Logs::General, Logs::None, "%s has requested a /rewind from %f, %f, %f, to %f, %f, %f in %s", GetName(), m_Position.x, m_Position.y, m_Position.z, m_RewindLocation.x, m_RewindLocation.y, m_RewindLocation.z, zone->GetShortName());
+			m_ZoneSummonLocation = glm::vec3(x, y, z);
+			m_Position = glm::vec4(m_ZoneSummonLocation, 0.0f);
 			SetHeading(heading);
 			break;
 		default:
-			LogFile->write(EQEMuLog::Error, "Client::ZonePC() received a reguest to perform an unsupported client zone operation.");
+			Log.Out(Logs::General, Logs::Error, "Client::ZonePC() received a reguest to perform an unsupported client zone operation.");
 			ReadyToZone = false;
 			break;
 	}
@@ -546,12 +538,12 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			Entity* entity = entity_list.GetID(entity_id_being_looted);
 			if (entity == 0)
 			{
-				Message(13, "Error: OP_EndLootRequest: Corpse not found (ent = 0)");
+				Message(CC_Red, "Error: OP_EndLootRequest: Corpse not found (ent = 0)");
 				Corpse::SendLootReqErrorPacket(this);
 			}
 			else if (!entity->IsCorpse())
 			{
-				Message(13, "Error: OP_EndLootRequest: Corpse not found (!entity->IsCorpse())");
+				Message(CC_Red, "Error: OP_EndLootRequest: Corpse not found (!entity->IsCorpse())");
 				Corpse::SendLootReqErrorPacket(this);
 			}
 			else
@@ -561,27 +553,15 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			}
 			SetLooting(0);
 		}
+		if(Trader)
+		{
+			Trader_EndTrader();
+		}
 
 		zone_mode = zm;
-		if (zm == ZoneToBindPoint) {
-			//TODO: Find a better packet that works with EQMac on death.
-			_log(EQMAC__LOG, "Zoning packet about to be sent (ZTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMGoto, sizeof(GMGoto_Struct));
-			GMGoto_Struct* gmg = (GMGoto_Struct*) outapp->pBuffer;
 
-			strcpy(gmg->charname,this->name);
-			strcpy(gmg->gmname,this->name);
-			gmg->zoneID = zoneID;
-			gmg->x = x;
-			gmg->y = y;
-			gmg->z = z;
-
-			outapp->priority = 6;
-			FastQueuePacket(&outapp);
-			safe_delete(outapp);
-		}
-		else if(zm == ZoneSolicited || zm == ZoneToSafeCoords) {
-			_log(EQMAC__LOG, "Zoning packet about to be sent (ZS/ZTSC). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+		if(zm == ZoneSolicited || zm == ZoneToSafeCoords) {
+			Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (ZS/ZTS). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 			RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 
@@ -595,20 +575,68 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			gmg->type = 0x01;				//an observed value, not sure of meaning
 
 			outapp->priority = 6;
-			FastQueuePacket(&outapp);
-			safe_delete(outapp);
+			FastQueuePacket(&outapp);	
 		}
-		else if (zm == EvacToSafeCoords || zm == GateToBindPoint) {
-			_log(EQMAC__LOG, "Zoning packet about to be sent (ETSC). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+		else if (zm == ZoneToBindPoint) {
+			//TODO: Find a better packet that works with EQMac on death. Sending OP_RequestClientZoneChange here usually does not zone the
+			//player correctly (it starts the zoning process, then disconnect.) OP_GMGoto seems to work 90% of the time. It's a hack, but it works...
+			Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (ZTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMGoto, sizeof(GMGoto_Struct));
+			GMGoto_Struct* gmg = (GMGoto_Struct*) outapp->pBuffer;
+	
+			strcpy(gmg->charname,this->name);
+			strcpy(gmg->gmname,this->name);
+			gmg->zoneID = zoneID;
+			gmg->x = x;
+			gmg->y = y;
+			gmg->z = z;
+			outapp->priority = 6;
+			FastQueuePacket(&outapp);
+		}
+		else if (zm == GateToBindPoint) {			
+			// we hide the real zoneid we want to evac/succor to here
+			zonesummon_id = zoneID;
+			zone_mode = zm;
+
+			if(zoneID == GetZoneID()) {
+				Log.Out(Logs::General, Logs::EQMac, "Zoning packet NOT being sent (GTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+				//Not doing inter-zone for same zone gates. Client is supposed to handle these, based on PP info it is fed.
+				//properly handle proximities
+				entity_list.ProcessMove(this, glm::vec3(m_Position));
+				m_Proximity = glm::vec3(m_Position);
+				SendPosition();
+			}
+			else
+			{
+				zone_mode = zm;
+				Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (GTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
+				RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
+
+				gmg->zone_id = zoneID;
+				gmg->x = x;
+				gmg->y = y;
+				gmg->z = z;
+				gmg->heading = heading;
+				gmg->instance_id = instance_id;
+				gmg->type = 0x01;	//an observed value, not sure of meaning
+				outapp->priority = 6;
+				FastQueuePacket(&outapp);
+			}
+		}
+		else if(zm == EvacToSafeCoords)
+		{
+			zone_mode = zm;
+			Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (ETSC). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 			RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 
-			if(this->GetZoneID() == 1)
-				gmg->zone_id = 2;
-			else if(this->GetZoneID() == 2)
-				gmg->zone_id = 1;
+			if(this->GetZoneID() == qeynos)
+				gmg->zone_id = qeynos2;
+			else if(this->GetZoneID() == qeynos2)
+				gmg->zone_id = qeynos;
 			else
-				gmg->zone_id = 1;
+				gmg->zone_id = qeynos;
 
 			gmg->x = x;
 			gmg->y = y;
@@ -622,16 +650,13 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 
 			outapp->priority = 6;
 			FastQueuePacket(&outapp);
-			safe_delete(outapp);
 		}
 		else {
 			if(zoneID == GetZoneID()) {
-				_log(EQMAC__LOG, "Zoning packet about to be sent (GOTO). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+				Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (GOTO). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 				//properly handle proximities
-				entity_list.ProcessMove(this, x_pos, y_pos, z_pos);
-				proximity_x = x_pos;
-				proximity_y = y_pos;
-				proximity_z = z_pos;
+				entity_list.ProcessMove(this, glm::vec3(m_Position));
+				m_Proximity = glm::vec3(m_Position);
 
 				//send out updates to people in zone.
 				SendPosition();
@@ -649,10 +674,9 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			gmg->type = 0x01;	//an observed value, not sure of meaning
 			outapp->priority = 6;
 			FastQueuePacket(&outapp);
-			safe_delete(outapp);
 		}
 
-		_log(EQMAC__LOG, "Player %s has requested a zoning to LOC x=%f, y=%f, z=%f, heading=%f in zoneid=%i and type=%i", GetName(), x, y, z, heading, zoneID, zm);
+		Log.Out(Logs::Detail, Logs::None, "Player %s has requested a zoning to LOC x=%f, y=%f, z=%f, heading=%f in zoneid=%i and type=%i", GetName(), x, y, z, heading, zoneID, zm);
 		//Clear zonesummon variables if we're zoning to our own zone
 		//Client wont generate a zone change packet to the server in this case so
 		//They aren't needed and it keeps behavior on next zone attempt from being undefined.
@@ -660,9 +684,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 		{
 			if(zm != EvacToSafeCoords && zm != ZoneToSafeCoords && zm != ZoneToBindPoint)
 			{
-				zonesummon_x = 0;
-				zonesummon_y = 0;
-				zonesummon_z = 0;
+				m_ZoneSummonLocation = glm::vec3();
 				zonesummon_id = 0;
 				zonesummon_ignorerestrictions = 0;
 				zone_mode = ZoneUnsolicited;
@@ -688,8 +710,6 @@ void Mob::Gate() {
 
 void Client::Gate() 
 {
-	ZoneChange_Struct *zc = new struct ZoneChange_Struct;
-	SendZoneCancel(zc);
 	Mob::Gate();
 }
 
@@ -699,22 +719,25 @@ void NPC::Gate() {
 	Mob::Gate();
 }
 
-void Client::SetBindPoint(int to_zone, int to_instance, float new_x, float new_y, float new_z) {
+void Client::SetBindPoint(int to_zone, int to_instance, const glm::vec3& location) {
 	if (to_zone == -1) {
 		m_pp.binds[0].zoneId = zone->GetZoneID();
 		m_pp.binds[0].instance_id = (zone->GetInstanceID() != 0 && zone->IsInstancePersistent()) ? zone->GetInstanceID() : 0;
-		m_pp.binds[0].x = x_pos;
-		m_pp.binds[0].y = y_pos;
-		m_pp.binds[0].z = z_pos;
+		m_pp.binds[0].x = m_Position.x;
+		m_pp.binds[0].y = m_Position.y;
+		m_pp.binds[0].z = m_Position.z;
+		m_pp.binds[0].heading = m_Position.w * 2.0f;
 	}
 	else {
 		m_pp.binds[0].zoneId = to_zone;
 		m_pp.binds[0].instance_id = to_instance;
-		m_pp.binds[0].x = new_x;
-		m_pp.binds[0].y = new_y;
-		m_pp.binds[0].z = new_z;
+		m_pp.binds[0].x = location.x;
+		m_pp.binds[0].y = location.y;
+		m_pp.binds[0].z = location.z;
+		m_pp.binds[0].heading = m_Position.w * 2.0f;
 	}
-	database.SaveCharacterBindPoint(this->CharacterID(), m_pp.binds[0].zoneId, m_pp.binds[0].instance_id, m_pp.binds[0].x, m_pp.binds[0].y, m_pp.binds[0].z, 0, 0);
+	auto regularBindPoint = glm::vec4(m_pp.binds[0].x, m_pp.binds[0].y, m_pp.binds[0].z, m_pp.binds[0].heading);
+	database.SaveCharacterBindPoint(this->CharacterID(), m_pp.binds[0].zoneId, m_pp.binds[0].instance_id, regularBindPoint, 0);
 }
 
 void Client::GoToBind(uint8 bindnum) {
@@ -731,6 +754,8 @@ void Client::GoToBind(uint8 bindnum) {
 }
 
 void Client::GoToDeath() {
+	//Client will request a zone in EQMac era clients, but let's make sure they get there:
+	zone_mode = ZoneToBindPoint;
 	MovePC(m_pp.binds[0].zoneId, m_pp.binds[0].instance_id, 0.0f, 0.0f, 0.0f, 0.0f, 1, ZoneToBindPoint);
 }
 
@@ -744,7 +769,7 @@ void Client::SetZoneFlag(uint32 zone_id) {
 	std::string query = StringFormat("INSERT INTO zone_flags (charID,zoneID) VALUES(%d,%d)", CharacterID(), zone_id);
 	auto results = database.QueryDatabase(query);
 	if(!results.Success())
-		LogFile->write(EQEMuLog::Error, "MySQL Error while trying to set zone flag for %s: %s", GetName(), results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "MySQL Error while trying to set zone flag for %s: %s", GetName(), results.ErrorMessage().c_str());
 }
 
 void Client::ClearZoneFlag(uint32 zone_id) {
@@ -757,7 +782,7 @@ void Client::ClearZoneFlag(uint32 zone_id) {
 	std::string query = StringFormat("DELETE FROM zone_flags WHERE charID=%d AND zoneID=%d", CharacterID(), zone_id);
 	auto results = database.QueryDatabase(query);
 	if(!results.Success())
-		LogFile->write(EQEMuLog::Error, "MySQL Error while trying to clear zone flag for %s: %s", GetName(), results.ErrorMessage().c_str());
+		Log.Out(Logs::General, Logs::Error, "MySQL Error while trying to clear zone flag for %s: %s", GetName(), results.ErrorMessage().c_str());
 
 }
 
@@ -767,11 +792,11 @@ void Client::LoadZoneFlags() {
 	std::string query = StringFormat("SELECT zoneID from zone_flags WHERE charID=%d", CharacterID());
 	auto results = database.QueryDatabase(query);
     if (!results.Success()) {
-        LogFile->write(EQEMuLog::Error, "MySQL Error while trying to load zone flags for %s: %s", GetName(), results.ErrorMessage().c_str());
+        Log.Out(Logs::General, Logs::Error, "MySQL Error while trying to load zone flags for %s: %s", GetName(), results.ErrorMessage().c_str());
         return;
     }
 
-    for(auto row = results.begin(); row != results.end(); ++row)
+	for(auto row = results.begin(); row != results.end(); ++row)
 		zone_flags.insert(atoi(row[0]));
 }
 
@@ -830,26 +855,37 @@ bool Client::CanBeInZone() {
 	char flag_needed[128];
 	if(!database.GetSafePoints(zone->GetShortName(), zone->GetInstanceVersion(), &safe_x, &safe_y, &safe_z, &minstatus, &minlevel, flag_needed)) {
 		//this should not happen...
-		_log(CLIENT__ERROR, "Unable to query zone info for ourself '%s'", zone->GetShortName());
+		Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Unable to query zone info for ourself '%s'", zone->GetShortName());
 		return(false);
 	}
 
 	if(GetLevel() < minlevel) {
-		_log(CLIENT__ERROR, "Character does not meet min level requirement (%d < %d)!", GetLevel(), minlevel);
+		Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Character does not meet min level requirement (%d < %d)!", GetLevel(), minlevel);
 		return(false);
 	}
 	if(Admin() < minstatus) {
-		_log(CLIENT__ERROR, "Character does not meet min status requirement (%d < %d)!", Admin(), minstatus);
+		Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Character does not meet min status requirement (%d < %d)!", Admin(), minstatus);
 		return(false);
 	}
 
 	if(flag_needed[0] != '\0') {
 		//the flag needed string is not empty, meaning a flag is required.
 		if(Admin() < minStatusToIgnoreZoneFlags && !HasZoneFlag(zone->GetZoneID())) {
-			_log(CLIENT__ERROR, "Character does not have the flag to be in this zone (%s)!", flag_needed);
+			Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Character does not have the flag to be in this zone (%s)!", flag_needed);
 			return(false);
 		}
 	}
 
 	return(true);
 }
+
+void Client::UpdateZoneChangeCount(uint32 zoneID)
+{
+	if(zoneID != GetZoneID() && !ignore_zone_count)
+	{
+		++m_pp.zone_change_count;
+		ignore_zone_count = true;
+	}
+
+}
+

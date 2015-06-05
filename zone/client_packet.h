@@ -1,19 +1,17 @@
-	// connecting opcode handlers
+	/* Connecting OpCode Handlers */
 	void Handle_Connect_0x3e33(const EQApplicationPacket *app);
 	void Handle_Connect_OP_ClientError(const EQApplicationPacket *app);
 	void Handle_Connect_OP_ClientUpdate(const EQApplicationPacket *app);
 	void Handle_Connect_OP_ReqClientSpawn(const EQApplicationPacket *app);
 	void Handle_Connect_OP_ReqNewZone(const EQApplicationPacket *app);
-	void Handle_Connect_OP_SendAAStats(const EQApplicationPacket *app);
 	void Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app);
 	void Handle_Connect_OP_SetDataRate(const EQApplicationPacket *app);
 	void Handle_Connect_OP_SetServerFilter(const EQApplicationPacket *app);
 	void Handle_Connect_OP_SpawnAppearance(const EQApplicationPacket *app);
 	void Handle_Connect_OP_TGB(const EQApplicationPacket *app);
-	void Handle_Connect_OP_UpdateAA(const EQApplicationPacket *app);
 	void Handle_Connect_OP_WearChange(const EQApplicationPacket *app);
 	void Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app);
-	// connected opcode handlers
+	/* Connected opcode handlers*/
 	void Handle_0x01e7(const EQApplicationPacket *app);
 	void Handle_OP_AAAction(const EQApplicationPacket *app);
 	void Handle_OP_Action(const EQApplicationPacket *app);
@@ -55,7 +53,6 @@
 	void Handle_OP_Discipline(const EQApplicationPacket *app);
 	void Handle_OP_DuelResponse(const EQApplicationPacket *app);
 	void Handle_OP_DuelResponse2(const EQApplicationPacket *app);
-	void Handle_OP_Dye(const EQApplicationPacket *app);
 	void Handle_OP_Emote(const EQApplicationPacket *app);
 	void Handle_OP_EndLootRequest(const EQApplicationPacket *app);
 	void Handle_OP_EnvDamage(const EQApplicationPacket *app);
@@ -168,3 +165,15 @@
 	void Handle_OP_YellForHelp(const EQApplicationPacket *app);
 	void Handle_OP_ZoneChange(const EQApplicationPacket *app);
 	void Handle_OP_ZoneEntryResend(const EQApplicationPacket *app);
+	void Handle_OP_LFGCommand(const EQApplicationPacket *app);
+	void Handle_OP_Disarm(const EQApplicationPacket *app);
+	void Handle_OP_Feedback(const EQApplicationPacket *app);
+	void Handle_OP_SoulMarkUpdate(const EQApplicationPacket *app);
+	void Handle_OP_SoulMarkList(const EQApplicationPacket *app);
+	void Handle_OP_SoulMarkAdd(const EQApplicationPacket *app);
+	void Handle_OP_MBRetrievalRequest(const EQApplicationPacket *app);
+	void Handle_OP_MBRetrievalDetailRequest(const EQApplicationPacket *app);
+	void Handle_OP_MBRetrievalPostRequest(const EQApplicationPacket *app);
+	void Handle_OP_MBRetrievalEraseRequest(const EQApplicationPacket *app);
+	void Handle_OP_Key(const EQApplicationPacket *app);
+	void Handle_OP_TradeRefused(const EQApplicationPacket *app);

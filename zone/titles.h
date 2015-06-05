@@ -18,9 +18,7 @@
 #ifndef TITLES_H
 #define TITLES_H
 
-#include "../common/types.h"
 #include <vector>
-#include <string>
 
 class Client;
 class EQApplicationPacket;
@@ -49,7 +47,7 @@ public:
 	TitleManager();
 
 	bool LoadTitles();
-
+	void ClearTitles();
 	std::string GetPrefix(int TitleID);
 	std::string GetSuffix(int TitleID);
 	int NumberOfAvailableTitles(Client *c);

@@ -24,7 +24,7 @@
 #include "../common/linked_list.h"
 #include "../common/timer.h"
 //#include "zoneserver.h"
-#include "../common/logsys.h"
+
 #include "../common/eq_packet_structs.h"
 #include "cliententry.h"
 
@@ -69,6 +69,7 @@ public:
 	inline void			SetCLE(ClientListEntry* iCLE)			{ cle = iCLE; }
 	inline uint16		GetExpansion()		{ return expansion; }
 	inline uint32		GetClientVersionBit() { return ClientVersionBit; }
+	inline bool			GetSessionLimit();
 
 private:
 
@@ -82,7 +83,6 @@ private:
 	Timer	autobootup_timeout;
 	uint32	pwaitingforbootup;
 
-	bool StartInTutorial;
 	uint32 ClientVersionBit;
 	bool OPCharCreate(char *name, CharCreate_Struct *cc);
 

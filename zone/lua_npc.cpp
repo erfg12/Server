@@ -269,7 +269,8 @@ void Lua_NPC::PauseWandering(int pause_time) {
 
 void Lua_NPC::MoveTo(float x, float y, float z, float h, bool save) {
 	Lua_Safe_Call_Void();
-	self->MoveTo(x, y, z, h, save);
+	auto position = glm::vec4(x, y, z, h);
+	self->MoveTo(position, save);
 }
 
 void Lua_NPC::NextGuardPosition() {
@@ -314,37 +315,37 @@ int Lua_NPC::GetSpawnPointID() {
 
 float Lua_NPC::GetSpawnPointX() {
 	Lua_Safe_Call_Real();
-	return self->GetSpawnPointX();
+	return self->GetSpawnPoint().x;
 }
 
 float Lua_NPC::GetSpawnPointY() {
 	Lua_Safe_Call_Real();
-	return self->GetSpawnPointY();
+	return self->GetSpawnPoint().y;
 }
 
 float Lua_NPC::GetSpawnPointZ() {
 	Lua_Safe_Call_Real();
-	return self->GetSpawnPointZ();
+	return self->GetSpawnPoint().z;
 }
 
 float Lua_NPC::GetSpawnPointH() {
 	Lua_Safe_Call_Real();
-	return self->GetSpawnPointH();
+	return self->GetSpawnPoint().w;
 }
 
 float Lua_NPC::GetGuardPointX() {
 	Lua_Safe_Call_Real();
-	return self->GetGuardPointX();
+	return self->GetGuardPoint().x;
 }
 
 float Lua_NPC::GetGuardPointY() {
 	Lua_Safe_Call_Real();
-	return self->GetGuardPointY();
+	return self->GetGuardPoint().y;
 }
 
 float Lua_NPC::GetGuardPointZ() {
 	Lua_Safe_Call_Real();
-	return self->GetGuardPointZ();
+	return self->GetGuardPoint().z;
 }
 
 void Lua_NPC::SetPrimSkill(int skill_id) {
@@ -420,11 +421,6 @@ int Lua_NPC::GetSpellFocusHeal() {
 float Lua_NPC::GetSlowMitigation() {
 	Lua_Safe_Call_Real();
 	return self->GetSlowMitigation();
-}
-
-float Lua_NPC::GetAttackSpeed() {
-	Lua_Safe_Call_Real();
-	return self->GetAttackSpeed();
 }
 
 int Lua_NPC::GetAccuracyRating() {
@@ -538,7 +534,6 @@ luabind::scope lua_register_npc() {
 		.def("GetSpellFocusDMG", (void(Lua_NPC::*)(int))&Lua_NPC::GetSpellFocusDMG)
 		.def("GetSpellFocusHeal", (void(Lua_NPC::*)(int))&Lua_NPC::GetSpellFocusHeal)
 		.def("GetSlowMitigation", (int(Lua_NPC::*)(void))&Lua_NPC::GetSlowMitigation)
-		.def("GetAttackSpeed", (float(Lua_NPC::*)(void))&Lua_NPC::GetAttackSpeed)
 		.def("GetAccuracyRating", (int(Lua_NPC::*)(void))&Lua_NPC::GetAccuracyRating)
 		.def("GetSpawnKillCount", (int(Lua_NPC::*)(void))&Lua_NPC::GetSpawnKillCount)
 		.def("GetScore", (int(Lua_NPC::*)(void))&Lua_NPC::GetScore)

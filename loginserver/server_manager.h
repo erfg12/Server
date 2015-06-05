@@ -18,7 +18,7 @@
 #ifndef EQEMU_SERVERMANAGER_H
 #define EQEMU_SERVERMANAGER_H
 
-#include "../common/debug.h"
+#include "../common/global_define.h"
 #include "../common/eq_stream_factory.h"
 #include "../common/emu_tcp_connection.h"
 #include "../common/emu_tcp_server.h"
@@ -48,11 +48,6 @@ public:
 	* Does basic processing for all the servers.
 	*/
 	void Process();
-
-	/**
-	* Sends a request to world to see if the client is banned or suspended.
-	*/
-	void SendUserToWorldRequest(unsigned int server_id, unsigned int client_account_id);
 
 	/**
 	* Sends a request to world to see if the client is banned or suspended.

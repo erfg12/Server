@@ -56,7 +56,7 @@ struct NPCType
 	int32	npc_faction_id;
 	uint32	merchanttype;
 	uint32	trap_template;
-	uint8	light;		//not loaded from DB
+	uint8	light;
 	uint32	AC;
 	uint32	Mana;	//not loaded from DB
 	uint32	ATK;	//not loaded from DB
@@ -81,16 +81,13 @@ struct NPCType
 	uint8	hairstyle;
 	uint8	luclinface;			//
 	uint8	beard;				//
-	uint32	drakkin_heritage;
-	uint32	drakkin_tattoo;
-	uint32	drakkin_details;
 	uint32	armor_tint[_MaterialCount];
 	uint32	min_dmg;
 	uint32	max_dmg;
 	int16	attack_count;
 	char	special_abilities[512];
-	uint16	d_meele_texture1;
-	uint16	d_meele_texture2;
+	uint16	d_melee_texture1;
+	uint16	d_melee_texture2;
 	char	ammo_idfile[30];
 	uint8	prim_melee_type;
 	uint8	sec_melee_type;
@@ -107,7 +104,6 @@ struct NPCType
 	bool	npc_aggro;
 	uint8	spawn_limit;	//only this many may be in zone at a time (0=no limit)
 	uint8	mount_color;	//only used by horse class
-	float	attack_speed;	//%+- on attack delay of the mob.
 	uint8	attack_delay;	//delay between attacks in 10ths of a second
 	int		accuracy_rating;	//10 = 1% accuracy
 	int		avoidance_rating;	//10 = 1% avoidance
@@ -125,6 +121,9 @@ struct NPCType
 	bool	no_target_hotkey;
 	bool	raid_target;
 	uint8 	probability;
+	uint32  combat_hp_regen;
+	uint32  combat_mana_regen;
+	bool	aggro_pc;
 };
 
 namespace player_lootitem {
@@ -133,11 +132,6 @@ namespace player_lootitem {
 		int16	equip_slot;
 		uint16	charges;
 		uint16	lootslot;
-		uint32	aug_1;
-		uint32	aug_2;
-		uint32	aug_3;
-		uint32	aug_4;
-		uint32	aug_5;
 		uint8	min_level;		  // 
 		uint8	max_level;		  // 
 	};
@@ -148,6 +142,7 @@ struct PlayerCorpse_Struct {
 	bool	locked;
 	uint32	itemcount;
 	uint32	exp;
+	uint32	gmexp;
 	float	size;
 	uint8	level;
 	uint32	race;
@@ -168,9 +163,9 @@ struct PlayerCorpse_Struct {
 	uint8 hairstyle;
 	uint8 face;
 	uint8 beard;
-	uint32 drakkin_heritage;
-	uint32 drakkin_tattoo;
-	uint32 drakkin_details;
+	uint8 killedby;
+	bool  rezzable;
+	uint32	rez_time;
 	player_lootitem::ServerLootItem_Struct	items[0];
 	//std::list<player_lootitem::ServerLootItem_Struct*> items;
 };
@@ -189,7 +184,6 @@ struct Door {
 	uint32	guild_id;
 	uint16	lock_pick;
 	uint32	keyitem;
-	uint8	nokeyring;
 	uint8	trigger_door;
 	uint8	trigger_type;
 	uint32	door_param;
@@ -202,6 +196,7 @@ struct Door {
 	float	dest_z;
 	float	dest_heading;
 	uint32	client_version_mask;
+	uint32	altkeyitem;
 };
 
 #pragma pack()
