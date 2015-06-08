@@ -120,14 +120,7 @@ E(OP_Assist);
 //Below are invalid opcodes ONLY
 E(OP_Unknown);
 E(OP_DisciplineUpdate);
-E(OP_Dye);
 E(OP_RaidJoin);
-E(OP_RemoveAllDoors);
 E(OP_SendAAStats);
-E(OP_SpellEffect);
-E(OP_TraderDelItem);
-E(OP_TraderItemUpdate);
-E(OP_Untargetable);
-E(OP_UpdateAA);
 #undef E
 #undef D

@@ -254,9 +254,8 @@ union
 		 };
 /*0384*/ uint8	lfg;			// 0=off, 1=lfg on
 /*0385*/ uint32 zoneID; // for mac.
-
-};
 	char  zonename[15]; //For trilogy.
+};
 
 struct LFG_Struct {
 	char	name[64];

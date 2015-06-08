@@ -1,6 +1,8 @@
 #ifndef CLIENTVERSIONS_H
 #define CLIENTVERSIONS_H
 
+#include "types.h"
+
 static const uint32 BIT_Trilogy = 1;
 static const uint32 BIT_MacPC = 2;
 static const uint32 BIT_MacIntel = 4;

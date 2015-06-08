@@ -1,7 +1,7 @@
-#include "../debug.h"
+#include "../global_define.h"
+#include "../eqemu_logsys.h"
 #include "trilogy.h"
 #include "../opcodemgr.h"
-#include "../logsys.h"
 #include "../eq_stream_ident.h"
 #include "../crc32.h"
 
@@ -13,6 +13,7 @@
 #include "../item.h"
 #include "trilogy_structs.h"
 #include "../rulesys.h"
+
 
 namespace Trilogy {
 
@@ -42,7 +43,7 @@ namespace Trilogy {
 			opcodes = new RegularOpcodeManager();
 			if(!opcodes->LoadOpcodes(opfile.c_str())) 
 			{
-				_log(NET__OPCODES, "Error loading opcodes file %s. Not registering patch %s.", opfile.c_str(), name);
+				Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Error loading opcodes file %s. Not registering patch %s.", opfile.c_str(), name);
 				return;
 			}
 		}
@@ -64,7 +65,7 @@ namespace Trilogy {
 		signature.first_eq_opcode = opcodes->EmuToEQ(OP_DataRate);
 		into.RegisterOldPatch(signature, pname.c_str(), &opcodes, &struct_strategy);
 		
-		_log(NET__IDENTIFY, "Registered patch %s", name);
+		Log.Out(Logs::General, Logs::Netcode, "[IDENTIFY] Registered patch %s", name);
 	}
 
 	void Reload() 
@@ -82,10 +83,10 @@ namespace Trilogy {
 			opfile += ".conf";
 			if(!opcodes->ReloadOpcodes(opfile.c_str()))
 			{
-				_log(NET__OPCODES, "Error reloading opcodes file %s for patch %s.", opfile.c_str(), name);
+				Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Error reloading opcodes file %s for patch %s.", opfile.c_str(), name);
 				return;
 			}
-			_log(NET__OPCODES, "Reloaded opcodes for patch %s", name);
+			Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Reloaded opcodes for patch %s", name);
 		}
 	}
 
@@ -125,10 +126,18 @@ namespace Trilogy {
 
 	DECODE(OP_EnterWorld) 
 	{
-		SETUP_DIRECT_DECODE(EnterWorld_Struct, structs::EnterWorld_Struct);
-		strn0cpy(emu->name, eq->charname, 30);
-		emu->return_home = 0;
-		emu->tutorial = 0;
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		if(!__eq_buffer)
+		{
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		__packet->size = sizeof(structs::EnterWorld_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size]; 
+		EnterWorld_Struct *emu = (EnterWorld_Struct*) __packet->pBuffer;
+		structs::EnterWorld_Struct *eq = (structs::EnterWorld_Struct *) __eq_buffer;
+		strn0cpy(emu->name, eq->charname, 64);
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -236,7 +245,8 @@ namespace Trilogy {
 			eq->anon = emu->player.spawn.anon;
 			strncpy(eq->name, emu->player.spawn.name, 64);
 			eq->deity = emu->player.spawn.deity;
-			if(emu->player.spawn.race == 42)
+			eq->race = emu->player.spawn.race;
+			if (emu->player.spawn.race == 42 && emu->player.spawn.gender == 2)
 				eq->size = emu->player.spawn.size + 2.0f;
 			else
 				eq->size = emu->player.spawn.size;
@@ -279,7 +289,6 @@ namespace Trilogy {
 			eq->flymode = emu->player.spawn.flymode;
 			eq->size = emu->player.spawn.size;
 			eq->petOwnerId = emu->player.spawn.petOwnerId;
-			_log(NET__STRUCTS, "ZoneEntry Packet is %i bytes uncompressed", sizeof(structs::ServerZoneEntry_Struct));
 			CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::ServerZoneEntry_Struct));
 
 		FINISH_ENCODE();
@@ -385,7 +394,8 @@ namespace Trilogy {
 		OUT_array(spellSlotRefresh, structs::MAX_PP_MEMSPELL);
 		eq->eqbackground = 0;
 
-		_log(NET__STRUCTS, "Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
+
+		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
 
 		CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::PlayerProfile_Struct)-4);
 		EQApplicationPacket* outapp = new EQApplicationPacket();
@@ -393,7 +403,7 @@ namespace Trilogy {
 		outapp->pBuffer = new uchar[10000];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, sizeof(structs::PlayerProfile_Struct), outapp->pBuffer, 10000);
 		EncryptOldProfilePacket(outapp->pBuffer, outapp->size);
-		_log(NET__STRUCTS, "Player Profile Packet is %i bytes compressed", outapp->size);
+		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes compressed", outapp->size);
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
 		delete __packet;
@@ -712,7 +722,7 @@ namespace Trilogy {
 		int entrycount = in->size / sizeof(Spawn_Struct);
 		if(entrycount == 0 || (in->size % sizeof(Spawn_Struct)) != 0) 
 		{
-			_log(NET__STRUCTS, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(Spawn_Struct));
+		//	_log(NET__STRUCTS, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(Spawn_Struct));
 			delete in;
 			return;
 		}
@@ -732,6 +742,7 @@ namespace Trilogy {
 
 			struct structs::Spawn_Struct* spawns = TrilogySpawns(emu,0);
 			memcpy(eq,spawns,sizeof(structs::Spawn_Struct));
+			safe_delete(spawns);
 
 		}
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
@@ -750,6 +761,7 @@ namespace Trilogy {
 
 		struct structs::Spawn_Struct* spawns = TrilogySpawns(emu,1);
 		memcpy(eq,spawns,sizeof(structs::Spawn_Struct));
+		safe_delete(spawns);
 
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(structs::Spawn_Struct));
 		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
@@ -757,6 +769,8 @@ namespace Trilogy {
 		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete[] __emu_buffer;
+		safe_delete(__packet);
+
 	}
 
 	DECODE(OP_ZoneChange)
@@ -905,7 +919,6 @@ namespace Trilogy {
 		OUT(level);
 		eq->unknown6 = 0x41; //Think this is target level.
 		OUT(instrument_mod);
-		OUT(bard_focus_id);
 		OUT(sequence);
 		OUT(type);
 		OUT(spell);
@@ -1020,7 +1033,7 @@ namespace Trilogy {
 				outapp->SetOpcode(OP_ItemPacket);
 
 			if(outapp->size != sizeof(structs::Item_Struct))
-				_log(ZONE__INIT,"Invalid size on OP_ItemPacket packet. Expected: %i, Got: %i", sizeof(structs::Item_Struct), outapp->size);
+				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_ItemPacket packet. Expected: %i, Got: %i", sizeof(structs::Item_Struct), outapp->size);
 
 			dest->FastQueuePacket(&outapp);
 			delete[] __emu_buffer;
@@ -1057,7 +1070,7 @@ namespace Trilogy {
 			memcpy(&myitem->item,mac_item,sizeof(structs::Item_Struct));
 		
 			if(outapp->size != sizeof(structs::TradeItemsPacket_Struct))
-				_log(ZONE__INIT,"Invalid size on OP_TradeItemPacket packet. Expected: %i, Got: %i", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
+				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_TradeItemPacket packet. Expected: %i, Got: %i", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
 
 			dest->FastQueuePacket(&outapp);
 			delete[] __emu_buffer;
@@ -1077,7 +1090,7 @@ namespace Trilogy {
 		int16 itemcount = in->size / sizeof(InternalSerializedItem_Struct);
 		if(itemcount == 0 || (in->size % sizeof(InternalSerializedItem_Struct)) != 0)
 		{
-			_log(NET__STRUCTS, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
+			Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
 			delete in;
 			return;
 		}
@@ -1099,7 +1112,7 @@ namespace Trilogy {
 			{
 				char *mac_item_char = reinterpret_cast<char*>(mac_item);
 				mac_item_string.append(mac_item_char,sizeof(structs::Item_Struct));
-				safe_delete_array(mac_item_char);	
+				safe_delete(mac_item);	
 			}
 		}
 		int32 length = 5000;
@@ -1109,6 +1122,7 @@ namespace Trilogy {
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_CharInventory, length);
 		outapp->size = buffer + DeflatePacket((uchar*) pi->packets, itemcount * sizeof(structs::Item_Struct), &outapp->pBuffer[buffer], length-buffer);
 		outapp->pBuffer[0] = itemcount;
+		safe_delete_array(pi);
 
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
@@ -1126,14 +1140,14 @@ namespace Trilogy {
 		int16 itemcount = in->size / sizeof(InternalSerializedItem_Struct);
 		if(itemcount == 0 || (in->size % sizeof(InternalSerializedItem_Struct)) != 0) 
 		{
-			_log(ZONE__INIT, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
+			Log.Out(Logs::Detail, Logs::Zone_Server, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(InternalSerializedItem_Struct));
 			delete in;
 			return;
 		}
-		if(itemcount > 80)
-			itemcount = 80;
+		if(itemcount > 79)
+			itemcount = 79;
 
-		int pisize = sizeof(structs::MerchantItems_Struct) + (80 * sizeof(structs::MerchantItemsPacket_Struct));
+		int pisize = sizeof(structs::MerchantItems_Struct) + (79 * sizeof(structs::MerchantItemsPacket_Struct));
 		structs::MerchantItems_Struct* pi = (structs::MerchantItems_Struct*) new uchar[pisize];
 		memset(pi, 0, pisize);
 
@@ -1154,7 +1168,8 @@ namespace Trilogy {
 
 				char *mac_item_char = reinterpret_cast<char*>(merchant);
 				mac_item_string.append(mac_item_char,sizeof(structs::MerchantItemsPacket_Struct));
-				safe_delete_array(mac_item_char);	
+				safe_delete(mac_item);	
+				safe_delete(merchant);
 			}
 		}
 		int32 length = 5000;
@@ -1167,6 +1182,7 @@ namespace Trilogy {
 
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
+		safe_delete_array(pi);
 	}
 
 	DECODE(OP_DeleteCharge) {  DECODE_FORWARD(OP_MoveItem); }
@@ -1178,7 +1194,7 @@ namespace Trilogy {
 		emu->to_slot = TrilogyToServerSlot(eq->to_slot);
 		IN(number_in_stack);
 
-		_log(INVENTORY__SLOTS, "EQMAC DECODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", emu->to_slot, emu->from_slot, emu->number_in_stack);
+		Log.Out(Logs::Detail, Logs::Inventory, "EQMAC DECODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", emu->to_slot, emu->from_slot, emu->number_in_stack);
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -1192,7 +1208,7 @@ namespace Trilogy {
 		eq->to_slot = ServerToTrilogySlot(emu->to_slot);
 		OUT(to_slot);
 		OUT(number_in_stack);
-		_log(INVENTORY__SLOTS, "EQMAC ENCODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", eq->to_slot, eq->from_slot, eq->number_in_stack);
+		Log.Out(Logs::Detail, Logs::Inventory, "EQMAC ENCODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", eq->to_slot, eq->from_slot, eq->number_in_stack);
 
 		FINISH_ENCODE();
 	}
@@ -1471,12 +1487,12 @@ namespace Trilogy {
 		int g;
 		for(g=0; g<10; g++)
 		{
-			/*if(eq->itemsinbag[g] > 0)
+			if(eq->itemsinbag[g] > 0)
 			{
 				eq->itemsinbag[g] = emu->itemsinbag[g];
-				_log(EQMAC__LOG, "Found a container item %i in slot: %i", emu->itemsinbag[g], g);
+				Log.Out(Logs::Detail, Logs::Inventory, "Found a container item %i in slot: %i", emu->itemsinbag[g], g);
 			}
-			else*/
+			else
 				eq->itemsinbag[g] = 0xFFFF;
 		}
 		eq->unknown208 = 0xFFFFFFFF;
@@ -1611,7 +1627,6 @@ namespace Trilogy {
 		IN(lvlhigh);
 		IN(gmlookup);
 		IN(guildid);
-		emu->type = 3;
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -1888,7 +1903,6 @@ namespace Trilogy {
 		strn0cpy(emu->bug,eq->bug,sizeof(eq->bug));
 		strcpy(emu->name,eq->name);
 		strcpy(emu->target_name,eq->target_name);
-		strcpy(emu->ui,"EQMac Client");
 		IN(x);
 		IN(y);
 		IN(z);
@@ -2014,9 +2028,13 @@ namespace Trilogy {
 		if(item->ID > 32767)
 			return 0;
 
-		structs::Item_Struct *mac_pop_item = new struct structs::Item_Struct;
+		structs::Item_Struct *mac_pop_item = new structs::Item_Struct;
 		memset(mac_pop_item,0,sizeof(structs::Item_Struct));
 
+		if(item->GMFlag == -1)
+			Log.Out(Logs::Moderate, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
+
+		// General items
   		if(type == 0)
   		{
   			mac_pop_item->equipSlot = ServerToTrilogySlot(slot_id_in);
@@ -2223,7 +2241,7 @@ namespace Trilogy {
 		eq->anon = emu->anon;
 		memcpy(eq->name, emu->name, 64);
 		eq->deity = emu->deity;
-		if(emu->race == 42)
+		if (emu->race == 42 && emu->gender == 2)
 			eq->size = emu->size + 2.0f;
 		else
 			eq->size = emu->size;
@@ -2260,6 +2278,19 @@ namespace Trilogy {
 		if(eq->GuildID == 0)
 			eq->GuildID = 0xFFFF;
 		eq->helm = emu->helm;
+		if (emu->race >= 209 && emu->race <= 212)
+		{
+			eq->race = 75;
+			if (emu->race == 210)
+				eq->texture = 3;
+			else if (emu->race == 211)
+				eq->texture = 2;
+			else if (emu->race == 212)
+				eq->texture = 1;
+			else
+				eq->texture = 0;
+		}
+		else
 		eq->race = emu->race;
 		strncpy(eq->Surname, emu->lastName, 32);
 		eq->walkspeed = emu->walkspeed;
@@ -2288,21 +2319,14 @@ namespace Trilogy {
 	}
 
 	ENCODE(OP_DisciplineUpdate) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_Dye) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_RaidJoin) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_RemoveAllDoors) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_SendAAStats) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_SpellEffect) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_TraderDelItem) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_TraderItemUpdate) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_Untargetable) { ENCODE_FORWARD(OP_Unknown); }
-	ENCODE(OP_UpdateAA) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_Unknown)
 	{
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		_log(EQMAC__LOG, "Dropped an invalid packet: %s",opcodes->EmuToName(in->GetOpcode()));
+		Log.Out(Logs::Detail, Logs::Client_Server_Packet, "Dropped an invalid packet: %s", opcodes->EmuToName(in->GetOpcode()));
 
 		delete in;
 		return;

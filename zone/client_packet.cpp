@@ -818,7 +818,6 @@ void Client::CheatDetected(CheatTypes CheatType, float x, float y, float z)
 
 void Client::Handle_Connect_OP_ClientError(const EQApplicationPacket *app)
 {
-	_log(EQMAC__LOG, "OP_ClientError.");
 	if (app->size != sizeof(ClientError_Struct)) {
 		Log.Out(Logs::General, Logs::Error, "Invalid size on OP_ClientError: Expected %i, Got %i",
 			sizeof(ClientError_Struct), app->size);
@@ -830,7 +829,6 @@ void Client::Handle_Connect_OP_ClientError(const EQApplicationPacket *app)
 
 void Client::Handle_Connect_OP_ClientUpdate(const EQApplicationPacket *app)
 {
-	_log(EQMAC__LOG, "OP_ClientUpdate.");
 	conn_state = ClientReadyReceived;
 
 	CompleteConnect();
@@ -839,7 +837,6 @@ void Client::Handle_Connect_OP_ClientUpdate(const EQApplicationPacket *app)
 
 void Client::Handle_Connect_OP_ReqClientSpawn(const EQApplicationPacket *app)
 {
-	_log(EQMAC__LOG, "ReqClientSpawn.");
 	conn_state = ClientSpawnRequested;
 
 	EQApplicationPacket* outapp = new EQApplicationPacket;
@@ -883,7 +880,6 @@ void Client::Handle_Connect_OP_ReqNewZone(const EQApplicationPacket *app)
 
 void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 {
-	_log(EQMAC__LOG, "OP_SendExpZonein.");
 	//////////////////////////////////////////////////////
 	// Spawn Appearance Packet
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
@@ -967,7 +963,6 @@ void Client::Handle_Connect_OP_SetDataRate(const EQApplicationPacket *app)
 
 void Client::Handle_Connect_OP_SetServerFilter(const EQApplicationPacket *app)
 {
-	_log(EQMAC__LOG, "OP_SetServerFilter.");
 	if (app->size != sizeof(SetServerFilter_Struct)) {
 		Log.Out(Logs::General, Logs::Error, "Received invalid sized OP_SetServerFilter");
 		DumpPacket(app);
@@ -1482,7 +1477,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	memcpy(outapp->pBuffer, pps, outapp->size);
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
-	_log(EQMAC__LOG, "PP");
 	database.LoadPetInfo(this);
 
 	/* Moved here so it's after where we load the pet data. */
@@ -1514,7 +1508,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	strncpy(sze->player.spawn.zonename, zone->GetShortName(), 15);
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
-	_log(EQMAC__LOG, "Zone Entry");
 	//_log(EQMAC__LOG, "Spawns");
 	/* Zone Spawns Packet */
 //	entity_list.SendZoneSpawnsBulk(this);
@@ -1575,7 +1568,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	outapp->priority = 6;
 	QueuePacket(outapp);
 	safe_delete(outapp);
-	_log(EQMAC__LOG, "Weather");
 
 	SetAttackTimer();
 	conn_state = ZoneInfoSent;

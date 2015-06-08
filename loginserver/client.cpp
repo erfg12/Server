@@ -326,11 +326,6 @@ void Client::Handle_PCLogin(const char* data, unsigned int size)
 	unsigned int enable;
 	string platform = "PC";
 	macversion = pc;
-	if(version == cv_tri)
-	{
-		platform = "Trilogy";
-		macversion = trilogy;
-	}
 
 	if (server.db->GetLoginDataFromAccountName(username, d_pass_hash, d_account_id) == false)
 	{
@@ -424,11 +419,8 @@ void Client::Handle_Play(const char* data)
 void Client::SendServerListPacket()
 {
 	EQApplicationPacket *outapp;
-
-	if (version == cv_tri)
-		outapp = server.SM->CreateTrilogyServerListPacket(this);
-	else
-		outapp = server.SM->CreateOldServerListPacket(this);
+	
+	outapp = server.SM->CreateOldServerListPacket(this);
 
 	if(server.options.IsDumpOutPacketsOn())
 	{

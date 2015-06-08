@@ -2485,12 +2485,12 @@ struct PlayerProfile_Struct
 /*0168*/ uint16 inventory[30];				// Comment: Id of items in inventory (Confirmed by Tazadar)
 /*0228*/ uint32 inventoryitemPointers[30];	// Comment: Harakiri these seems to be only used by the client, they are the pointers to the actual item_struct of each item see offset 004C71A3, 
 											// if these are not cleared before sending, the client will print "Got a bogus item, deleting it" - another indication these are pointers
-/*0348*/ struct	ItemProperties_Struct	invItemProprieties[30]; // Comment: infos about the items in the inventory (confirmed by Tazadar)
+/*0348*/ struct	OldItemProperties_Struct	invItemProprieties[30]; // Comment: infos about the items in the inventory (confirmed by Tazadar)
 /*0648*/ struct OldSpellBuff_Struct buffs[15];	// Comment:
 /*0798*/ uint16 containerinv[80];           // Comment: Ids of items in bags (confirmed by Tazadar)
 /*0958*/ uint16 cursorbaginventory[10];     // Comment: Ids of items in the bag of your cursor (confirmed by Tazadar)
-/*0978*/ struct	ItemProperties_Struct	bagItemProprieties[80]; // Comment: infos about the items in the bag (confirmed by Tazadar)
-/*1778*/ struct	ItemProperties_Struct	cursorItemProprieties[10]; // Comment: infos about the items in the cursor bag (confirmed by Tazadar)
+/*0978*/ struct	OldItemProperties_Struct	bagItemProprieties[80]; // Comment: infos about the items in the bag (confirmed by Tazadar)
+/*1778*/ struct	OldItemProperties_Struct	cursorItemProprieties[10]; // Comment: infos about the items in the cursor bag (confirmed by Tazadar)
 /*1878*/ short  spell_book[256];			// Comment: 
 /*2390*/ short  mem_spells[8];			// Comment: 
 /*2406*/ int8   pp_unknown10[2];			// Comment: 
@@ -2529,8 +2529,8 @@ struct PlayerProfile_Struct
 /*2820*/ int8	unknown2820[24];			// Comment: 
 /*2844*/ char   bind_point_zone[20];		// Comment: 
 /*2864*/ char   start_point_zone[4][20];	// Comment: 
-/*2944*/ struct	ItemProperties_Struct bankinvitemproperties[8];			// Comment: infos of items in bank (Confirmed by Tazadar)
-/*3024*/ struct	ItemProperties_Struct bankbagitemproperties[80];		// Comment: infos of items in bank containers (Confirmed by Tazadar)
+/*2944*/ struct	OldItemProperties_Struct bankinvitemproperties[8];			// Comment: infos of items in bank (Confirmed by Tazadar)
+/*3024*/ struct	OldItemProperties_Struct bankbagitemproperties[80];		// Comment: infos of items in bank containers (Confirmed by Tazadar)
 /*3824*/ int8	unknown2944[4];				// Comment: 
 /*3828*/ float	bind_location[3][5];		// Comment: Bind affinity location, Harakiri Confirmed by client method translocatePC in eqgame offset 00495996 : bind_location[1][1]; == x bind location bind_location[0][1] == y bind location bind_location[2][1]; == z bind location
 /*3888*/ int8	unknown3888[24];			// Comment: 

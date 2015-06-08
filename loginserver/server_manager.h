@@ -65,11 +65,6 @@ public:
 	EQApplicationPacket *CreateOldServerListPacket(Client *c);
 
 	/**
-	* Creates a server list packet for the Trilogy client.
-	*/
-	EQApplicationPacket *CreateTrilogyServerListPacket(Client *c);
-
-	/**
 	* Checks to see if there is a server exists with this name, ignoring option.
 	*/
 	bool ServerExists(std::string l_name, std::string s_name, WorldServer *ignore = nullptr);
