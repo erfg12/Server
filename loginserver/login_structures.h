@@ -28,6 +28,14 @@ struct ServerList_Struct {
 	uchar	data[0];
 };
 
+struct ServerList_Trilogy_Struct {
+	uint8	numservers;
+	uint8	unknown1;
+	uint8	unknown2;
+	uint8	showusercount; // 0xFF = show numbers, 0x0 = show "UP"
+	uchar	data[0];
+};
+
 struct ServerListServerFlags_Struct {
 	uint8 greenname;
 	uint32 usercount;
