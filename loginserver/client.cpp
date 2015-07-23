@@ -69,7 +69,7 @@ bool Client::Process()
 			{
 				if(server.options.IsTraceOn())
 				{
-					server_log->Log(log_network, "Session ready received from client.");
+					server_log->Log(log_network, "Session login received from client.");
 				}
 				Handle_OSXLogin((const char*)app->pBuffer, app->Size());
 				break;
@@ -187,17 +187,19 @@ void Client::Handle_SessionReady(const char* data, unsigned int size)
 
 void Client::Handle_OSXLogin(const char* data, unsigned int size)
 {
-	if(version != cv_old)
+	if (version != cv_old)
 	{
-		//Not old client, gtfo haxxor!
+		cout << "Not old client, gtfo haxxor!";
 		return;
 	}
-	
+
 	status = cs_logged_in;
 
 	string ourdata = data;
-	if(size < strlen("eqworld-52.989studios.com") + 1)
+	if (size < strlen("eqworld-52.989studios.com") + 1){
+		cout << "wrong size?";
 		return;
+	}
 
 	//Get rid of that 989 studios part of the string, plus remove null term zero.
 	string userpass = ourdata.substr(0, ourdata.find("eqworld-52.989studios.com") - 1);
@@ -299,6 +301,7 @@ void Client::Handle_PCLogin(const char* data, unsigned int size)
 	}
 
 	if (size < sizeof(LoginServerInfo_Struct)) {
+		cout << "wrong size";
 		return;
 	}
 
