@@ -146,10 +146,8 @@ public:
 	virtual void CalcBonuses();
 	virtual int GetCurrentBuffSlots() const { return RuleI(Spells, MaxBuffSlotsNPC); }
 	virtual int GetCurrentSongSlots() const { return RuleI(Spells, MaxSongSlotsNPC); }
-	virtual int GetCurrentDiscSlots() const { return RuleI(Spells, MaxDiscSlotsNPC); }
 	virtual int GetMaxBuffSlots() const { return RuleI(Spells, MaxBuffSlotsNPC); }
 	virtual int GetMaxSongSlots() const { return RuleI(Spells, MaxSongSlotsNPC); }
-	virtual int GetMaxDiscSlots() const { return RuleI(Spells, MaxDiscSlotsNPC); }
 	virtual int GetMaxTotalSlots() const { return RuleI(Spells, MaxTotalSlotsNPC); }
 	virtual int GetPetMaxTotalSlots() const { return RuleI(Spells, MaxTotalSlotsPET); }
 	virtual void InitializeBuffSlots();
@@ -176,8 +174,8 @@ public:
 	virtual void SpellProcess();
 	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
 
-	void	AddItem(const Item_Struct* item, uint16 charges, bool equipitem = true);
-	void	AddItem(uint32 itemid, uint16 charges, bool equipitem = true);
+	void	AddItem(const Item_Struct* item, uint16 charges, bool equipitem = true, bool quest = false);
+	void	AddItem(uint32 itemid, uint16 charges, bool equipitem = true, bool quest = false);
 	void	AddLootTable();
 	void	AddLootTable(uint32 ldid);
 	void	DescribeAggro(Client *towho, Mob *mob, bool verbose);
@@ -191,6 +189,14 @@ public:
 	void	QueryLoot(Client* to);
 	uint32	CountLoot();
 	inline uint32	GetLoottableID()	const { return loottable_id; }
+	bool	GetQuestLootItem(int16 itemid); 
+	bool	HasQuestLootItem(); 
+	bool	RemoveQuestLootItems(int16 itemid);
+	bool	QuestLootCount(uint16 itemid1, uint16 itemid2, uint16 itemid3, uint16 itemid4);
+	void	CleanQuestLootItems();
+	uint8	CountQuestItem(uint16 itemid);
+	uint8	CountQuestItems();
+	void	RemoveItem(ServerLootItem_Struct* item_data);
 	virtual void UpdateEquipmentLight();
 
 	inline uint32	GetCopper()		const { return copper; }
@@ -233,7 +239,7 @@ public:
 	uint32	MerchantType;
 	bool	merchant_open;
 	inline void	MerchantOpenShop() { merchant_open = true; }
-	inline void	MerchantCloseShop() { merchant_open = false; }
+	inline void	MerchantCloseShop() { entity_list.SendMerchantEnd(this); merchant_open = false; }
 	inline bool	IsMerchantOpen() { return merchant_open; }
 	void	Depop(bool StartSpawnTimer = false);
 	void	Stun(int duration, Mob* attacker);
@@ -249,8 +255,9 @@ public:
 	inline int32	GetNPCFactionID()	const { return npc_faction_id; }
 	inline int32	GetPreCharmNPCFactionID()	const { return precharm_npc_faction_id; }
 	inline int32	GetPrimaryFaction()	const { return primary_faction; }
-	int32	GetNPCHate(Mob* in_ent) {return hate_list.GetEntHate(in_ent);}
+	int32	GetNPCHate(Mob* in_ent, bool includeBonus = true) {return hate_list.GetEntHate(in_ent, false, includeBonus);}
 	bool	IsOnHatelist(Mob*p) { return hate_list.IsOnHateList(p);}
+	void	SetRememberDistantMobs(bool state) { hate_list.SetRememberDistantMobs(state); }
 
 	void	SetNPCFactionID(int32 in) { npc_faction_id = in; database.GetFactionIdsForNPC(npc_faction_id, &faction_list, &primary_faction); }
 	void	SetPreCharmNPCFactionID(int32 in) { precharm_npc_faction_id = in; }
@@ -272,7 +279,7 @@ public:
 	bool	IsTaunting() { return taunting; }
 	void	PickPocket(Client* thief);
 	void	StartSwarmTimer(uint32 duration) { swarm_timer.Start(duration); }
-	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, int16 charges, uint8 minlevel, uint8 maxlevel, bool equipit, bool wearchange = false);
+	void	AddLootDrop(const Item_Struct*dbitem, ItemList* itemlistconst, int16 charges, uint8 minlevel, uint8 maxlevel, bool equipit, bool wearchange = false, bool quest = false, bool pet = false);
 	virtual void DoClassAttacks(Mob *target);
 	void	CheckSignal();
 	inline bool IsTargetableWithHotkey() const { return no_target_hotkey; }
@@ -335,6 +342,8 @@ public:
 	int32	GetAvoidanceRating() const { return (avoidance_rating); }
 	void	SetAvoidanceRating(int32 d) { avoidance_rating = d;}
 	int32 GetRawAC() const { return AC; }
+	void	SetIgnoreDistance(float distance) { ignore_distance = distance; }
+	float	GetIgnoreDistance() { return ignore_distance; }
 
 	void	ModifyNPCStat(const char *identifier, const char *newValue);
 	virtual void SetLevel(uint8 in_level, bool command = false);
@@ -382,10 +391,19 @@ public:
 	void	mod_npc_killed(Mob* oos);
 	void	AISpellsList(Client *c);
 
-	bool IsRaidTarget() const { return raid_target; };
+	bool IsRaidTarget() const { return raid_target; }
 
 	uint16 GetPrimaryMeleeTexture() { return d_melee_texture1; }
 	uint16 GetSecondaryMeleeTexture() { return d_melee_texture2; }
+
+	bool AddQuestLoot(int16 itemid, int8 charges = 1);
+	bool AddPetLoot(int16 itemid, int8 charges = 1);
+	void DeleteQuestLoot(int16 itemid1, int16 itemid2 = 0, int16 itemid3 = 0, int16 itemid4 = 0);
+	void DeleteInvalidQuestLoot();
+	bool IsBoat();
+	void ShowQuickStats(Client* client);
+	bool IsEquipped(int16 itemid);
+	uint8 GetBaseTexture() const { return base_texture; }
 
 protected:
 
@@ -487,6 +505,8 @@ protected:
 	QGlobalCache *qGlobals;
 
 	bool raid_target;
+	float ignore_distance;
+	uint8 base_texture;
 
 private:
 	uint32	loottable_id;

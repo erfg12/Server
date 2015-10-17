@@ -89,7 +89,7 @@ protected:
 		cur = m_list.begin();
 		while(cur != m_list.end()) {
 			T *data = *cur;
-			if (data->IsFree() && (!data->CheckNetActive())) {
+			if (data != nullptr && data->IsFree() && (!data->CheckNetActive())) {
 				#if EQN_DEBUG >= 4
 					std::cout << "TCPConnection Connection deleted." << std::endl;
 				#endif

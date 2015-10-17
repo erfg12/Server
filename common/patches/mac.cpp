@@ -14,6 +14,8 @@
 #include "mac_structs.h"
 #include "../rulesys.h"
 
+#pragma warning( disable : 4244 4267 4309 )
+
 namespace Mac {
 
 	static const char *name = "Mac";
@@ -159,10 +161,17 @@ namespace Mac {
 			strncpy(eq->name, emu->player.spawn.name, 64);
 			eq->deity = emu->player.spawn.deity;
 			eq->race = emu->player.spawn.race;
-			if (emu->player.spawn.race == 42 && emu->player.spawn.gender == 2)
-				eq->size = emu->player.spawn.size + 2.0f;
+			if ((emu->player.spawn.race == 42 || emu->player.spawn.race == 120) && emu->player.spawn.gender == 2)
+			{
+				eq->size = emu->player.spawn.size + 4.0f;
+				eq->width = emu->player.spawn.size + 4.0f;
+			}
 			else
+			{
 				eq->size = emu->player.spawn.size;
+				eq->width = emu->player.spawn.size;
+			}
+			
 			eq->NPC = emu->player.spawn.NPC;
 			eq->invis = emu->player.spawn.invis;
 			eq->max_hp = emu->player.spawn.max_hp;
@@ -188,7 +197,7 @@ namespace Mac {
 			eq->AFK = emu->player.spawn.afk;
 			eq->title = emu->player.spawn.aaitle;
 			eq->anim_type = 0x64;
-			eq->texture = emu->player.spawn.equip_chest2;
+			eq->bodytexture = emu->player.spawn.bodytexture;
 			eq->helm = emu->player.spawn.helm;
 			eq->GM = emu->player.spawn.gm;
 			eq->GuildID = emu->player.spawn.guildID;
@@ -196,7 +205,7 @@ namespace Mac {
 				eq->GuildID = 0xFFFF;
 			eq->guildrank = emu->player.spawn.guildrank;
 			if(eq->guildrank == 0)
-				eq->guildrank = 0xFF;
+				eq->guildrank = 0xFFFF;
 			strncpy(eq->Surname, emu->player.spawn.lastName, 32);
 			eq->walkspeed = emu->player.spawn.walkspeed;
 			eq->runspeed = emu->player.spawn.runspeed;
@@ -277,12 +286,6 @@ namespace Mac {
 		OUT(copper_cursor);
 		OUT_array(skills, structs::MAX_PP_SKILL);  // 1:1 direct copy (100 dword)
 
-		//for(r = 0; r < 50; r++) {
-		//	eq->innate[r] = 255;
-		//}
-		//OUT(ATR_PET_LOH_timer);
-		//OUT(UnknownTimer);
-		//OUT(HarmTouchTimer);
 		int value = RuleI(Character,ConsumptionValue);
 
 		float tpercent = (float)emu->thirst_level/(float)value;
@@ -311,6 +314,7 @@ namespace Mac {
 		OUT(anon);
 		OUT(gm);
 		OUT(guildrank);
+		eq->uniqueGuildID = emu->guild_id;
 		OUT(exp);
 		OUT_array(languages, 26);
 		OUT(x);
@@ -349,6 +353,36 @@ namespace Mac {
 		OUT(abilitySlotRefresh);
 		OUT_array(spellSlotRefresh, structs::MAX_PP_MEMSPELL);
 		eq->eqbackground = 0;
+		OUT(fatigue);
+		OUT(height);
+		OUT(width);
+		eq->length = 0;
+		eq->view_height = 0;
+		OUT_array(cursorbaginventory,pp_cursorbaginventory_size);
+		for(r = 0; r < pp_cursorbaginventory_size; r++)
+		{
+			OUT(cursorItemProperties[r].charges);
+		}
+		OUT_array(inventory,pp_inventory_size);
+		for(r = 0; r < pp_inventory_size; r++)
+		{
+			OUT(invItemProperties[r].charges);
+		}
+		OUT_array(containerinv,pp_containerinv_size);
+		for(r = 0; r < pp_containerinv_size; r++)
+		{
+			OUT(bagItemProperties[r].charges);
+		}
+		OUT_array(bank_inv,pp_bank_inv_size);
+		for(r = 0; r < pp_bank_inv_size; r++)
+		{
+			OUT(bankinvitemproperties[r].charges);
+		}
+		OUT_array(bank_cont_inv,pp_containerinv_size);
+		for(r = 0; r < pp_containerinv_size; r++)
+		{
+			OUT(bankbagitemproperties[r].charges);
+		}
 
 		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
 
@@ -923,9 +957,6 @@ namespace Mac {
 			myitem->slotid = int_struct->slot_id;
 			memcpy(&myitem->item,mac_item,sizeof(structs::Item_Struct));
 		
-			if(outapp->size != sizeof(structs::TradeItemsPacket_Struct))
-				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_TradeItemPacket packet. Expected: %i, Got: %i", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
-
 			dest->FastQueuePacket(&outapp);
 			delete[] __emu_buffer;
 		}
@@ -1037,6 +1068,58 @@ namespace Mac {
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
 		safe_delete_array(pi);
+	}
+
+	ENCODE(OP_PickPocket) 
+	{
+
+		if((*p)->size == sizeof(PickPocket_Struct))
+		{
+			ENCODE_LENGTH_EXACT(PickPocket_Struct);
+			SETUP_DIRECT_ENCODE(PickPocket_Struct, structs::PickPocket_Struct);
+			OUT(to);
+			OUT(from);
+			OUT(myskill);
+			OUT(type);
+			OUT(coin);
+			FINISH_ENCODE();
+		}
+		else 
+		{
+			//consume the packet
+			EQApplicationPacket *in = *p;
+			*p = nullptr;
+
+			//store away the emu struct
+			unsigned char *__emu_buffer = in->pBuffer;
+			ItemPacket_Struct *old_item_pkt=(ItemPacket_Struct *)__emu_buffer;
+			InternalSerializedItem_Struct *int_struct=(InternalSerializedItem_Struct *)(old_item_pkt->SerializedItem);
+
+			const ItemInst * item = (const ItemInst *)int_struct->inst;
+	
+			if(item)
+			{
+				structs::Item_Struct* mac_item = MacItem((ItemInst*)int_struct->inst,int_struct->slot_id);
+
+				if(mac_item == 0)
+				{
+					delete in;
+					return;
+				}
+
+				EQApplicationPacket* outapp = new EQApplicationPacket(OP_PickPocket,sizeof(structs::PickPocketItemPacket_Struct));
+				structs::PickPocketItemPacket_Struct* myitem = (structs::PickPocketItemPacket_Struct*) outapp->pBuffer;
+				myitem->from = old_item_pkt->fromid;
+				myitem->to = old_item_pkt->toid;
+				myitem->myskill = old_item_pkt->skill;
+				myitem->coin = 0;
+				myitem->type = 5;
+				memcpy(&myitem->item,mac_item,sizeof(structs::Item_Struct));
+
+				dest->FastQueuePacket(&outapp);
+				delete[] __emu_buffer;
+			}
+		}
 	}
 
 	DECODE(OP_DeleteCharge) {  DECODE_FORWARD(OP_MoveItem); }
@@ -1423,15 +1506,6 @@ namespace Mac {
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_ManaChange)
-	{
-		ENCODE_LENGTH_EXACT(ManaChange_Struct);
-		SETUP_DIRECT_ENCODE(ManaChange_Struct, structs::ManaChange_Struct);
-		OUT(new_mana);
-		OUT(spell_id);
-		FINISH_ENCODE();
-	}
-
 	ENCODE(OP_DeleteSpawn)
 	{
 		SETUP_DIRECT_ENCODE(DeleteSpawn_Struct, structs::DeleteSpawn_Struct);
@@ -1486,20 +1560,6 @@ namespace Mac {
 		IN(item_id);
 		strcpy(emu->item_name,eq->item_name);
 		FINISH_DIRECT_DECODE();
-	}
-
-	ENCODE(OP_LogServer) 
-	{
-		ENCODE_LENGTH_EXACT(LogServer_Struct);
-		SETUP_DIRECT_ENCODE(LogServer_Struct, structs::LogServer_Struct);
-		strcpy(eq->worldshortname, "alkabor");
-		strcpy(eq->unknown096, "pacman");
-		OUT(enable_pvp);
-		OUT(enable_FV);
-		eq->NameGen = 1;
-		eq->Gibberish = 1;
-		eq->ProfanityFilter = 0;
-		FINISH_ENCODE();
 	}
 
 	ENCODE(OP_RequestClientZoneChange)
@@ -1852,7 +1912,7 @@ namespace Mac {
 		memset(mac_pop_item,0,sizeof(structs::Item_Struct));
 
 		if(item->GMFlag == -1)
-			Log.Out(Logs::Moderate, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
+			Log.Out(Logs::Detail, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
 
 		// General items
   		if(type == 0)
@@ -1868,9 +1928,9 @@ namespace Mac {
 		// Items on a merchant
   		else if(type == 1)
   		{ 
-  			mac_pop_item->Charges = 1;
+  			mac_pop_item->Charges = inst->GetCharges();
   			mac_pop_item->equipSlot = inst->GetMerchantSlot();
-			mac_pop_item->Price = inst->GetPrice();  //This handles sellrate for us. 
+			mac_pop_item->Price = inst->GetPrice();  //This handles sellrate, faction, cha, and vendor greed for us. 
 			mac_pop_item->SellRate = 1;
 		}
 		// Item links
@@ -1890,7 +1950,8 @@ namespace Mac {
 			mac_pop_item->NoRent = item->NoRent;         
 			mac_pop_item->NoDrop = item->NoDrop;         
 			mac_pop_item->Size = item->Size;           
-			mac_pop_item->ID = item->ID;        
+			mac_pop_item->ID = item->ID;       
+			mac_pop_item->inv_refnum = mac_pop_item->equipSlot;
 			mac_pop_item->Icon = item->Icon;       
 			mac_pop_item->Slots = item->Slots;  
 			mac_pop_item->CastTime = item->CastTime;  
@@ -1927,6 +1988,7 @@ namespace Mac {
 				mac_pop_item->container.BagSlots = item->BagSlots;         
 				mac_pop_item->container.BagSize = item->BagSize;    
 				mac_pop_item->container.BagWR = item->BagWR; 
+				mac_pop_item->container.IsBagOpen = 0;
 			}
 			else if(item->ItemClass == 2)
 			{
@@ -2068,8 +2130,8 @@ namespace Mac {
 		eq->anon = emu->anon;
 		memcpy(eq->name, emu->name, 64);
 		eq->deity = emu->deity;
-		if (emu->race == 42 && emu->gender == 2)
-				eq->size = emu->size + 2.0f;
+		if ((emu->race == 42 || emu->race == 120) && emu->gender == 2)
+			eq->size = emu->size + 4.0f;
 		else
 			eq->size = emu->size;
 		eq->NPC = emu->NPC;
@@ -2093,7 +2155,8 @@ namespace Mac {
 			eq->guildrank = 0;
 			eq->LD=1;
 		}
-		eq->texture = emu->equip_chest2;
+
+		eq->bodytexture = emu->bodytexture;
 		for(int k = 0; k < 9; k++) 
 		{
 			eq->equipment[k] = emu->equipment[k];
@@ -2109,13 +2172,13 @@ namespace Mac {
 		{
 			eq->race = 75;
 			if (emu->race == 210)
-				eq->texture = 3;
+				eq->bodytexture = 3;
 			else if (emu->race == 211)
-				eq->texture = 2;
+				eq->bodytexture = 2;
 			else if (emu->race == 212)
-				eq->texture = 1;
+				eq->bodytexture = 1;
 			else
-				eq->texture = 0;
+				eq->bodytexture = 0;
 		}
 		else
 			eq->race = emu->race;
@@ -2145,7 +2208,6 @@ namespace Mac {
 		return eq;
 	}
 
-	ENCODE(OP_DisciplineUpdate) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_RaidJoin) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_Unknown)
 	{

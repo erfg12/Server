@@ -20,6 +20,7 @@
 
 #include "map.h"
 #include "pathing.h"
+#include "string_ids.h"
 #include "water_map.h"
 #include "zone.h"
 
@@ -30,6 +31,44 @@
 extern Zone* zone;
 
 #define FEAR_PATHING_DEBUG
+
+int Mob::GetFleeRatio()
+{
+	int specialFleeRatio = GetSpecialAbility(FLEE_PERCENT);
+	int fleeRatio = specialFleeRatio > 0 ? specialFleeRatio : RuleI(Combat, FleeHPRatio);
+
+	Mob *hate_top = GetHateTop();
+	if (!hate_top)
+	{
+		return 0;
+	}
+
+	uint8 hateTopLevel = hate_top->GetLevel();
+
+	if (GetLevel() <= hateTopLevel)
+	{
+		if (hateTopLevel > 25 && (hateTopLevel - GetLevel()) > (GetLevel() / 2))
+		{
+			// deep green con runs much earlier
+			return fleeRatio * 2;
+		}
+	}
+	else
+	{
+		if (GetLevel() > (hateTopLevel + 2))
+		{
+			// red con
+			return fleeRatio / 2;
+		}
+		else
+		{
+			// yellow con
+			return fleeRatio * 2 / 3;
+		}
+	}
+
+	return fleeRatio;
+}
 
 //this is called whenever we are damaged to process possible fleeing
 void Mob::CheckFlee() {
@@ -44,11 +83,10 @@ void Mob::CheckFlee() {
 	if(!flee_timer.Check())
 		return;	//only do all this stuff every little while, since
 				//its not essential that we start running RIGHT away
-
+	
 	//see if were possibly hurt enough
 	float ratio = GetHPRatio();
-	float fleeratio = GetSpecialAbility(FLEE_PERCENT);
-	fleeratio = fleeratio > 0 ? fleeratio : RuleI(Combat, FleeHPRatio);
+	int fleeratio = GetFleeRatio();
 
 	if(ratio >= fleeratio)
 		return;
@@ -67,31 +105,30 @@ void Mob::CheckFlee() {
 		return;
 	}
 
-	//base our flee ratio on our con. this is how the
-	//attacker sees the mob, since this is all we can observe
-	uint32 con = GetLevelCon(hate_top->GetLevel(), GetLevel());
-	float run_ratio;
-	switch(con) {
-		//these values are not 100% researched
-		case CON_GREEN:
-			run_ratio = fleeratio;
-			break;
-		case CON_LIGHTBLUE:
-			run_ratio = fleeratio * 9 / 10;
-			break;
-		case CON_BLUE:
-			run_ratio = fleeratio * 8 / 10;
-			break;
-		default:
-			run_ratio = fleeratio * 7 / 10;
-			break;
-	}
-	if(ratio < run_ratio)
+	if (RuleB(Combat, FleeIfNotAlone) ||
+		GetSpecialAbility(ALWAYS_FLEE) ||
+		(!RuleB(Combat, FleeIfNotAlone) && (entity_list.GetHatedCountByFaction(hate_top, this) == 0))
+		)
 	{
-		if (RuleB(Combat, FleeIfNotAlone) ||
-			GetSpecialAbility(ALWAYS_FLEE) ||
-			(!RuleB(Combat, FleeIfNotAlone) && (entity_list.GetHatedCountByFaction(hate_top, this) == 0)))
+		if (roamer || IsWarriorClass() || zone->GetZoneExpansion() == ClassicEQ || GetMana() < 70 || GetLevel() < 30
+			|| !IsNPC() || DistanceSquared(CastToNPC()->GetSpawnPoint(), GetPosition()) < 40000
+		)
+		{
 			StartFleeing();
+		}
+		else if (!IsCasting())
+		{
+			if (IsMoving())
+			{
+				SetRunAnimSpeed(0);
+				SendPosition();
+				SetMoving(false);
+			}
+
+			entity_list.MessageClose_StringID(this, true, 200, MT_Spells, BEGIN_GATE, this->GetCleanName());
+			CastSpell(SEPLL_GATE, GetID(), 1, 5000, 70);
+			flee_timer.Start(4000);
+		}
 	}
 }
 
@@ -108,9 +145,7 @@ void Mob::ProcessFlee()
 	}
 
 	//see if we are still dying, if so, do nothing
-	float fleeratio = GetSpecialAbility(FLEE_PERCENT);
-	fleeratio = fleeratio > 0 ? fleeratio : RuleI(Combat, FleeHPRatio);
-	if (GetHPRatio() < fleeratio)
+	if (GetHPRatio() < GetFleeRatio())
 		return;
 
 	//we are not dying anymore... see what we do next

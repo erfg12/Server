@@ -138,12 +138,7 @@ int32 Client::GetMaxFR() const {
 		+ spellbonuses.FRCapMod
 		+ aabonuses.FRCapMod;
 }
-int32 Client::GetMaxCorrup() const {
-	return GetMaxResist()
-		+ itembonuses.CorrupCapMod
-		+ spellbonuses.CorrupCapMod
-		+ aabonuses.CorrupCapMod;
-}
+
 int32 Client::LevelRegen()
 {
 	bool sitting = IsSitting();
@@ -222,7 +217,7 @@ int32 Client::CalcHPRegen() {
 
 int32 Client::CalcHPRegenCap()
 {
-	int cap = RuleI(Character, ItemHealthRegenCap) + itembonuses.HeroicSTA/25;
+	int cap = RuleI(Character, ItemHealthRegenCap);
 
 	cap += aabonuses.ItemHPRegenCap + spellbonuses.ItemHPRegenCap + itembonuses.ItemHPRegenCap;
 
@@ -244,15 +239,18 @@ int32 Client::CalcMaxHP() {
 
 	max_hp += max_hp * ((spellbonuses.MaxHPChange + itembonuses.MaxHPChange) / 10000.0f);
 
-	if (cur_hp > max_hp)
-		cur_hp = max_hp;
-
 	int hp_perc_cap = spellbonuses.HPPercCap[0];
 	if(hp_perc_cap) {
 		int curHP_cap = (max_hp * hp_perc_cap) / 100;
 		if (cur_hp > curHP_cap || (spellbonuses.HPPercCap[1] && cur_hp > spellbonuses.HPPercCap[1]))
 			cur_hp = curHP_cap;
 	}
+
+	if(max_hp > 32767)
+		max_hp = 32767;
+
+	if (cur_hp > max_hp)
+		cur_hp = max_hp;
 
 	return max_hp;
 }
@@ -815,7 +813,7 @@ int32 Client::acmod() {
 int32 Client::CalcAC() {
 
 	// new formula
-	int avoidance = (acmod() + ((GetSkill(SkillDefense) + itembonuses.HeroicAGI/10)*16)/9);
+	int avoidance = (acmod() + (GetSkill(SkillDefense)*16)/9);
 	if (avoidance < 0)
 		avoidance = 0;
 
@@ -823,12 +821,12 @@ int32 Client::CalcAC() {
 	if (m_pp.class_ == WIZARD || m_pp.class_ == MAGICIAN || m_pp.class_ == NECROMANCER || m_pp.class_ == ENCHANTER) {
 		//something is wrong with this, naked casters have the wrong natural AC
 //		mitigation = (spellbonuses.AC/3) + (GetSkill(DEFENSE)/2) + (itembonuses.AC+1);
-		mitigation = (GetSkill(SkillDefense) + itembonuses.HeroicAGI/10)/4 + (itembonuses.AC+1);
+		mitigation = GetSkill(SkillDefense)/4 + (itembonuses.AC+1);
 		//this might be off by 4..
 		mitigation -= 4;
 	} else {
 //		mitigation = (spellbonuses.AC/4) + (GetSkill(DEFENSE)/3) + ((itembonuses.AC*4)/3);
-		mitigation = (GetSkill(SkillDefense) + itembonuses.HeroicAGI/10)/3 + ((itembonuses.AC*4)/3);
+		mitigation = GetSkill(SkillDefense)/3 + ((itembonuses.AC*4)/3);
 		if(m_pp.class_ == MONK)
 			mitigation += GetLevel() * 13/10;	//the 13/10 might be wrong, but it is close...
 	}
@@ -846,16 +844,6 @@ int32 Client::CalcAC() {
 			displayed += iksarlevel * 12 / 10;
 	}
 
-	// Shield AC bonus for HeroicSTR
-	if(itembonuses.HeroicSTR) {
-		bool equiped = CastToClient()->m_inv.GetItem(MainSecondary);
-		if(equiped) {
-			uint8 shield = CastToClient()->m_inv.GetItem(MainSecondary)->GetItem()->ItemType;
-			if(shield == ItemTypeShield)
-				displayed += itembonuses.HeroicSTR/2;
-		}
-	}
-
 	//spell AC bonuses are added directly to natural total
 	displayed += spellbonuses.AC;
 
@@ -867,23 +855,13 @@ int32 Client::GetACMit() {
 
 	int mitigation = 0;
 	if (m_pp.class_ == WIZARD || m_pp.class_ == MAGICIAN || m_pp.class_ == NECROMANCER || m_pp.class_ == ENCHANTER) {
-		mitigation = (GetSkill(SkillDefense) + itembonuses.HeroicAGI/10)/4 + (itembonuses.AC+1);
+		mitigation = (GetSkill(SkillDefense))/4 + (itembonuses.AC+1);
 		mitigation -= 4;
 	}
 	else {
-		mitigation = (GetSkill(SkillDefense) + itembonuses.HeroicAGI/10)/3 + ((itembonuses.AC*4)/3);
+		mitigation = (GetSkill(SkillDefense))/3 + ((itembonuses.AC*4)/3);
 		if(m_pp.class_ == MONK)
 			mitigation += GetLevel() * 13/10;	//the 13/10 might be wrong, but it is close...
-	}
-
-	// Shield AC bonus for HeroicSTR
-	if(itembonuses.HeroicSTR) {
-		bool equiped = CastToClient()->m_inv.GetItem(MainSecondary);
-		if(equiped) {
-			uint8 shield = CastToClient()->m_inv.GetItem(MainSecondary)->GetItem()->ItemType;
-			if(shield == ItemTypeShield)
-				mitigation += itembonuses.HeroicSTR/2;
-		}
 	}
 
 	return(mitigation*1000/847);
@@ -891,7 +869,7 @@ int32 Client::GetACMit() {
 
 int32 Client::GetACAvoid() {
 
-	int32 avoidance = (acmod() + ((GetSkill(SkillDefense) + itembonuses.HeroicAGI/10)*16)/9);
+	int32 avoidance = (acmod() + ((GetSkill(SkillDefense))*16)/9);
 	if (avoidance < 0)
 		avoidance = 0;
 
@@ -921,10 +899,6 @@ int32 Client::CalcMaxMana()
 		max_mana = 0;
 	}
 
-	if (cur_mana > max_mana) {
-		cur_mana = max_mana;
-	}
-
 	int mana_perc_cap = spellbonuses.ManaPercCap[0];
 	if(mana_perc_cap) {
 		int curMana_cap = (max_mana * mana_perc_cap) / 100;
@@ -932,7 +906,15 @@ int32 Client::CalcMaxMana()
 			cur_mana = curMana_cap;
 	}
 
-	Log.Out(Logs::Detail, Logs::Spells, "Client::CalcMaxMana() called for %s - returning %d", GetName(), max_mana);
+	if(max_mana > 32767)
+		max_mana = 32767;
+
+	if (cur_mana > max_mana) {
+		cur_mana = max_mana;
+	}
+	#if EQDEBUG >= 11
+		Log.Out(Logs::Detail, Logs::Spells, "Client::CalcMaxMana() called for %s - returning %d", GetName(), max_mana);
+	#endif
 	return max_mana;
 }
 
@@ -1023,7 +1005,7 @@ int32 Client::CalcManaRegen()
 			this->medding = true;
 			regen = (((GetSkill(SkillMeditate) / 10) + (clevel - (clevel / 4))) / 4) + 4;
 			regen += spellbonuses.ManaRegen + itembonuses.ManaRegen;
-			CheckIncreaseSkill(SkillMeditate, nullptr, -5);
+			CheckIncreaseSkill(SkillMeditate, nullptr, zone->skill_difficulty[SkillMeditate].difficulty);
 		}
 		else
 			regen = 2 + spellbonuses.ManaRegen + itembonuses.ManaRegen;
@@ -1045,10 +1027,7 @@ int32 Client::CalcManaRegenCap()
 	switch(GetCasterClass())
 	{
 		case 'I':
-			cap += (itembonuses.HeroicINT / 25);
-			break;
 		case 'W':
-			cap += (itembonuses.HeroicWIS / 25);
 			break;
 	}
 
@@ -1061,7 +1040,7 @@ uint32 Client::CalcCurrentWeight() {
 	ItemInst* ins;
 	uint32 Total = 0;
 	int x;
-	for (x = EmuConstants::EQUIPMENT_BEGIN; x <= EmuConstants::GENERAL_END; x++) // include cursor or not?
+	for (x = MainCursor; x <= EmuConstants::GENERAL_END; x++)
 	{
 		TempItem = 0;
 		ins = GetInv().GetItem(x);
@@ -1069,46 +1048,53 @@ uint32 Client::CalcCurrentWeight() {
 			TempItem = ins->GetItem();
 		if (TempItem)
 			Total += TempItem->Weight;
-	}
-	for (x = EmuConstants::GENERAL_BAGS_BEGIN; x <= EmuConstants::GENERAL_BAGS_END; x++) // include cursor bags or not?
-	{
-		int TmpWeight = 0;
-		TempItem = 0;
-		ins = GetInv().GetItem(x);
-		if (ins)
-			TempItem = ins->GetItem();
-		if (TempItem)
-			TmpWeight = TempItem->Weight;
-		if (TmpWeight > 0)
+
+		ItemInst* baginst = ins;
+		ItemInst* inst;
+		const Item_Struct* Item = 0;
+		if (baginst && baginst->GetItem() && baginst->IsType(ItemClassContainer))
 		{
-			// this code indicates that weight redux bags can only be in the first general inventory slot to be effective...
-			// is this correct? or can we scan for the highest weight redux and use that? (need client verifications)
-			int bagslot = MainGeneral1;
-			int reduction = 0;
-			for (int m = EmuConstants::GENERAL_BAGS_BEGIN + 10; m <= EmuConstants::GENERAL_BAGS_END; m += 10) // include cursor bags or not?
+			uint32 bag_weight = 0;
+			int i;
+			for (i = 0; i < baginst->GetItem()->BagSlots; i++) 
 			{
-				if (x >= m)
-					bagslot += 1;
+				inst = GetInv().GetItem(m_inv.CalcSlotId(x, i));
+				if (inst)
+					Item = inst->GetItem();
+				if (Item)
+				{
+					bag_weight += Item->Weight;
+				}
 			}
-			ItemInst* baginst = GetInv().GetItem(bagslot);
-			if (baginst && baginst->GetItem() && baginst->IsType(ItemClassContainer))
-				reduction = baginst->GetItem()->BagWR;
-			if (reduction > 0)
-				TmpWeight -= TmpWeight*reduction/100;
-			Total += TmpWeight;
+
+			int reduction = baginst->GetItem()->BagWR;
+			if (reduction > 0 && bag_weight > 0)
+				bag_weight -= bag_weight*reduction/100;
+
+			Total += bag_weight;
 		}
 	}
 
-	//TODO: coin weight reduction (from purses, etc), since client already calculates it
-	/*From the Wiki http://www.eqemulator.net/wiki/wikka.php?wakka=EQEmuDBSchemaitems under bagwr (thanks Trevius):
-	Interestingly, you can also have bags that reduce coin weight. However, in order to set bags to reduce coin weight, you MUST set the Item ID somewhere between 17201 and 17230. This is hard coded into the client.
-	The client is set to have certain coin weight reduction on a per Item ID basis within this range. The best way to create an new item to reduce coin weight is to examine existing bags in this range.
-	Search for the words "coin purse" with the #finditem command in game and the Bag WR setting on those bags is the amount they will reduce coin weight. It is easiest to overwrite one of those bags if you wish to create one with the
-	same weight reduction amount for coins. You can use other Item IDs in this range for setting coin weight reduction, but by using an existing item, at least you will know the amount the client will reduce it by before you create it.
-	This is the ONLY instance I have seen where the client is hard coded to particular Item IDs to set a certain property for an item. It is very odd.
-	*/
+	uint32 coin_weight = (m_pp.platinum + m_pp.gold + m_pp.silver + m_pp.copper) / 4;
 
-	Total += (m_pp.platinum + m_pp.gold + m_pp.silver + m_pp.copper) / 4;
+	// Coin purses only work when in a main inventory slot
+	const Item_Struct* CoinItem = 0;
+	ItemInst* cins;
+	uint32 coin_reduction = 0;
+	for (x = EmuConstants::GENERAL_BEGIN; x <= EmuConstants::GENERAL_END; x++)
+	{
+		CoinItem = 0;
+		cins = GetInv().GetItem(x);
+		if (cins && cins->GetID() >= 17201 && cins->GetID() <= 17230)
+		{
+			CoinItem = cins->GetItem();
+			if(CoinItem)
+				coin_reduction = CoinItem->BagWR > coin_reduction ? CoinItem->BagWR : coin_reduction;
+		}
+	}
+
+	coin_weight -= coin_weight*coin_reduction/100;
+	Total += coin_weight;
 
 	float Packrat = (float)spellbonuses.Packrat + (float)aabonuses.Packrat + (float)itembonuses.Packrat;
 	if (Packrat > 0)
@@ -1166,7 +1152,7 @@ int32 Client::CalcAGI() {
 	int32 str = GetSTR();
 
 	//Encumbered penalty
-	if(weight > (str * 10)) {
+	if(IsEncumbered()) {
 		//AGI is halved when we double our weight, zeroed (defaults to 1) when we triple it. this includes AGI from AAs
 		float total_agi = float(val + mod);
 		float str_float = float(str);
@@ -1345,7 +1331,6 @@ int Client::CalcHaste()
 }
 
 //The AA multipliers are set to be 5, but were 2 on WR
-//The resistant discipline which I think should be here is implemented
 //in Mob::ResistSpell
 int32	Client::CalcMR()
 {
@@ -1468,8 +1453,17 @@ int32	Client::CalcFR()
 	}
 
 	int c = GetClass();
-	if(c == RANGER) {
+	if(c == RANGER) 
+	{
 		FR += 4;
+
+		int l = GetLevel();
+		if(l > 49)
+			FR += l - 49;
+	} 
+	else if(c == MONK) 
+	{
+		FR += 8;
 
 		int l = GetLevel();
 		if(l > 49)
@@ -1541,19 +1535,36 @@ int32	Client::CalcDR()
 	}
 
 	int c = GetClass();
-	if(c == PALADIN) {
+	if(c == PALADIN) 
+	{
 		DR += 8;
 
 		int l = GetLevel();
 		if(l > 49)
 			DR += l - 49;
 
-	} else if(c == SHADOWKNIGHT) {
+	} 
+	else if(c == SHADOWKNIGHT) 
+	{
 		DR += 4;
 
 		int l = GetLevel();
 		if(l > 49)
 			DR += l - 49;
+	} 
+	else if(c == BEASTLORD) 
+	{
+		DR += 4;
+
+		int l = GetLevel();
+		if(l > 49)
+			DR += l - 49;
+	} 
+	else if(c == MONK) 
+	{
+		int l = GetLevel();
+		if(l > 50)
+			DR += l - 50;
 	}
 
 	DR += itembonuses.DR + spellbonuses.DR + aabonuses.DR;
@@ -1621,19 +1632,28 @@ int32	Client::CalcPR()
 	}
 
 	int c = GetClass();
-	if(c == ROGUE) {
+	if(c == ROGUE) 
+	{
 		PR += 8;
 
 		int l = GetLevel();
 		if(l > 49)
 			PR += l - 49;
 
-	} else if(c == SHADOWKNIGHT) {
+	} 
+	else if(c == SHADOWKNIGHT) 
+	{
 		PR += 4;
 
 		int l = GetLevel();
 		if(l > 49)
 			PR += l - 49;
+	}
+	else if(c == MONK) 
+	{
+		int l = GetLevel();
+		if(l > 50)
+			PR += l - 50;
 	}
 
 	PR += itembonuses.PR + spellbonuses.PR + aabonuses.PR;
@@ -1701,7 +1721,16 @@ int32	Client::CalcCR()
 	}
 
 	int c = GetClass();
-	if(c == RANGER) {
+	if(c == RANGER) 
+	{
+		CR += 4;
+
+		int l = GetLevel();
+		if(l > 49)
+			CR += l - 49;
+	} 
+	else if(c == BEASTLORD) 
+	{
 		CR += 4;
 
 		int l = GetLevel();
@@ -1718,16 +1747,6 @@ int32	Client::CalcCR()
 		CR = GetMaxCR();
 
 	return(CR);
-}
-
-int32	Client::CalcCorrup()
-{
-	Corrup = GetBaseCorrup() + itembonuses.Corrup + spellbonuses.Corrup + aabonuses.Corrup;
-
-	if(Corrup > GetMaxCorrup())
-		Corrup = GetMaxCorrup();
-
-	return(Corrup);
 }
 
 int32 Client::CalcATK() {
@@ -1829,15 +1848,18 @@ void Client::CalcMaxEndurance()
 		max_end = 0;
 	}
 
-	if (cur_end > max_end) {
-		cur_end = max_end;
-	}
-
 	int end_perc_cap = spellbonuses.EndPercCap[0];
 	if(end_perc_cap) {
 		int curEnd_cap = (max_end * end_perc_cap) / 100;
 		if (cur_end > curEnd_cap || (spellbonuses.EndPercCap[1] && cur_end > spellbonuses.EndPercCap[1]))
 			cur_end = curEnd_cap;
+	}
+
+	if(max_end > 32767)
+		max_end = 32767;
+
+	if (cur_end > max_end) {
+		cur_end = max_end;
 	}
 }
 
@@ -1885,7 +1907,7 @@ int32 Client::CalcEnduranceRegen() {
 }
 
 int32 Client::CalcEnduranceRegenCap() {
-	int cap = (RuleI(Character, ItemEnduranceRegenCap) + itembonuses.HeroicSTR/25 + itembonuses.HeroicDEX/25 + itembonuses.HeroicAGI/25 + itembonuses.HeroicSTA/25);
+	int cap = (RuleI(Character, ItemEnduranceRegenCap));
 
 	return (cap * RuleI(Character, EnduranceRegenMultiplier) / 100);
 }

@@ -629,9 +629,12 @@ void Group::GroupBardPulse(Mob* caster, uint16 spell_id) {
 
 	float range2 = range*range;
 
-	for(z=0; z < MAX_GROUP_MEMBERS; z++) {
-		if(members[z] == caster) {
+	for(z=0; z < MAX_GROUP_MEMBERS; z++)
+	{
+		if(members[z] == caster)
+		{
 			caster->BardPulse(spell_id, caster);
+			entity_list.AddHealAggro(members[z], caster, caster->CheckHealAggroAmount(spell_id, members[z]));
 #ifdef GROUP_BUFF_PETS
 			if(caster->GetPet() && caster->HasPetAffinity() && !caster->GetPet()->IsCharmed())
 				caster->BardPulse(spell_id, caster->GetPet());
@@ -643,6 +646,7 @@ void Group::GroupBardPulse(Mob* caster, uint16 spell_id) {
 			if(distance <= range2) 
 			{
 				members[z]->BardPulse(spell_id, caster);
+				entity_list.AddHealAggro(members[z], caster, caster->CheckHealAggroAmount(spell_id, members[z]));
 #ifdef GROUP_BUFF_PETS
 
 				if(members[z]->GetPet() && members[z]->HasPetAffinity() && !members[z]->GetPet()->IsCharmed())

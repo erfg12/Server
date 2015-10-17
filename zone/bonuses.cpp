@@ -100,7 +100,6 @@ void Client::CalcBonuses()
 	CalcDR();
 	CalcPR();
 	CalcCR();
-	CalcCorrup();
 
 	CalcMaxHP();
 	CalcMaxMana();
@@ -189,49 +188,32 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		newbon->AC += item->AC;
 		newbon->HP += item->HP;
 		newbon->Mana += item->Mana;
-		newbon->Endurance += item->Endur;
-		newbon->STR += (item->AStr + item->HeroicStr);
-		newbon->STA += (item->ASta + item->HeroicSta);
-		newbon->DEX += (item->ADex + item->HeroicDex);
-		newbon->AGI += (item->AAgi + item->HeroicAgi);
-		newbon->INT += (item->AInt + item->HeroicInt);
-		newbon->WIS += (item->AWis + item->HeroicWis);
-		newbon->CHA += (item->ACha + item->HeroicCha);
+		newbon->STR += (item->AStr);
+		newbon->STA += (item->ASta);
+		newbon->DEX += (item->ADex);
+		newbon->AGI += (item->AAgi);
+		newbon->INT += (item->AInt);
+		newbon->WIS += (item->AWis);
+		newbon->CHA += (item->ACha);
 
-		newbon->MR += (item->MR + item->HeroicMR);
-		newbon->FR += (item->FR + item->HeroicFR);
-		newbon->CR += (item->CR + item->HeroicCR);
-		newbon->PR += (item->PR + item->HeroicPR);
-		newbon->DR += (item->DR + item->HeroicDR);
-		newbon->Corrup += (item->SVCorruption + item->HeroicSVCorrup);
+		newbon->MR += (item->MR);
+		newbon->FR += (item->FR);
+		newbon->CR += (item->CR);
+		newbon->PR += (item->PR);
+		newbon->DR += (item->DR);
 
-		newbon->STRCapMod += item->HeroicStr;
-		newbon->STACapMod += item->HeroicSta;
-		newbon->DEXCapMod += item->HeroicDex;
-		newbon->AGICapMod += item->HeroicAgi;
-		newbon->INTCapMod += item->HeroicInt;
-		newbon->WISCapMod += item->HeroicWis;
-		newbon->CHACapMod += item->HeroicCha;
-		newbon->MRCapMod += item->HeroicMR;
-		newbon->CRCapMod += item->HeroicFR;
-		newbon->FRCapMod += item->HeroicCR;
-		newbon->PRCapMod += item->HeroicPR;
-		newbon->DRCapMod += item->HeroicDR;
-		newbon->CorrupCapMod += item->HeroicSVCorrup;
-
-		newbon->HeroicSTR += item->HeroicStr;
-		newbon->HeroicSTA += item->HeroicSta;
-		newbon->HeroicDEX += item->HeroicDex;
-		newbon->HeroicAGI += item->HeroicAgi;
-		newbon->HeroicINT += item->HeroicInt;
-		newbon->HeroicWIS += item->HeroicWis;
-		newbon->HeroicCHA += item->HeroicCha;
-		newbon->HeroicMR += item->HeroicMR;
-		newbon->HeroicFR += item->HeroicFR;
-		newbon->HeroicCR += item->HeroicCR;
-		newbon->HeroicPR += item->HeroicPR;
-		newbon->HeroicDR += item->HeroicDR;
-		newbon->HeroicCorrup += item->HeroicSVCorrup;
+		newbon->STRCapMod += item->AStr;
+		newbon->STACapMod += item->ASta;
+		newbon->DEXCapMod += item->ADex;
+		newbon->AGICapMod += item->AAgi;
+		newbon->INTCapMod += item->AInt;
+		newbon->WISCapMod += item->AWis;
+		newbon->CHACapMod += item->ACha;
+		newbon->MRCapMod += item->MR;
+		newbon->CRCapMod += item->FR;
+		newbon->FRCapMod += item->CR;
+		newbon->PRCapMod += item->PR;
+		newbon->DRCapMod += item->DR;
 
 	}
 	else
@@ -242,154 +224,36 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		newbon->AC += CalcRecommendedLevelBonus( lvl, reclvl, item->AC );
 		newbon->HP += CalcRecommendedLevelBonus( lvl, reclvl, item->HP );
 		newbon->Mana += CalcRecommendedLevelBonus( lvl, reclvl, item->Mana );
-		newbon->Endurance += CalcRecommendedLevelBonus( lvl, reclvl, item->Endur );
-		newbon->STR += CalcRecommendedLevelBonus( lvl, reclvl, (item->AStr + item->HeroicStr) );
-		newbon->STA += CalcRecommendedLevelBonus( lvl, reclvl, (item->ASta + item->HeroicSta) );
-		newbon->DEX += CalcRecommendedLevelBonus( lvl, reclvl, (item->ADex + item->HeroicDex) );
-		newbon->AGI += CalcRecommendedLevelBonus( lvl, reclvl, (item->AAgi + item->HeroicAgi) );
-		newbon->INT += CalcRecommendedLevelBonus( lvl, reclvl, (item->AInt + item->HeroicInt) );
-		newbon->WIS += CalcRecommendedLevelBonus( lvl, reclvl, (item->AWis + item->HeroicWis) );
-		newbon->CHA += CalcRecommendedLevelBonus( lvl, reclvl, (item->ACha + item->HeroicCha) );
+		newbon->STR += CalcRecommendedLevelBonus( lvl, reclvl, (item->AStr) );
+		newbon->STA += CalcRecommendedLevelBonus( lvl, reclvl, (item->ASta) );
+		newbon->DEX += CalcRecommendedLevelBonus( lvl, reclvl, (item->ADex) );
+		newbon->AGI += CalcRecommendedLevelBonus( lvl, reclvl, (item->AAgi) );
+		newbon->INT += CalcRecommendedLevelBonus( lvl, reclvl, (item->AInt) );
+		newbon->WIS += CalcRecommendedLevelBonus( lvl, reclvl, (item->AWis) );
+		newbon->CHA += CalcRecommendedLevelBonus( lvl, reclvl, (item->ACha) );
 
-		newbon->MR += CalcRecommendedLevelBonus( lvl, reclvl, (item->MR + item->HeroicMR) );
-		newbon->FR += CalcRecommendedLevelBonus( lvl, reclvl, (item->FR + item->HeroicFR) );
-		newbon->CR += CalcRecommendedLevelBonus( lvl, reclvl, (item->CR + item->HeroicCR) );
-		newbon->PR += CalcRecommendedLevelBonus( lvl, reclvl, (item->PR + item->HeroicPR) );
-		newbon->DR += CalcRecommendedLevelBonus( lvl, reclvl, (item->DR + item->HeroicDR) );
-		newbon->Corrup += CalcRecommendedLevelBonus( lvl, reclvl, (item->SVCorruption + item->HeroicSVCorrup) );
+		newbon->MR += CalcRecommendedLevelBonus( lvl, reclvl, (item->MR) );
+		newbon->FR += CalcRecommendedLevelBonus( lvl, reclvl, (item->FR) );
+		newbon->CR += CalcRecommendedLevelBonus( lvl, reclvl, (item->CR) );
+		newbon->PR += CalcRecommendedLevelBonus( lvl, reclvl, (item->PR) );
+		newbon->DR += CalcRecommendedLevelBonus( lvl, reclvl, (item->DR) );
 
-		newbon->STRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicStr );
-		newbon->STACapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicSta );
-		newbon->DEXCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicDex );
-		newbon->AGICapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicAgi );
-		newbon->INTCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicInt );
-		newbon->WISCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicWis );
-		newbon->CHACapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicCha );
-		newbon->MRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicMR );
-		newbon->CRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicFR );
-		newbon->FRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicCR );
-		newbon->PRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicPR );
-		newbon->DRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicDR );
-		newbon->CorrupCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicSVCorrup );
+		newbon->STRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->AStr );
+		newbon->STACapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->ASta );
+		newbon->DEXCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->ADex );
+		newbon->AGICapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->AAgi );
+		newbon->INTCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->AInt );
+		newbon->WISCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->AWis );
+		newbon->CHACapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->ACha );
+		newbon->MRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->MR );
+		newbon->CRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->FR );
+		newbon->FRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->CR );
+		newbon->PRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->PR );
+		newbon->DRCapMod += CalcRecommendedLevelBonus( lvl, reclvl, item->DR );
 
-		newbon->HeroicSTR += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicStr );
-		newbon->HeroicSTA += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicSta );
-		newbon->HeroicDEX += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicDex );
-		newbon->HeroicAGI += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicAgi );
-		newbon->HeroicINT += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicInt );
-		newbon->HeroicWIS += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicWis );
-		newbon->HeroicCHA += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicCha );
-		newbon->HeroicMR += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicMR );
-		newbon->HeroicFR += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicFR );
-		newbon->HeroicCR += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicCR );
-		newbon->HeroicPR += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicPR );
-		newbon->HeroicDR += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicDR );
-		newbon->HeroicCorrup += CalcRecommendedLevelBonus( lvl, reclvl, item->HeroicSVCorrup );
 	}
 
 	//FatherNitwit: New style haste, shields, and regens
-	if(newbon->haste < (int32)item->Haste) {
-		newbon->haste = item->Haste;
-	}
-	if(item->Regen > 0)
-		newbon->HPRegen += item->Regen;
-
-	if(item->ManaRegen > 0)
-		newbon->ManaRegen += item->ManaRegen;
-
-	if(item->EnduranceRegen > 0)
-		newbon->EnduranceRegen += item->EnduranceRegen;
-
-	if(item->Attack > 0) {
-
-		int cap = RuleI(Character, ItemATKCap);
-		cap += itembonuses.ItemATKCap + spellbonuses.ItemATKCap + aabonuses.ItemATKCap;
-
-		if((newbon->ATK + item->Attack) > cap)
-			newbon->ATK = RuleI(Character, ItemATKCap);
-		else
-			newbon->ATK += item->Attack;
-	}
-	if(item->DamageShield > 0) {
-		if((newbon->DamageShield + item->DamageShield) > RuleI(Character, ItemDamageShieldCap))
-			newbon->DamageShield = RuleI(Character, ItemDamageShieldCap);
-		else
-			newbon->DamageShield += item->DamageShield;
-	}
-	if(item->SpellShield > 0) {
-		if((newbon->SpellShield + item->SpellShield) > RuleI(Character, ItemSpellShieldingCap))
-			newbon->SpellShield = RuleI(Character, ItemSpellShieldingCap);
-		else
-			newbon->SpellShield += item->SpellShield;
-	}
-	if(item->Shielding > 0) {
-		if((newbon->MeleeMitigation + item->Shielding) > RuleI(Character, ItemShieldingCap))
-			newbon->MeleeMitigation = RuleI(Character, ItemShieldingCap);
-		else
-			newbon->MeleeMitigation += item->Shielding;
-	}
-	if(item->StunResist > 0) {
-		if((newbon->StunResist + item->StunResist) > RuleI(Character, ItemStunResistCap))
-			newbon->StunResist = RuleI(Character, ItemStunResistCap);
-		else
-			newbon->StunResist += item->StunResist;
-	}
-	if(item->StrikeThrough > 0) {
-		if((newbon->StrikeThrough + item->StrikeThrough) > RuleI(Character, ItemStrikethroughCap))
-			newbon->StrikeThrough = RuleI(Character, ItemStrikethroughCap);
-		else
-			newbon->StrikeThrough += item->StrikeThrough;
-	}
-	if(item->Avoidance > 0) {
-		if((newbon->AvoidMeleeChance + item->Avoidance) > RuleI(Character, ItemAvoidanceCap))
-			newbon->AvoidMeleeChance = RuleI(Character, ItemAvoidanceCap);
-		else
-			newbon->AvoidMeleeChance += item->Avoidance;
-	}
-	if(item->Accuracy > 0) {
-		if((newbon->HitChance + item->Accuracy) > RuleI(Character, ItemAccuracyCap))
-			newbon->HitChance = RuleI(Character, ItemAccuracyCap);
-		else
-			newbon->HitChance += item->Accuracy;
-	}
-	if(item->CombatEffects > 0) {
-		if((newbon->ProcChance + item->CombatEffects) > RuleI(Character, ItemCombatEffectsCap))
-			newbon->ProcChance = RuleI(Character, ItemCombatEffectsCap);
-		else
-			newbon->ProcChance += item->CombatEffects;
-	}
-	if(item->DotShielding > 0) {
-		if((newbon->DoTShielding + item->DotShielding) > RuleI(Character, ItemDoTShieldingCap))
-			newbon->DoTShielding = RuleI(Character, ItemDoTShieldingCap);
-		else
-			newbon->DoTShielding += item->DotShielding;
-	}
-
-	if(item->HealAmt > 0) {
-		if((newbon->HealAmt + item->HealAmt) > RuleI(Character, ItemHealAmtCap))
-			newbon->HealAmt = RuleI(Character, ItemHealAmtCap);
-		else
-			newbon->HealAmt += item->HealAmt;
-	}
-	if(item->SpellDmg > 0) {
-		if((newbon->SpellDmg + item->SpellDmg) > RuleI(Character, ItemSpellDmgCap))
-			newbon->SpellDmg = RuleI(Character, ItemSpellDmgCap);
-		else
-			newbon->SpellDmg += item->SpellDmg;
-	}
-	if(item->Clairvoyance > 0) {
-		if((newbon->Clairvoyance + item->Clairvoyance) > RuleI(Character, ItemClairvoyanceCap))
-			newbon->Clairvoyance = RuleI(Character, ItemClairvoyanceCap);
-		else
-			newbon->Clairvoyance += item->Clairvoyance;
-	}
-
-	if(item->DSMitigation > 0) {
-		if((newbon->DSMitigation + item->DSMitigation) > RuleI(Character, ItemDSMitigationCap))
-			newbon->DSMitigation = RuleI(Character, ItemDSMitigationCap);
-		else
-			newbon->DSMitigation += item->DSMitigation;
-	}
 	if (item->Worn.Effect>0 && (item->Worn.Type == ET_WornEffect)) { // latent effects
 		ApplySpellsBonuses(item->Worn.Effect, GetLevel(), newbon, 0, true);
 	}
@@ -498,13 +362,6 @@ void Client::AddItemBonuses(const ItemInst *inst, StatBonuses* newbon) {
 		{
 			AddItemFactionBonus(item->FactionMod4, item->FactionAmt4);
 		}
-	}
-
-	if (item->ExtraDmgSkill != 0 && item->ExtraDmgSkill <= HIGHEST_SKILL) {
-		if((newbon->SkillDamageAmount[item->ExtraDmgSkill] + item->ExtraDmgAmt) > RuleI(Character, ItemExtraDmgCap))
-			newbon->SkillDamageAmount[item->ExtraDmgSkill] = RuleI(Character, ItemExtraDmgCap);
-		else
-			newbon->SkillDamageAmount[item->ExtraDmgSkill] += item->ExtraDmgAmt;
 	}
 }
 
@@ -679,9 +536,6 @@ void Client::ApplyAABonuses(uint32 aaid, uint32 slots, StatBonuses* newbon)
 			case SE_ResistMagic:
 				newbon->MR += base1;
 				break;
-			case SE_ResistCorruption:
-				newbon->Corrup += base1;
-				break;
 			case SE_IncreaseSpellHaste:
 				break;
 			case SE_IncreaseRange:
@@ -735,9 +589,6 @@ void Client::ApplyAABonuses(uint32 aaid, uint32 slots, StatBonuses* newbon)
 						break;
 					case 11: //dr
 						newbon->DRCapMod += base1;
-						break;
-					case 12: //corruption
-						newbon->CorrupCapMod += base1;
 						break;
 				}
 				break;
@@ -904,14 +755,8 @@ void Client::ApplyAABonuses(uint32 aaid, uint32 slots, StatBonuses* newbon)
 			case SE_DoubleSpecialAttack:
 				newbon->DoubleSpecialAttack += base1;
 				break;
-			case SE_TripleBackstab:
-				newbon->TripleBackstab += base1;
-				break;
 			case SE_FrontalBackstabMinDmg:
 				newbon->FrontalBackstabMinDmg = true;
-				break;
-			case SE_FrontalBackstabChance:
-				newbon->FrontalBackstabChance += base1;
 				break;
 			case SE_BlockBehind:
 				newbon->BlockBehind += base1;
@@ -1281,10 +1126,6 @@ void Client::ApplyAABonuses(uint32 aaid, uint32 slots, StatBonuses* newbon)
 					newbon->AssassinateLevel = base1;
 				break;
 			}
-
-			case SE_PetMeleeMitigation:
-				newbon->PetMeleeMitigation += base1;
-				break;
 
 			case SE_MeleeVulnerability:
 				newbon->MeleeVulnerability += base1;
@@ -1660,12 +1501,6 @@ void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* ne
 				break;
 			}
 
-			case SE_ResistCorruption:
-			{
-				new_bonus->Corrup += effect_value;
-				break;
-			}
-
 			case SE_RaiseStatCap:
 			{
 				switch(spells[spell_id].base2[i])
@@ -1706,9 +1541,6 @@ void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* ne
 						break;
 					case 11: //dr
 						new_bonus->DRCapMod += effect_value;
-						break;
-					case 12: // corruption
-						new_bonus->CorrupCapMod += effect_value;
 						break;
 				}
 				break;
@@ -2198,15 +2030,6 @@ void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* ne
 				new_bonus->CriticalDotDecay = true;
 				break;
 
-			case SE_MitigateDamageShield:
-			{
-				if (effect_value < 0)
-					effect_value = effect_value*-1;
-
-				new_bonus->DSMitigationOffHand += effect_value;
-				break;
-			}
-
 			case SE_CriticalDoTChance:
 				new_bonus->CriticalDoTChance += effect_value;
 				break;
@@ -2500,16 +2323,8 @@ void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* ne
 				new_bonus->DoubleSpecialAttack += effect_value;
 				break;
 
-			case SE_TripleBackstab:
-				new_bonus->TripleBackstab += effect_value;
-				break;
-
 			case SE_FrontalBackstabMinDmg:
 				new_bonus->FrontalBackstabMinDmg = true;
-				break;
-
-			case SE_FrontalBackstabChance:
-				new_bonus->FrontalBackstabChance += effect_value;
 				break;
 
 			case SE_ConsumeProjectile:
@@ -2869,10 +2684,6 @@ void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* ne
 				break;
 			}
 
-			case SE_PetMeleeMitigation:
-				new_bonus->PetMeleeMitigation += effect_value;
-				break;
-
 			case SE_MeleeVulnerability:
 				new_bonus->MeleeVulnerability += effect_value;
 				break;
@@ -2955,60 +2766,23 @@ void NPC::CalcItemBonuses(StatBonuses *newbon)
 				newbon->AC += cur->AC;
 				newbon->HP += cur->HP;
 				newbon->Mana += cur->Mana;
-				newbon->Endurance += cur->Endur;
-				newbon->STR += (cur->AStr + cur->HeroicStr);
-				newbon->STA += (cur->ASta + cur->HeroicSta);
-				newbon->DEX += (cur->ADex + cur->HeroicDex);
-				newbon->AGI += (cur->AAgi + cur->HeroicAgi);
-				newbon->INT += (cur->AInt + cur->HeroicInt);
-				newbon->WIS += (cur->AWis + cur->HeroicWis);
-				newbon->CHA += (cur->ACha + cur->HeroicCha);
-				newbon->MR += (cur->MR + cur->HeroicMR);
-				newbon->FR += (cur->FR + cur->HeroicFR);
-				newbon->CR += (cur->CR + cur->HeroicCR);
-				newbon->PR += (cur->PR + cur->HeroicPR);
-				newbon->DR += (cur->DR + cur->HeroicDR);
-				newbon->Corrup += (cur->SVCorruption + cur->HeroicSVCorrup);
+				newbon->STR += (cur->AStr);
+				newbon->STA += (cur->ASta);
+				newbon->DEX += (cur->ADex);
+				newbon->AGI += (cur->AAgi);
+				newbon->INT += (cur->AInt);
+				newbon->WIS += (cur->AWis);
+				newbon->CHA += (cur->ACha);
+				newbon->MR += (cur->MR);
+				newbon->FR += (cur->FR);
+				newbon->CR += (cur->CR);
+				newbon->PR += (cur->PR);
+				newbon->DR += (cur->DR);
 
 				//more complex stats
-				if(cur->Regen > 0) {
-					newbon->HPRegen += cur->Regen;
-				}
-				if(cur->ManaRegen > 0) {
-					newbon->ManaRegen += cur->ManaRegen;
-				}
-				if(cur->Attack > 0) {
-					newbon->ATK += cur->Attack;
-				}
-				if(cur->DamageShield > 0) {
-					newbon->DamageShield += cur->DamageShield;
-				}
-				if(cur->SpellShield > 0) {
-					newbon->SpellDamageShield += cur->SpellShield;
-				}
-				if(cur->Shielding > 0) {
-					newbon->MeleeMitigation += cur->Shielding;
-				}
-				if(cur->StunResist > 0) {
-					newbon->StunResist += cur->StunResist;
-				}
-				if(cur->StrikeThrough > 0) {
-					newbon->StrikeThrough += cur->StrikeThrough;
-				}
-				if(cur->Avoidance > 0) {
-					newbon->AvoidMeleeChance += cur->Avoidance;
-				}
-				if(cur->Accuracy > 0) {
-					newbon->HitChance += cur->Accuracy;
-				}
-				if(cur->CombatEffects > 0) {
-					newbon->ProcChance += cur->CombatEffects;
-				}
 				if (cur->Worn.Effect>0 && (cur->Worn.Type == ET_WornEffect)) { // latent effects
 					ApplySpellsBonuses(cur->Worn.Effect, GetLevel(), newbon);
 				}
-				if (cur->Haste > newbon->haste)
-					newbon->haste = cur->Haste;
 			}
 		}
 
@@ -3472,12 +3246,6 @@ void Mob::NegateSpellsBonuses(uint16 spell_id)
 					break;
 				}
 
-				case SE_ResistCorruption:
-					spellbonuses.Corrup = effect_value;
-					itembonuses.Corrup = effect_value;
-					aabonuses.Corrup = effect_value;
-					break;
-
 				case SE_CastingLevel2:
 				case SE_CastingLevel:	// Brilliance of Ro
 					spellbonuses.effective_casting_level = effect_value;
@@ -3819,12 +3587,6 @@ void Mob::NegateSpellsBonuses(uint16 spell_id)
 					itembonuses.CriticalHealOverTime = effect_value;
 					break;
 
-				case SE_MitigateDamageShield:
-					spellbonuses.DSMitigationOffHand = effect_value;
-					itembonuses.DSMitigationOffHand = effect_value;
-					aabonuses.DSMitigationOffHand = effect_value;
-					break;
-
 				case SE_CriticalDoTChance:
 					spellbonuses.CriticalDoTChance = effect_value;
 					aabonuses.CriticalDoTChance = effect_value;
@@ -4021,20 +3783,8 @@ void Mob::NegateSpellsBonuses(uint16 spell_id)
 					itembonuses.DoubleSpecialAttack = effect_value;
 					break;
 
-				case SE_TripleBackstab:
-					spellbonuses.TripleBackstab = effect_value;
-					aabonuses.TripleBackstab = effect_value;
-					itembonuses.TripleBackstab = effect_value;
-					break;
-
 				case SE_FrontalBackstabMinDmg:
 					spellbonuses.FrontalBackstabMinDmg = false;
-					break;
-
-				case SE_FrontalBackstabChance:
-					spellbonuses.FrontalBackstabChance = effect_value;
-					aabonuses.FrontalBackstabChance = effect_value;
-					itembonuses.FrontalBackstabChance = effect_value;
 					break;
 
 				case SE_ConsumeProjectile:
@@ -4125,12 +3875,6 @@ void Mob::NegateSpellsBonuses(uint16 spell_id)
 					spellbonuses.GivePetGroupTarget = false;
 					aabonuses.GivePetGroupTarget = false;
 					itembonuses.GivePetGroupTarget = false;
-					break;
-
-				case SE_PetMeleeMitigation:
-					spellbonuses.PetMeleeMitigation = effect_value;
-					itembonuses.PetMeleeMitigation = effect_value;
-					aabonuses.PetMeleeMitigation = effect_value;
 					break;
 
 				case SE_RootBreakChance:
@@ -4409,4 +4153,3 @@ void Mob::NegateSpellsBonuses(uint16 spell_id)
 		}
 	}
 }
-

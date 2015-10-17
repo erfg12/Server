@@ -136,7 +136,8 @@ public:
 	bool SetInventoryVersion(EQClientVersion version) {
 		if (!m_versionset) {
 			m_version = version;
-			return (m_versionset = true);
+			m_versionset = true;
+			return (m_versionset);
 		}
 		else {
 			return false;
@@ -191,10 +192,6 @@ public:
 	// where argument specifies OR'd list of invWhere constants to look
 	int16 HasItemByUse(uint8 use, uint8 quantity=0, uint8 where=0xFF);
 
-	// Check whether item exists in inventory
-	// where argument specifies OR'd list of invWhere constants to look
-	int16 HasItemByLoreGroup(uint32 loregroup, uint8 where=0xFF);
-
 	// Locate an available inventory slot
 	int16 FindFreeSlot(bool for_bag, bool try_cursor, uint8 min_size = 0, bool is_arrow = false);
 	int16 FindFreeSlotForTradeItem(const ItemInst* inst);
@@ -210,7 +207,6 @@ public:
 
 	//  Test for valid inventory casting slot
 	bool SupportsClickCasting(int16 slot_id);
-	bool SupportsPotionBeltCasting(int16 slot_id);
 
 	// Test whether a given slot can support a container item
 	static bool SupportsContainers(int16 slot_id);
@@ -223,7 +219,6 @@ public:
 	void dumpWornItems();
 	void dumpInventory();
 	void dumpBankItems();
-	void dumpSharedBankItems();
 
 	void SetCustomItemData(uint32 character_id, int16 slot_id, std::string identifier, std::string value);
 	void SetCustomItemData(uint32 character_id, int16 slot_id, std::string identifier, int value);
@@ -250,15 +245,12 @@ protected:
 	int16 _HasItem(ItemInstQueue& iqueue, int16 item_id, uint8 quantity);
 	int16 _HasItemByUse(std::map<int16, ItemInst*>& bucket, uint8 use, uint8 quantity);
 	int16 _HasItemByUse(ItemInstQueue& iqueue, uint8 use, uint8 quantity);
-	int16 _HasItemByLoreGroup(std::map<int16, ItemInst*>& bucket, uint32 loregroup);
-	int16 _HasItemByLoreGroup(ItemInstQueue& iqueue, uint32 loregroup);
 
 
 	// Player inventory
 	std::map<int16, ItemInst*>	m_worn;		// Items worn by character
 	std::map<int16, ItemInst*>	m_inv;		// Items in character personal inventory
 	std::map<int16, ItemInst*>	m_bank;		// Items in character bank
-	std::map<int16, ItemInst*>	m_shbank;	// Items in character shared bank
 	std::map<int16, ItemInst*>	m_trade;	// Items in a trade session
 	ItemInstQueue				m_cursor;	// Items on cursor: FIFO
 
@@ -330,7 +322,6 @@ public:
 
 	// Accessors
 	const int16 GetID() const { return ((m_item) ? m_item->ID : NO_ITEM); }
-	const uint32 GetItemScriptID() const { return ((m_item) ? m_item->ScriptFileID : NO_ITEM); }
 	const Item_Struct* GetItem() const;
 	const Item_Struct* GetUnscaledItem() const;
 

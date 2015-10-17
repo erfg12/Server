@@ -184,7 +184,6 @@ public:
 	virtual Raid* GetRaid() { return entity_list.GetRaidByClient(this); }
 	virtual Group* GetGroup() { return entity_list.GetGroupByClient(this); }
 	virtual inline bool IsBerserk() { return berserk; }
-	virtual int32 GetMeleeMitDmg(Mob *attacker, int32 damage, int32 minhit, float mit_rating, float atk_rating);
 	virtual void SetAttackTimer();
 	float GetQuiverHaste();
 
@@ -199,6 +198,11 @@ public:
 	void	Trader_EndTrader();
 	void	Trader_StartTrader();
 	uint8	WithCustomer(uint16 NewCustomer);
+	void	KeyRingLoad();
+	void	KeyRingAdd(uint32 item_id);
+	bool	KeyRingCheck(uint32 item_id);
+	void	KeyRingList(Client* notifier);
+	void	ZoneFlagList(Client* notifier);
 	virtual bool IsClient() const { return true; }
 	void	CompleteConnect();
 	bool	TryStacking(ItemInst* item, uint8 type = ItemPacketTrade, bool try_worn = true, bool try_cursor = true);
@@ -337,9 +341,23 @@ public:
 
 	inline uint8 GetLanguageSkill(uint16 n) const { return m_pp.languages[n]; }
 
-	void SendPickPocketResponse(Mob *from, uint32 amt, int type, const Item_Struct* item = nullptr);
+	void SendPickPocketResponse(Mob *from, uint32 amt, int type, int16 slotid = 0, ItemInst* inst = nullptr, bool skipskill = false);
+	bool GetPickPocketSlot(ItemInst* inst, int16& slotid);
 
 	inline const char* GetLastName() const { return lastname; }
+
+	typedef struct {
+		glm::vec4 l_Position;
+		float last_distance;
+		bool  inside;
+	} DynamicPosition_Struct;
+	std::unordered_map<uint16, DynamicPosition_Struct> dynamic_positions;
+	inline void SetLastDistance(uint16 entity_id, float distance) { dynamic_positions[entity_id].last_distance = distance; }
+	inline float GetLastDistance(uint16 entity_id) { return dynamic_positions[entity_id].last_distance; }
+	inline bool GetInside(uint16 entity_id) { return dynamic_positions[entity_id].inside; }
+	inline void SetInside(uint16 entity_id, bool state) { dynamic_positions[entity_id].inside = state; }
+	inline glm::vec4 GetLastPosition(uint16 entity_id) { return dynamic_positions[entity_id].l_Position; }
+	inline void SetLastPosition(uint16 entity_id, glm::vec4 pos) { dynamic_positions[entity_id].l_Position = pos; }
 
 	inline float ProximityX() const { return m_Proximity.x; }
 	inline float ProximityY() const { return m_Proximity.y; }
@@ -355,6 +373,14 @@ public:
 	inline virtual int32 GetAC() const { return AC; }
 	inline virtual int32 GetATK() const { return ATK + itembonuses.ATK + spellbonuses.ATK + ((GetSTR() + GetSkill(SkillOffense)) * 9 / 10); }
 	inline virtual int32 GetATKBonus() const { return itembonuses.ATK + spellbonuses.ATK; }
+	virtual int32 GetOffense(int hand = MainPrimary);
+	inline int32 GetOffense(SkillUseTypes weaponSkill);
+	virtual int32 GetToHit(int hand = MainPrimary);
+	inline int32 GetToHit(SkillUseTypes weaponSkill);
+	uint32 RollDamageMultiplier(uint32 offense);
+	virtual int32 GetMitigation();
+	virtual int32 GetAvoidance();
+	int32 GetEffectiveWornAC();
 	inline virtual int GetHaste() const { return Haste; }
 	int GetRawACNoShield(int &shield_ac, int spell_mod = 1) const;
 
@@ -396,35 +422,17 @@ public:
 	inline uint8 GetBaseWIS() const { return m_pp.WIS; }
 	inline uint8 GetBaseCorrup() const { return 15; } // Same for all
 
-	inline virtual int32 GetHeroicSTR() const { return itembonuses.HeroicSTR; }
-	inline virtual int32 GetHeroicSTA() const { return itembonuses.HeroicSTA; }
-	inline virtual int32 GetHeroicDEX() const { return itembonuses.HeroicDEX; }
-	inline virtual int32 GetHeroicAGI() const { return itembonuses.HeroicAGI; }
-	inline virtual int32 GetHeroicINT() const { return itembonuses.HeroicINT; }
-	inline virtual int32 GetHeroicWIS() const { return itembonuses.HeroicWIS; }
-	inline virtual int32 GetHeroicCHA() const { return itembonuses.HeroicCHA; }
-	inline virtual int32 GetHeroicMR() const { return itembonuses.HeroicMR; }
-	inline virtual int32 GetHeroicFR() const { return itembonuses.HeroicFR; }
-	inline virtual int32 GetHeroicDR() const { return itembonuses.HeroicDR; }
-	inline virtual int32 GetHeroicPR() const { return itembonuses.HeroicPR; }
-	inline virtual int32 GetHeroicCR() const { return itembonuses.HeroicCR; }
-	inline virtual int32 GetHeroicCorrup() const { return itembonuses.HeroicCorrup; }
 	// Mod2
 	inline virtual int32 GetShielding() const { return itembonuses.MeleeMitigation; }
 	inline virtual int32 GetSpellShield() const { return itembonuses.SpellShield; }
 	inline virtual int32 GetDoTShield() const { return itembonuses.DoTShielding; }
 	inline virtual int32 GetStunResist() const { return itembonuses.StunResist; }
 	inline virtual int32 GetStrikeThrough() const { return itembonuses.StrikeThrough; }
-	inline virtual int32 GetAvoidance() const { return itembonuses.AvoidMeleeChance; }
+	inline virtual int32 GetAvoidanceMod() const { return itembonuses.AvoidMeleeChance; }
 	inline virtual int32 GetAccuracy() const { return itembonuses.HitChance; }
 	inline virtual int32 GetCombatEffects() const { return itembonuses.ProcChance; }
 	inline virtual int32 GetDS() const { return itembonuses.DamageShield; }
 	// Mod3
-	inline virtual int32 GetHealAmt() const { return itembonuses.HealAmt; }
-	inline virtual int32 GetSpellDmg() const { return itembonuses.SpellDmg; }
-	inline virtual int32 GetClair() const { return itembonuses.Clairvoyance; }
-	inline virtual int32 GetDSMit() const { return itembonuses.DSMitigation; }
-
 	inline virtual int32 GetSingMod() const { return itembonuses.singingMod; }
 	inline virtual int32 GetBrassMod() const { return itembonuses.brassMod; }
 	inline virtual int32 GetPercMod() const { return itembonuses.percussionMod; }
@@ -443,10 +451,8 @@ public:
 	virtual bool CheckSpellLevelRestriction(uint16 spell_id);
 	virtual int GetCurrentBuffSlots() const;
 	virtual int GetCurrentSongSlots() const;
-	virtual int GetCurrentDiscSlots() const { return 1; }
 	virtual int GetMaxBuffSlots() const { return 25; }
 	virtual int GetMaxSongSlots() const { return 12; }
-	virtual int GetMaxDiscSlots() const { return 1; }
 	virtual int GetMaxTotalSlots() const { return 38; }
 	virtual void InitializeBuffSlots();
 	virtual void UninitializeBuffSlots();
@@ -456,6 +462,7 @@ public:
 	uint32 GetWeight() const { return(weight); }
 	inline void RecalcWeight() { weight = CalcCurrentWeight(); }
 	uint32 CalcCurrentWeight();
+	bool IsEncumbered() { return (weight > (GetSTR() * 10)); }
 	inline uint32 GetCopper() const { return m_pp.copper; }
 	inline uint32 GetSilver() const { return m_pp.silver; }
 	inline uint32 GetGold() const { return m_pp.gold; }
@@ -520,17 +527,18 @@ public:
 	void GoToDeath();
 	inline const int32 GetInstanceID() const { return zone->GetInstanceID(); }
 
-	FACTION_VALUE	GetReverseFactionCon(Mob* iOther);
-	FACTION_VALUE	GetFactionLevel(uint32 char_id, uint32 npc_id, uint32 p_race, uint32 p_class, uint32 p_deity, int32 pFaction, Mob* tnpc);
-	int32	GetCharacterFactionLevel(int32 faction_id);
-	int32	GetModCharacterFactionLevel(int32 faction_id);
-	void	MerchantRejectMessage(Mob *merchant, int primaryfaction);
-	void	SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 totalvalue, uint8 temp);
+	FACTION_VALUE GetReverseFactionCon(Mob* iOther);
+	FACTION_VALUE GetFactionLevel(uint32 char_id, uint32 npc_id, uint32 p_race, uint32 p_class, uint32 p_deity, int32 pFaction, Mob* tnpc);
+	int32 GetCharacterFactionLevel(int32 faction_id, bool updating = false);
+	int32 GetModCharacterFactionLevel(int32 faction_id);
+	void MerchantRejectMessage(Mob *merchant, int primaryfaction);
+	void SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_before_hit, int32 totalvalue, uint8 temp,  int32 this_faction_min, int32 this_faction_max);
 
-	void	SetFactionLevel(uint32 char_id, uint32 npc_id, uint8 char_class, uint8 char_race, uint8 char_deity, bool quest = false);
-	void	SetFactionLevel2(uint32 char_id, int32 faction_id, uint8 char_class, uint8 char_race, uint8 char_deity, int32 value, uint8 temp);
-	int32	GetRawItemAC();
-	uint16	GetCombinedAC_TEST();
+	void UpdatePersonalFaction(int32 char_id, int32 npc_value, int32 faction_id, int32 *current_value, int32 temp, int32 this_faction_min, int32 this_faction_max);
+	void SetFactionLevel(uint32 char_id, uint32 npc_id, uint8 char_class, uint8 char_race, uint8 char_deity, bool quest = false);
+	void SetFactionLevel2(uint32 char_id, int32 faction_id, uint8 char_class, uint8 char_race, uint8 char_deity, int32 value, uint8 temp);
+	int32 GetRawItemAC();
+	uint16 GetCombinedAC_TEST();
 
 	inline uint32 LSAccountID() const { return lsaccountid; }
 	inline uint32 GetWID() const { return WID; }
@@ -594,11 +602,13 @@ public:
 	void	AddSkill(SkillUseTypes skillid, uint16 value);
 	void	CheckSpecializeIncrease(uint16 spell_id);
 	void	CheckSongSkillIncrease(uint16 spell_id);
-	bool	CheckIncreaseSkill(SkillUseTypes skillid, Mob *against_who, int chancemodi = 0);
+	bool	CheckIncreaseSkill(SkillUseTypes skillid, Mob *against_who, float difficulty = 7.0, float success = 1.0); //valid values for difficulty are 1 to 15. Success is a float simply so we don't need to cast
 	void	CheckLanguageSkillIncrease(uint8 langid, uint8 TeacherSkill);
 	void	SetLanguageSkill(int langid, int value);
 	void	ShowSkillsWindow();
+
 	void	SendStats(Client* client);
+	void	SendQuickStats(Client* client);
 
 	uint16 MaxSkill(SkillUseTypes skillid, uint16 class_, uint16 level) const;
 	inline uint16 MaxSkill(SkillUseTypes skillid) const { return MaxSkill(skillid, GetClass(), GetLevel()); }
@@ -623,8 +633,6 @@ public:
 	void ScribeSpell(uint16 spell_id, int slot, bool update_client = true);
 	void UnscribeSpell(int slot, bool update_client = true);
 	void UnscribeSpellAll(bool update_client = true);
-	void UntrainDisc(int slot, bool update_client = true);
-	void UntrainDiscAll(bool update_client = true);
 	bool SpellGlobalCheck(uint16 Spell_ID, uint32 Char_ID);
 	uint32 GetCharMaxLevelFromQGlobal();
 
@@ -716,7 +724,7 @@ public:
 	bool	MakeItemLink(char* &ret_link, const ItemInst* inst);
 	int		GetItemLinkHash(const ItemInst* inst);
 	void	SendLootItemInPacket(const ItemInst* inst, int16 slot_id);
-	void	SendItemPacket(int16 slot_id, const ItemInst* inst, ItemPacketType packet_type, int16 fromid = 0);
+	void	SendItemPacket(int16 slot_id, const ItemInst* inst, ItemPacketType packet_type, int16 fromid = 0, int16 toid = 0, int16 skill = 0);
 	bool	IsValidSlot(uint32 slot);
 	bool	IsBankSlot(uint32 slot);
 
@@ -724,19 +732,18 @@ public:
 	eqFilterMode GetFilter(eqFilterType filter_id) const { return ClientFilters[filter_id]; }
 	void SetFilter(eqFilterType filter_id, eqFilterMode value) { ClientFilters[filter_id]=value; }
 
-	void BreakInvis();
 	void LeaveGroup();
 
 	bool Hungry() const {if (GetGM()) return false; return m_pp.hunger_level <= 3000;}
 	bool Thirsty() const {if (GetGM()) return false; return m_pp.thirst_level <= 3000;}
 	bool FoodFamished(); 
 	bool WaterFamished();
-int32 GetHunger() const { return m_pp.hunger_level; }
-int32 GetThirst() const { return m_pp.thirst_level; }
-int32 GetFamished() const { return m_pp.famished; }
-void SetHunger(int32 in_hunger);
-void SetThirst(int32 in_thirst);
-void SetConsumption(int32 in_hunger, int32 in_thirst);
+	int32 GetHunger() const { return m_pp.hunger_level; }
+	int32 GetThirst() const { return m_pp.thirst_level; }
+	int32 GetFamished() const { return m_pp.famished; }
+	void SetHunger(int32 in_hunger);
+	void SetThirst(int32 in_thirst);
+	void SetConsumption(int32 in_hunger, int32 in_thirst);
 
 	bool	CheckTradeLoreConflict(Client* other);
 	void	LinkDead();
@@ -755,11 +762,12 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	virtual void ThrowingAttack(Mob* other, bool CanDoubleAttack = false);
 	void DoClassAttacks(Mob *ca_target, uint16 skill = -1, bool IsRiposte=false);
 
-	void SetZoneFlag(uint32 zone_id);
+	void SetZoneFlag(uint32 zone_id, uint8 key = 0);
 	void ClearZoneFlag(uint32 zone_id);
-	bool HasZoneFlag(uint32 zone_id) const;
-	void SendZoneFlagInfo(Client *to) const;
-	void LoadZoneFlags();
+	bool HasZoneFlag(uint32 zone_id, uint8 key = 0);
+	void SendZoneFlagInfo(Client *to);
+	void LoadZoneFlags(LinkedList<ZoneFlags_Struct*>* ZoneFlags);
+	uint8 GetZoneFlagKey(uint32 zone_id);
 
 	bool CanFish();
 	void GoFish();
@@ -769,10 +777,9 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	void ResetTrade();
 	void DropInst(const ItemInst* inst);
 	void CreateGroundObject(const ItemInst* item, float x, float y, float z, float heading, uint32 decay_time = 300000);
-	bool TrainDiscipline(uint32 itemid);
-	void SendDisciplineUpdate();
-	void SendDisciplineTimer(uint32 timer_id, uint32 duration);
-	bool UseDiscipline(uint32 spell_id, uint32 target);
+	bool UseDiscipline(uint8 disc_id);
+	uint8 DisciplineUseLevel(uint8 disc_id);
+	bool CastDiscipline(uint8 disc_id, uint8 level_to_use);
 
 	bool CheckTitle(int titleset);
 	void EnableTitle(int titleset);
@@ -781,6 +788,8 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	void EnteringMessages(Client* client);
 	void SendRules(Client* client);
 	std::list<std::string> consent_list;
+	void Consent(uint8 permission, char name[64], uint32 offline_charid = 0);
+	bool LoadCharacterConsent();
 
 	//Anti-Cheat Stuff
 	uint32 m_TimeSinceLastPositionCheck;
@@ -797,6 +806,7 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	const bool IsSenseExempted() const { return m_SenseExemption; }
 	const bool IsAssistExempted() const { return m_AssistExemption; }
 	const bool GetGMSpeed() const { return (gmspeed > 0); }
+	const bool GetGMInvul() const { return gminvul; }
 	void CheatDetected(CheatTypes CheatType, float x, float y, float z);
 	const bool IsMQExemptedArea(uint32 zoneID, float x, float y, float z) const;
 	bool CanUseReport;
@@ -825,7 +835,6 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	int GetAggroCount();
 	void IncrementAggroCount();
 	void DecrementAggroCount();
-	void SendDisciplineTimers();
 
 	void CheckEmoteHail(Mob *target, const char* message);
 
@@ -848,14 +857,12 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	Mob *GetBindSightTarget() { return bind_sight_target; }
 	void SetBindSightTarget(Mob *n) { bind_sight_target = n; }
 	uint16 GetBoatID() const { return BoatID; }
-	uint16 GetBoatNPCID() { return m_pp.boatid; }
+	uint32 GetBoatNPCID() { return m_pp.boatid; }
 	char* GetBoatName() { return m_pp.boat; }
 	void SetBoatID(uint32 boatid);
 	void SetBoatName(const char* boatname);
 	QGlobalCache *GetQGlobals() { return qGlobals; }
 	QGlobalCache *CreateQGlobals() { qGlobals = new QGlobalCache(); return qGlobals; }
-	void DoTracking();
-	inline bool IsTracking() { return (TrackingID > 0); }
 	inline void SetPendingGuildInvitation(bool inPendingGuildInvitation) { PendingGuildInvitation = inPendingGuildInvitation; }
 	inline bool GetPendingGuildInvitation() { return PendingGuildInvitation; }
 	void LocateCorpse();
@@ -892,7 +899,7 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	int32 GetActCHA() { return( std::min(GetMaxCHA(), GetCHA()) ); }
 	void LoadAccountFlags();
 	void SetAccountFlag(std::string flag, std::string val);
-	std::string GetAccountFlag(std::string flag); float GetDamageMultiplier(SkillUseTypes);
+	std::string GetAccountFlag(std::string flag);
 	void Consume(const Item_Struct *item, uint8 type, int16 slot, bool auto_consume);
 	int mod_client_damage(int damage, SkillUseTypes skillinuse, int hand, const ItemInst* weapon, Mob* other);
 	bool mod_client_message(char* message, uint8 chan_num);
@@ -915,14 +922,12 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 	int mod_consume(Item_Struct *item, ItemUseTypes type, int change);
 	int mod_food_value(const Item_Struct *item, int change);
 	int mod_drink_value(const Item_Struct *item, int change);
-	void Starve();
 	void QuestReward(Mob* target, uint32 copper = 0, uint32 silver = 0, uint32 gold = 0, uint32 platinum = 0, uint32 itemid = 0, uint32 exp = 0, bool faction = false);
 	void RewindCommand();
 
 	void SetEngagedRaidTarget(bool value) { EngagedRaidTarget = value; }
 	bool GetEngagedRaidTarget() const { return EngagedRaidTarget; }
 
-	void ShowNumHits(); // work around function for numhits not showing on buffs
 	bool IsTargetInMyGroup(Client* target);
 
 	void TripInterrogateInvState() { interrogateinv_flag = true; }
@@ -932,22 +937,32 @@ void SetConsumption(int32 in_hunger, int32 in_thirst);
 
 	bool IsLFG() { return LFG; }
 
-	bool Disarm(Client* client);
+	uint8 Disarm(Client* client, float chance);
 	void SendSoulMarks(SoulMarkList_Struct* SMS);
-
-	//Command #Tune functions
-	virtual int32 Tune_GetMeleeMitDmg(Mob* GM, Mob *attacker, int32 damage, int32 minhit, float mit_rating, float atk_rating);
-	int32 GetMeleeDamage(Mob* other, bool GetMinDamage = false);
 
 	bool has_zomm;
 	bool client_position_update;
 	bool ignore_zone_count; 
+	uint16 last_target;
 
 	inline virtual int32 GetLastLogin() const { return m_pp.lastlogin; }
 	inline virtual int32 GetTimePlayedMin() const { return m_pp.timePlayedMin; }
 
 	bool ClickyOverride() { return clicky_override; }
+	void SetActiveDisc(uint8 value, int16 spellid) { active_disc = value; active_disc_spell = spellid; }
+	void FadeDisc() { BuffFadeBySpellID(active_disc_spell); active_disc = 0; active_disc_spell = 0; Log.Out(Logs::General, Logs::Discs, "Fading currently enabled disc."); }
+	uint8 GetActiveDisc() { return active_disc; }
+	uint16 GetActiveDiscSpell() { return active_disc_spell; }
+	bool HasInstantDisc(uint16 skill_type = 0);
 
+	void SendClientVersion();
+	void FixClientXP();
+	void SendToBoat(bool messageonly = false);
+
+	uint32 trapid; //ID of trap player has triggered. This is cleared when the player leaves the trap's radius, or it despawns.
+
+	void SendMerchantEnd();
+	float GetPortHeading(uint16 newx, uint16 newy);
 
 protected:
 	friend class Mob;
@@ -1009,7 +1024,6 @@ private:
 	int32 CalcDR();
 	int32 CalcPR();
 	int32 CalcCR();
-	int32 CalcCorrup();
 	int32 CalcMaxHP();
 	int32 CalcBaseHP();
 	int32 CalcHPRegen();
@@ -1030,7 +1044,6 @@ private:
 	uint32				ip;
 	uint16				port;
 	CLIENT_CONN_STATUS	client_state;
-	bool				itemsinabag;
 	uint32				character_id;
 	uint32				WID;
 	uint32				account_id;
@@ -1042,6 +1055,7 @@ private:
 	uint8				guildrank; // player's rank in the guild, 0-GUILD_MAX_RANK
 	uint16				duel_target;
 	bool				duelaccepted;
+	std::list<uint32>	keyring;
 	bool				tellsoff;	// GM /toggle
 	bool				gmhideme;
 	bool				AFK;
@@ -1050,6 +1064,7 @@ private:
 	bool				auto_fire;
 	bool				runmode;
 	uint8				gmspeed;
+	bool				gminvul;
 	bool				medding;
 	uint16				horseId;
 	bool				revoked;
@@ -1059,7 +1074,6 @@ private:
 	bool				berserk;
 	bool				dead;
 	uint16				BoatID;
-	uint16				TrackingID;
 	uint16				CustomerID;
 	uint32				account_creation;
 	uint8				firstlogon;
@@ -1125,17 +1139,21 @@ private:
 	Timer	charm_cast_timer;
 	Timer	qglobal_purge_timer;
 	Timer	TrackingTimer;
+	Timer	client_distance_timer;
 
 	Timer anon_toggle_timer;
 	Timer afk_toggle_timer;
 	Timer helm_toggle_timer;
 	Timer light_update_timer;
 	Timer position_update_timer;
+	Timer disc_ability_timer;
 
     glm::vec3 m_Proximity;
 
 	void BulkSendInventoryItems();
-	void	BulkSendItems();
+	void BulkSendItems();
+	void SendCursorItems();
+	void FillPPItems();
 
 	faction_map factionvalues;
 
@@ -1162,7 +1180,7 @@ private:
 	bool EngagedRaidTarget;
 	uint32 SavedRaidRestTimer;
 
-	std::set<uint32> zone_flags;
+	LinkedList<ZoneFlags_Struct*> ZoneFlags;
 
 	int TotalSecondsPlayed;
 
@@ -1190,7 +1208,7 @@ private:
 			//this is the point where the client changes to the loading screen
 			ReceivedZoneEntry, //got the first packet, loading up PP
 			PlayerProfileLoaded, //our DB work is done, sending it
-			ZoneInfoSent, //includes PP, tributes, tasks, spawns, time and weather
+			ZoneInfoSent, //includes PP, spawns, time and weather
 			//this is the point where the client shows a status bar zoning in
 			NewZoneRequested, //received and sent new zone request
 			ClientSpawnRequested, //client sent ReqClientSpawn
@@ -1224,7 +1242,8 @@ private:
 	void UpdateZoneChangeCount(uint32 zoneid);
 
 	bool clicky_override; // On AK, clickies with 0 casttime did not enforce any restrictions (level, regeant consumption, etc) 
-
+	uint8 active_disc;
+	uint16 active_disc_spell;
 };
 
 #endif

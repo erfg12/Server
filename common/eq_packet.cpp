@@ -38,6 +38,8 @@
 #include <iostream>
 #include <stdio.h>
 
+#pragma warning( disable : 4244 4800 4267 )
+
 EQPacket::EQPacket(EmuOpcode op, const unsigned char *buf, uint32 len)
 :	BasePacket(buf, len),
 	emu_opcode(op)
@@ -668,24 +670,38 @@ void EQOldPacket::DecodePacket(uint16 length, uchar *pPacket)
 	}
 	if (HDR.b6_Unknown)
 	{
-		// cout << "DEBUG: HDR.b6_Unknown" << endl;
-		bDumpPacket = true;
-		size += 4; // 4 unknown bytes
-		intptr += 2;
+		if ((size + 3) < length)
+		{
+			// cout << "DEBUG: HDR.b6_Unknown" << endl;
+			bDumpPacket = true;
+			size += 4; // 4 unknown bytes
+			intptr += 2;
+		} else {
+			return;
+		}
 	}
 	if (HDR.b7_Unknown)
 	{
-		//cout << "DEBUG: HDR.b7_Unknown" << endl;
-		bDumpPacket = true;
-		size += 8; // 8 unknown bytes
-		intptr += 4;
+		if ((size + 7) < length) {
+			//cout << "DEBUG: HDR.b7_Unknown" << endl;
+			bDumpPacket = true;
+			size += 8; // 8 unknown bytes
+			intptr += 4;
+		} else {
+			return;
+		}
 	}
 			    
 	//Common  ACK Request
 	if(HDR.a1_ARQ)
 	{
-		dwARQ = ntohs(*intptr++);
-		size+=2;
+		if ((size + 1) < length)
+		{
+			dwARQ = ntohs(*intptr++);
+			size+=2;
+		} else {
+			return;
+		}
 	}
 	/************ END CHECK ACK FIELDS ************/
 
@@ -694,17 +710,18 @@ void EQOldPacket::DecodePacket(uint16 length, uchar *pPacket)
 	/************ CHECK FRAGMENTS ************/
 	if(HDR.a3_Fragment)
 	{ 
-		if (length < 16) // Adding checks for illegal packets, so we dont read beyond the buffer
+		if ((size + 5) < length) // Adding checks for illegal packets, so we dont read beyond the buffer
 		{
+			size += 6;
+			pPacket += size;
+
+			//Extract frag info.
+			fraginfo.dwSeq    = ntohs(*intptr++);
+			fraginfo.dwCurr   = ntohs(*intptr++);
+			fraginfo.dwTotal  = ntohs(*intptr++);
+		} else {
 			return;
 		}
-		size += 6;
-		pPacket += size;
-
-		//Extract frag info.
-		fraginfo.dwSeq    = ntohs(*intptr++);
-		fraginfo.dwCurr   = ntohs(*intptr++);
-		fraginfo.dwTotal  = ntohs(*intptr++);
 	}
 	/************ END CHECK FRAGMENTS ************/
 			    
@@ -713,17 +730,25 @@ void EQOldPacket::DecodePacket(uint16 length, uchar *pPacket)
 	/************ CHECK ACK SEQUENCE ************/
 	if(HDR.a4_ASQ && HDR.a1_ARQ)
 	{
-		dbASQ_high = ((char*)intptr)[0];
-		dbASQ_low  = ((char*)intptr)[1];
-		intptr++;
-		size+=2;
+		if ((size + 1) < length) {
+			dbASQ_high = ((char*)intptr)[0];
+			dbASQ_low  = ((char*)intptr)[1];
+			intptr++;
+			size+=2;
+		} else {
+			return;
+		}
 	}
 	else
 	{
 		if(HDR.a4_ASQ)
 		{
-			dbASQ_high = ((char*)intptr)[0]; intptr = (uint16*)&pPacket[size+1]; //This better?
-			size+=1;
+			if (size < length) {
+				dbASQ_high = ((char*)intptr)[0]; intptr = (uint16*)&pPacket[size+1]; //This better?
+				size+=1;
+			} else {
+				return;
+			}
 		}
 	}
 	/************ END CHECK ACK SEQUENCE ************/

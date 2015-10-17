@@ -20,6 +20,8 @@
 
 #include <iostream>
 
+#pragma warning( disable : 4996 4800 )
+
 #define DEBUG_MUTEX_CLASS 0
 #if DEBUG_MUTEX_CLASS >= 1
 

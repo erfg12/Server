@@ -42,8 +42,6 @@ public:
 	int HasItemByUse(int use);
 	int HasItemByUse(int use, uint8 quantity);
 	int HasItemByUse(int use, uint8 quantity, uint8 where);
-	int HasItemByLoreGroup(uint32 loregroup);
-	int HasItemByLoreGroup(uint32 loregroup, int where);
 	int FindFreeSlot(bool for_bag, bool try_cursor);
 	int FindFreeSlot(bool for_bag, bool try_cursor, int min_size);
 	int FindFreeSlot(bool for_bag, bool try_cursor, int min_size, bool is_arrow);

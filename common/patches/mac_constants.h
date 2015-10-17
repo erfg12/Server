@@ -9,7 +9,7 @@ namespace MAC {
 			// this needs work to match actual client equivilents
 			MapPossessions = 0,
 			MapBank,
-			MapSharedBank,
+			MapUnused,
 			MapTrade,
 			MapWorld,
 			MapLimbo,
@@ -24,7 +24,7 @@ namespace MAC {
 			MapRealEstate,
 			MapViewMODPC,
 			MapViewMODBank,
-			MapViewMODSharedBank,
+			MapViewMODUnused,
 			MapViewMODLimbo,
 			MapAltStorage,
 			MapArchived,
@@ -81,7 +81,6 @@ namespace MAC {
 	namespace consts {
 		static const uint16	MAP_POSSESSIONS_SIZE = slots::_MainCount;
 		static const uint16 MAP_BANK_SIZE = 8;
-		static const uint16 MAP_SHARED_BANK_SIZE = 2;
 		static const uint16 MAP_TRADE_SIZE = 8;
 		static const uint16 MAP_WORLD_SIZE = 10;
 		static const uint16 MAP_LIMBO_SIZE = 36;
@@ -93,7 +92,6 @@ namespace MAC {
 		static const uint16 MAP_REAL_ESTATE_SIZE = 0;
 		static const uint16 MAP_VIEW_MOD_PC_SIZE = MAP_POSSESSIONS_SIZE;
 		static const uint16 MAP_VIEW_MOD_BANK_SIZE = MAP_BANK_SIZE;
-		static const uint16 MAP_VIEW_MOD_SHARED_BANK_SIZE = MAP_SHARED_BANK_SIZE;
 		static const uint16 MAP_VIEW_MOD_LIMBO_SIZE = MAP_LIMBO_SIZE;
 		static const uint16 MAP_ALT_STORAGE_SIZE = 0;
 		static const uint16 MAP_ARCHIVED_SIZE = 0;
@@ -118,15 +116,9 @@ namespace MAC {
 
 		static const int16 BANK_BEGIN = 2000;
 		static const int16 BANK_END = 2007;
-		static const int16 BANK_BAGS_BEGIN = 2031;
-		static const int16 BANK_BAGS_END_OFFSET = 159;
+		static const int16 BANK_BAGS_BEGIN = 2030;
+		static const int16 BANK_BAGS_END_OFFSET = 79;
 		static const int16 BANK_BAGS_END = BANK_BAGS_BEGIN + BANK_BAGS_END_OFFSET;
-
-		static const int16 SHARED_BANK_BEGIN = 2500;
-		static const int16 SHARED_BANK_END = 2501;
-		static const int16 SHARED_BANK_BAGS_BEGIN = 2531;
-		static const int16 SHARED_BANK_BAGS_END_OFFSET = 19;
-		static const int16 SHARED_BANK_BAGS_END = SHARED_BANK_BAGS_BEGIN + SHARED_BANK_BAGS_END_OFFSET;
 
 		static const int16 TRADE_BEGIN = 3000;
 		static const int16 TRADE_END = 3007;
@@ -138,11 +130,14 @@ namespace MAC {
 		static const int16 WORLD_BEGIN = 4000;
 		static const int16 WORLD_END = 4009;
 
-		static const int16 CORPSE_BEGIN = 0;
-		static const int16 CORPSE_END = 30;
+		static const int16 CORPSE_BEGIN = 22;
 
 		static const uint16 ITEM_COMMON_SIZE = 5;
 		static const uint16 ITEM_CONTAINER_SIZE = 10;
+
+		static const int16 CURSOR_QUEUE_BEGIN = 8000;
+		static const int16 CURSOR_QUEUE_END = 8999;
+
 	}
 
 	namespace limits {

@@ -200,12 +200,23 @@ bool IsHasteSpell(uint16 spell_id)
 
 bool IsHarmonySpell(uint16 spell_id)
 {
+	//This will also return true for Pacify
 	return (IsEffectInSpell(spell_id, SE_Harmony) || IsEffectInSpell(spell_id, SE_ChangeFrenzyRad));
 }
 
 bool IsPacifySpell(uint16 spell_id)
 {
 	return IsEffectInSpell(spell_id, SE_ChangeFrenzyRad);
+}
+
+bool IsLullSpell(uint16 spell_id)
+{
+	return IsEffectInSpell(spell_id, SE_Lull);
+}
+
+bool IsCrowdControlSpell(uint16 spell_id)
+{
+	return (IsEffectInSpell(spell_id, SE_Harmony) || IsEffectInSpell(spell_id, SE_ChangeFrenzyRad) || IsEffectInSpell(spell_id, SE_Lull));
 }
 
 bool IsPercentalHealSpell(uint16 spell_id)
@@ -245,12 +256,9 @@ bool IsBeneficialSpell(uint16 spell_id)
 						sai == SAI_Memory_Blur || sai == SAI_Calm_Song)
 					return false;
 			} else {
-				// If the resisttype is not magic and spell is Bind Sight or Cast Sight or Harmony
+				// If the resisttype is not magic and spell is Harmony
 				// It's not beneficial
-				if ((sai == SAI_Calm && IsEffectInSpell(spell_id, SE_Harmony))
-					|| (sai == SAI_Calm_Song && IsEffectInSpell(spell_id, SE_BindSight))
-					|| (sai == SAI_Dispell_Sight && spells[spell_id].skill == 18 &&
-						!IsEffectInSpell(spell_id, SE_VoiceGraft)))
+				if (sai == SAI_Calm && IsEffectInSpell(spell_id, SE_Harmony))
 					return false;
 			}
 		}
@@ -312,6 +320,14 @@ bool IsSummonPCSpell(uint16 spell_id)
 bool IsCharmSpell(uint16 spell_id)
 {
 	return IsEffectInSpell(spell_id, SE_Charm);
+}
+
+bool IsDireCharmSpell(uint16 spell_id)
+{
+	if(IsEffectInSpell(spell_id, SE_Charm) && spells[spell_id].buffdurationformula == 50)
+		return true;
+	else
+		return false;
 }
 
 bool IsBlindSpell(uint16 spell_id)
@@ -707,31 +723,6 @@ int32 CalculateCounters(uint16 spell_id)
 	return counter;
 }
 
-bool IsDisciplineBuff(uint16 spell_id)
-{
-	if (!IsValidSpell(spell_id))
-		return false;
-
-	if (spells[spell_id].mana == 0 && spells[spell_id].short_buff_box == 0 &&
-			(spells[spell_id].EndurCost || spells[spell_id].EndurUpkeep) &&
-			spells[spell_id].targettype == ST_Self)
-		return true;
-
-	return false;
-}
-
-bool IsDiscipline(uint16 spell_id)
-{
-	if (!IsValidSpell(spell_id))
-		return false;
-
-	if (spells[spell_id].mana == 0 &&
-			(spells[spell_id].EndurCost || spells[spell_id].EndurUpkeep))
-		return true;
-
-	return false;
-}
-
 bool IsCombatSkill(uint16 spell_id)
 {
 	if (!IsValidSpell(spell_id))
@@ -1016,7 +1007,10 @@ bool IsResistDebuffSpell(uint16 spell_id)
 
 bool IsSelfConversionSpell(uint16 spell_id)
 {
-	if (GetSpellTargetType(spell_id) == ST_Self && IsEffectInSpell(spell_id, SE_CurrentMana) &&
+	if(!IsValidSpell(spell_id))
+		return false;
+
+	if (spells[spell_id].targettype == ST_Self && IsEffectInSpell(spell_id, SE_CurrentMana) &&
 			IsEffectInSpell(spell_id, SE_CurrentHP) && spells[spell_id].base[GetSpellEffectIndex(spell_id, SE_CurrentMana)] > 0 &&
 			spells[spell_id].base[GetSpellEffectIndex(spell_id, SE_CurrentHP)] < 0)
 		return true;
@@ -1100,11 +1094,12 @@ bool RequiresComponents(uint16 spell_id)
 		for (int t_count = 0; t_count < 4; t_count++) 
 		{
 			int32 component = spells[spell_id].components[t_count];
+			int32 focuscomponent = spells[spell_id].NoexpendReagent[t_count];
 
-			if (component == -1)
+			if (component == -1 && focuscomponent == -1)
 				continue;
 
-			if(component > 0)
+			if(component > 0 || focuscomponent > 0)
 				return true;
 		}
 	}
@@ -1241,5 +1236,43 @@ bool IsSpeedBuff(uint16 spell_id)
 				return true;
 		}
 	}
+	return false;
+}
+
+bool IsRainSpell(uint16 spell_id)
+{
+	if(IsDetrimentalSpell(spell_id) && 
+		(spells[spell_id].targettype == ST_AETarget || spells[spell_id].targettype == ST_AECaster) &&
+		(spells[spell_id].spell_category == 12 || spells[spell_id].spell_category == 150 || spells[spell_id].spell_category == 151 || spells[spell_id].spell_category == 152))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool IsDisc(uint16 spell_id)
+{
+	if(spells[spell_id].IsDisciplineBuff)
+		return true;
+	else
+		return false;
+}
+
+bool IsShrinkSpell(uint16 spell_id)
+{
+	int j;
+
+	if (!IsValidSpell(spell_id))
+		return false;
+
+	for (j = 0; j < EFFECT_COUNT; j++)
+	{
+		if (spells[spell_id].effectid[j] == SE_ModelSize && spells[spell_id].base[j] < 100)
+		{
+			return true;
+		}
+	}
+
 	return false;
 }

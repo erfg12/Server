@@ -1,5 +1,6 @@
 #include "mysql_request_result.h"
 
+#pragma warning( disable : 4018 )
 
 MySQLRequestResult::MySQLRequestResult()
 	: m_CurrentRow(), m_OneBeyondRow()

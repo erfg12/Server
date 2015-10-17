@@ -104,11 +104,6 @@ uint32 Lua_ItemInst::GetID() {
 	return self->GetID();
 }
 
-uint32 Lua_ItemInst::GetItemScriptID() {
-	Lua_Safe_Call_Int();
-	return self->GetItemScriptID();
-}
-
 int Lua_ItemInst::GetCharges() {
 	Lua_Safe_Call_Int();
 	return self->GetCharges();
@@ -258,7 +253,6 @@ luabind::scope lua_register_iteminst() {
 		.def("IsWeapon", (bool(Lua_ItemInst::*)(void))&Lua_ItemInst::IsWeapon)
 		.def("IsAmmo", (bool(Lua_ItemInst::*)(void))&Lua_ItemInst::IsAmmo)
 		.def("GetID", (uint32(Lua_ItemInst::*)(void))&Lua_ItemInst::GetID)
-		.def("GetItemScriptID", (uint32(Lua_ItemInst::*)(void))&Lua_ItemInst::GetItemScriptID)
 		.def("GetItem", (Lua_Item(Lua_ItemInst::*)(void))&Lua_ItemInst::GetItem)
 		.def("GetCharges", (int(Lua_ItemInst::*)(void))&Lua_ItemInst::GetCharges)
 		.def("SetCharges", (void(Lua_ItemInst::*)(int))&Lua_ItemInst::SetCharges)

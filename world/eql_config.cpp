@@ -48,7 +48,7 @@ void EQLConfig::LoadSettings() {
         m_dynamics = atoi(row[0]);
     }
 
-	query = StringFormat("SELECT zone, port FROM launcher_zones WHERE launcher = '%s'", namebuf);
+	query = StringFormat("SELECT zone, port FROM launcher_zones WHERE launcher = '%s' AND enabled = 1", namebuf);
 	results = database.QueryDatabase(query);
 	if (!results.Success()) {
         Log.Out(Logs::General, Logs::Error, "EQLConfig::LoadSettings: %s", results.ErrorMessage().c_str());

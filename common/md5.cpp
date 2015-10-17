@@ -12,6 +12,8 @@
 #include "../common/string_util.h"
 #include "../common/seperator.h"
 
+#pragma warning( disable : 4267 )
+
 MD5::MD5() {
 	memset(pMD5, 0, 16);
 }

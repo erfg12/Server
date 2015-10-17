@@ -53,6 +53,7 @@ public:
 	uint32 GetLockPick();
 	void SetKeyItem(uint32 key);
 	uint32 GetKeyItem();
+	uint32 GetAltKeyItem();
 	void SetNoKeyring(int type);
 	int GetNoKeyring();
 	void CreateDatabaseEntry();

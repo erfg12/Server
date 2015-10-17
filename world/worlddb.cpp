@@ -33,7 +33,7 @@ extern std::vector<RaceClassCombos> character_create_race_class_combos;
 
 
 // solar: the current stuff is at the bottom of this function
-void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct* cs, uint32 ClientVersion) {
+void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct* cs, uint32 ClientVersion, uint8 &charcount) {
 	Inventory *inv;
 	uint8 has_home = 0;
 	uint8 has_bind = 0;
@@ -67,7 +67,7 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 		"zone_id		            "  // 16
 		"FROM                       "
 		"character_data             "
-		"WHERE `account_id` = %i ORDER BY `name` LIMIT 10   ", account_id);
+		"WHERE `account_id` = %i AND is_deleted = 0 ORDER BY `name` LIMIT 8   ", account_id);
 	auto results = database.QueryDatabase(cquery); int char_num = 0;
 	for (auto row = results.begin(); row != results.end(); ++row) {
 		PlayerProfile_Struct pp;
@@ -192,8 +192,17 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 			printf("Error loading inventory for %s\n", cs->name[char_num]);
 		}
 		safe_delete(inv);
-		if (++char_num > 10)
+
+		++char_num;
+		if (char_num >= 8)
+		{
+			charcount = 8;
 			break;
+		}
+		else
+		{
+			charcount = char_num;
+		}
 	}
 
 	return;
@@ -212,8 +221,12 @@ int WorldDatabase::MoveCharacterToBind(int CharID, uint8 bindnum) {
 		return 0;
 	}
 
-	int zone_id, instance_id;
-	double x, y, z, heading;
+	int zone_id = 0;
+	int instance_id = 0;
+	double x = 0;
+	double y = 0;
+	double z = 0;
+	double heading = 0;
 	for (auto row = results.begin(); row != results.end(); ++row) {
 		zone_id = atoi(row[0]);
 		instance_id = atoi(row[1]);

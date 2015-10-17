@@ -33,6 +33,48 @@
 extern QueryServ* QServ;
 
 
+float Mob::GetBaseEXP()
+{
+	float exp = EXP_FORMULA;
+
+	float zemmod = 75.0;
+	if(zone->newzone_data.zone_exp_multiplier >= 0)
+	{
+		zemmod = zone->newzone_data.zone_exp_multiplier * 100;
+	}
+
+	float totalmod = 1.0;
+	if(zone->IsHotzone())
+	{
+		totalmod += RuleR(Zone, HotZoneBonus);
+	}
+
+	// AK had a permanent 20% XP increase.
+	totalmod += 0.20;
+	
+	float basexp = exp * zemmod * totalmod;
+	float logged_xp = basexp;
+
+	if(player_damage == 0)
+	{
+		basexp *= 0.25f;
+		Log.Out(Logs::General, Logs::EQMac, "%s was not damaged by a player. Full XP was: %0.2f Earned XP is: %0.2f", GetName(), logged_xp, basexp);
+	}
+	else if(dire_pet_damage > 0)
+	{
+		float percentage = static_cast<float>(dire_pet_damage)/total_damage;
+		percentage *= 100.0f;
+		if(percentage > 50 && percentage <= 74)
+			basexp *= 0.75f;
+		else if(percentage >= 75)
+			basexp *= 0.50f;
+
+		Log.Out(Logs::General, Logs::EQMac, "%s was %0.2f percent damaged by a dire charmed pet (%d/%d). Full XP was: %0.2f Earned XP is: %0.2f", GetName(), percentage, dire_pet_damage, total_damage, logged_xp, basexp);
+	}
+
+	return basexp;
+}
+
 void Client::AddEXP(uint32 in_add_exp, uint8 conlevel, bool resexp) {
 
 	this->EVENT_ITEM_ScriptStopReturn();
@@ -63,31 +105,8 @@ void Client::AddEXP(uint32 in_add_exp, uint8 conlevel, bool resexp) {
 			totalmod *= RuleR(Character, ExpMultiplier);
 		}
 
-		float zemmod = 75.0;
-		if(zone->newzone_data.zone_exp_multiplier >= 0){
-			zemmod = zone->newzone_data.zone_exp_multiplier * 100;
-		}
-
-		if(zone->IsHotzone())
-		{
-			totalmod += RuleR(Zone, HotZoneBonus);
-		}
-
-		// AK had a permanent 20% XP increase.
-		totalmod += 0.20;
-
-		add_exp = uint32(float(add_exp) * totalmod * zemmod);
+		add_exp = uint32(float(add_exp) * totalmod);
 	}
-
-	float aatotalmod = 1.0;
-
-	// AK had a permanent 20% XP increase.
-	aatotalmod += 0.20;
-
-	if(zone->newzone_data.zone_exp_multiplier >= 0){
-		aatotalmod *= zone->newzone_data.zone_exp_multiplier * 100;
-	}
-
 
 	if(RuleB(Zone, LevelBasedEXPMods)){
 		if(zone->level_exp_mod[GetLevel()].ExpMod){
@@ -106,7 +125,7 @@ void Client::AddEXP(uint32 in_add_exp, uint8 conlevel, bool resexp) {
 		add_aaxp = xp_cap;
 
 	uint32 exp = GetEXP() + add_exp;
-	uint32 aaexp = (uint32)(RuleR(Character, AAExpMultiplier) * add_aaxp * aatotalmod);
+	uint32 aaexp = (uint32)(RuleR(Character, AAExpMultiplier) * add_aaxp);
 	uint32 had_aaexp = GetAAXP();
 	aaexp += had_aaexp;
 	if(aaexp < had_aaexp)
@@ -556,20 +575,30 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 	int8 membercount = 0;
 	int8 close_membercount = 0;
 	uint8 maxlevel = 1;
+	uint16 weighted_levels = 0;
+	uint8 minlevel = 65;
 
+	// This loop grabs the max player level for the group level check further down, the min level to subtract the 6th group member, adds up all
+	// the player levels for the weighted split, and does a preliminary count of the group members for the group bonus calc. 
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] != nullptr  && members[i]->IsClient()) {
 			Client *cmember = members[i]->CastToClient();
-			if(cmember->CastToClient()->GetZoneID() == zone->GetZoneID())
+			if(cmember->GetZoneID() == zone->GetZoneID())
 			{
-				if(members[i]->GetLevel() > maxlevel)
-					maxlevel = members[i]->GetLevel();
+				if(cmember->GetLevel() > maxlevel)
+					maxlevel = cmember->GetLevel();
+
+				if(cmember->GetLevel() < minlevel)
+					minlevel = cmember->GetLevel();
 
 				if(cmember->GetLevelCon(other->GetLevel()) != CON_GREEN)
 				{
 					++membercount;
-					if(cmember->CastToClient()->IsInRange(other))
+					if(cmember->IsInRange(other))
+					{
+						weighted_levels += cmember->GetLevel();
 						++close_membercount;
+					}
 				}
 			}
 		}
@@ -579,16 +608,21 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 	if (membercount <= 0 || close_membercount <= 0)
 		return;
 
+	// We don't need this variable set if we don't have a 6th member to subtract from the split.
+	if(close_membercount < 6)
+		minlevel = 0;
+
 	bool isgreen = false;
 	int conlevel = Mob::GetLevelCon(maxlevel, other->GetLevel());
 	if(conlevel == CON_GREEN)
 		isgreen = true;
 
+	//Give XP out to lower toons from NPCs that are green to the highest player.
 	if(isgreen && !RuleB(AlKabor, GreensGiveXPToGroup))
 		return;
 
-	// The first loop grabs the maxlevel, so we need to adjust the count here checking for level range, 
-	// before applying xp in the third and final loop.
+	// This loop uses the max player level we now have to determine who is in level range to gain XP. Anybody
+	// outside the range is subtracted from the player count and has their level removed from the weighted split.
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) {
 		if (members[i] != nullptr && members[i]->IsClient()) // If Group Member is Client
 		{
@@ -599,10 +633,17 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 			{
 				if(membercount != 0 && close_membercount != 0)
 				{
+					Log.Out(Logs::Detail, Logs::Group, "%s is not within level range, removing from XP gain.", cmember->GetName());
 					--membercount;
 
 					if(cmember->CastToClient()->IsInRange(other))
+					{
+						if(weighted_levels >= cmember->GetLevel())
+							weighted_levels -= cmember->GetLevel();
+
 						--close_membercount;
+						minlevel = 0;
+					}
 				}
 				else
 					return;
@@ -610,9 +651,11 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 		}
 	}
 
+	// Another sanity check.
 	if (membercount <= 0 || close_membercount <= 0)
 		return;
 
+	// Count players out of range from the corpse but still in the zone towards the bonus.
 	if(!RuleB(AlKabor, OutOfRangeGroupXPBonus))
 		membercount = close_membercount;
 
@@ -623,6 +666,7 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 		groupmod += 0.40;
 	if(RuleB(AlKabor, GroupEXPBonuses))
 	{
+		// Use the "broken" bonuses on AK.
 		if(membercount == 4)
 			groupmod += 1.20;
 		else if(membercount > 4)
@@ -630,26 +674,24 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 	}
 	else
 	{
+		// Use the bonuses how they should have been.
 		if(membercount == 4)
 			groupmod += 0.60;
 		else if(membercount > 4)
 			groupmod += 0.80;
 	}
 
-	uint32 groupexp = (uint32)((float)exp * groupmod * (RuleR(Character, GroupExpMultiplier)));
+	float groupexp = (static_cast<float>(exp) * groupmod) * RuleR(Character, GroupExpMultiplier);
 
-	// Give XP to all clients in the group who are close to the kill. 
+	// 6th member is free in the split.
 	if(!RuleB(AlKabor, Count6thGroupMember))
 	{
-		// 6th member is free for division.
 		if(close_membercount == 6)
-			close_membercount = 5;
+			weighted_levels -= minlevel;
 	}
 
-	uint32 splitgroupxp = groupexp / close_membercount;
-	if(splitgroupxp < 1)
-		splitgroupxp = 1;
-
+	// This loop figures out the split, and sends XP for each player that qualifies. (NPC is not green to the player, player is in the 
+	// zone where the kill occured, is in range of the corpse, and is in level range with the rest of the group.)
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) 
 	{
 		if (members[i] != nullptr && members[i]->IsClient()) // If Group Member is Client
@@ -662,19 +704,19 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 			{
 				if (cmember->IsInLevelRange(maxlevel)) 
 				{
-					if(isgreen)
-					{
-						// NPCs that are green to some of the group do not split XP.
-						cmember->AddEXP(groupexp, cmember->GetLevelCon(other->GetLevel()));
-						//_log(_GROUP__LOG, "%s gets non-split green XP worth: %i. You lucky dog.", cmember->GetName(), groupexp);
-					}
-					else
-					{
-						cmember->AddEXP(splitgroupxp, conlevel);
-						//_log(_GROUP__LOG, "%s splits %i with the rest of the group. Their share: %i", cmember->GetName(), groupexp, splitgroupxp);
-						//cmember->Message(CC_Yellow, "Group XP awarded is: %i Total XP is: %i for count: %i total count: %i in_exp is: %i", splitgroupxp, groupexp, close_membercount, membercount, exp);
+					float split_percent = static_cast<float>(cmember->GetLevel()) / weighted_levels;
+					float splitgroupxp = groupexp * split_percent;
+					if(splitgroupxp < 1)
+						splitgroupxp = 1;
+					
+					if(conlevel == CON_GREEN)
+						conlevel = Mob::GetLevelCon(cmember->GetLevel(), other->GetLevel());
 
-					}
+					cmember->AddEXP(static_cast<uint32>(splitgroupxp), conlevel);
+					Log.Out(Logs::Detail, Logs::Group, "%s splits %0.2f with the rest of the group. Their share: %0.2f", cmember->GetName(), groupexp, splitgroupxp);
+					//if(cmember->Admin() > 80)
+					//	cmember->Message(CC_Yellow, "Group XP awarded is: %0.2f Total XP is: %0.2f for count: %i total count: %i in_exp is: %i", splitgroupxp, groupexp, close_membercount, membercount, exp);
+
 				}
 				else
 					Log.Out(Logs::Detail, Logs::Group, "%s is too low in level to gain XP from this group.", cmember->GetName());

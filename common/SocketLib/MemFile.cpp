@@ -178,7 +178,11 @@ char *MemFile::fgets(char *s, int size)
 	return s;
 }
 
-
+/*
+C6262	Excessive stack usage
+Function uses '32792' bytes of stack:  exceeds /analyze:stacksize '16384'.
+Consider moving some data to heap.	common	memfile.cpp	182
+*/
 void MemFile::fprintf(char *format, ...)
 {
 	va_list ap;

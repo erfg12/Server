@@ -1,4 +1,5 @@
 #include "../common/global_define.h"
+#include "../common/eqemu_logsys.h"
 #include "../common/eq_packet.h"
 #include "../common/eq_stream_intf.h"
 #include "../common/misc.h"
@@ -105,19 +106,23 @@ void Client::SendLogServer()
 {
 	auto outapp = new EQApplicationPacket(OP_LogServer, sizeof(LogServer_Struct));
 	LogServer_Struct *l=(LogServer_Struct *)outapp->pBuffer;
-	const char *wsn=WorldConfig::get()->ShortName.c_str();
-	memcpy(l->worldshortname,wsn,strlen(wsn));
-
-	if(RuleB(Mail, EnableMailSystem))
-		l->enablemail = 1;
-
-	l->enable_pvp = (RuleI(World, PVPSettings));
-
-	if(RuleB(World, IsGMPetitionWindowEnabled))
-		l->enable_petition_wnd = 1;
 
 	if(RuleI(World, FVNoDropFlag) == 1 || RuleI(World, FVNoDropFlag) == 2 && GetAdmin() > RuleI(Character, MinStatusForNoDropExemptions))
 		l->enable_FV = 1;
+
+	l->enable_pvp = (RuleI(World, PVPSettings));
+
+	l->auto_identify = 0;
+	l->NameGen = 1;
+	l->Gibberish = 1;
+	l->test_server = 0;
+	l->Locale = 0;
+	l->ProfanityFilter = 0;
+
+	const char *wsn=WorldConfig::get()->ShortName.c_str();
+	memcpy(l->worldshortname,wsn,strlen(wsn));
+	memcpy(l->loggingServerAddress, "127.0.0.1", 16);
+	l->loggingServerPort = 9878;
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -161,7 +166,8 @@ void Client::SendCharInfo() {
 	auto outapp = new EQApplicationPacket(OP_SendCharInfo, sizeof(CharacterSelect_Struct));
 	CharacterSelect_Struct* cs = (CharacterSelect_Struct*)outapp->pBuffer;
 
-	database.GetCharSelectInfo(GetAccountID(), cs, ClientVersionBit);
+	charcount = 0;
+	database.GetCharSelectInfo(GetAccountID(), cs, ClientVersionBit, charcount);
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -463,9 +469,14 @@ bool Client::HandleEnterWorldPacket(const EQApplicationPacket *app) {
 		return true;
 	}
 
-	if (RuleI(World, MaxClientsPerIP) >= 0) {
-		client_list.GetCLEIP(this->GetIP()); //Check current CLE Entry IPs against incoming connection
-	}
+	//if (RuleI(World, MaxClientsPerIP) >= 0) {
+	//	client_list.GetCLEIP(this->GetIP()); //Check current CLE Entry IPs against incoming connection
+	//}
+	if(GetSessionLimit())
+		return false;
+
+	if (RuleI(World, MaxClientsPerIP) >= 0 && !client_list.CheckIPLimit(GetAccountID(), GetIP(), GetAdmin(), cle))
+		return false;
 
 	EnterWorld_Struct *ew=(EnterWorld_Struct *)app->pBuffer;
 	strn0cpy(char_name, ew->name, 64);
@@ -580,9 +591,17 @@ bool Client::HandleEnterWorldPacket(const EQApplicationPacket *app) {
 bool Client::HandleDeleteCharacterPacket(const EQApplicationPacket *app) {
 
 	uint32 char_acct_id = database.GetAccountIDByChar((char*)app->pBuffer);
+	uint32 level = database.GetLevelByChar((char*)app->pBuffer);
 	if(char_acct_id == GetAccountID()) {
 		Log.Out(Logs::Detail, Logs::World_Server,"Delete character: %s",app->pBuffer);
-		database.DeleteCharacter((char *)app->pBuffer);
+		if(level >= 30)
+		{
+			database.MarkCharacterDeleted((char *)app->pBuffer);
+		}
+		else
+		{
+			database.DeleteCharacter((char *)app->pBuffer);
+		}
 		SendCharInfo();
 	}
 
@@ -733,9 +752,6 @@ void Client::EnterWorld(bool TryBootup) {
 	if (zoneID == 0)
 		return;
 
-	//if(GetSessionLimit())
-	//	return;
-
 	ZoneServer* zs = nullptr;
 	if(instanceID > 0)
 	{
@@ -872,30 +888,39 @@ void Client::Clearance(int8 response)
 		return;
 	}
 
-	// @bp This is the chat server
-	/*
-	char packetData[] = "64.37.148.34.9876,MyServer,Testchar,23cd2c95";
-	outapp = new EQApplicationPacket(OP_0x0282, sizeof(packetData));
-	strcpy((char*)outapp->pBuffer, packetData);
-	QueuePacket(outapp);
-	delete outapp;
-	*/
-
 	// Send zone server IP data
 	outapp = new EQApplicationPacket(OP_ZoneServerInfo, sizeof(ZoneServerInfo_Struct));
 	ZoneServerInfo_Struct* zsi = (ZoneServerInfo_Struct*)outapp->pBuffer;
-	const char *zs_addr=zs->GetCAddress();
-	if (!zs_addr[0]) {
-		if (cle->IsLocalClient()) {
+
+	const char *zs_addr = nullptr;
+	if(cle && cle->IsLocalClient()) {
+		const char *local_addr = zs->GetCLocalAddress();
+
+		if(local_addr[0]) {
+			zs_addr = local_addr;
+		} else {
 			struct in_addr in;
 			in.s_addr = zs->GetIP();
-			zs_addr=inet_ntoa(in);
-			if (!strcmp(zs_addr,"127.0.0.1"))
-				zs_addr=WorldConfig::get()->LocalAddress.c_str();
+			zs_addr = inet_ntoa(in);
+
+			if(strcmp(zs_addr, "127.0.0.1") == 0)
+			{
+				Log.Out(Logs::Detail, Logs::World_Server, "Local zone address was %s, setting local address to: %s", zs_addr, WorldConfig::get()->LocalAddress.c_str());
+				zs_addr = WorldConfig::get()->LocalAddress.c_str();
+			} else {
+				Log.Out(Logs::Detail, Logs::World_Server, "Local zone address %s", zs_addr);
+			}
+		}
+
+	} else {
+		const char *addr = zs->GetCAddress();
+		if(addr[0]) {
+			zs_addr = addr;
 		} else {
-			zs_addr=WorldConfig::get()->WorldAddress.c_str();
+			zs_addr = WorldConfig::get()->WorldAddress.c_str();
 		}
 	}
+
 	strcpy(zsi->ip, zs_addr);
 	zsi->port =zs->GetCPort();
 	Log.Out(Logs::Detail, Logs::World_Server,"Sending client to zone %s (%d:%d) at %s:%d",zonename,zoneID,instanceID,zsi->ip,zsi->port);
@@ -923,14 +948,6 @@ void Client::ZoneUnavail() {
 	autobootup_timeout.Disable();
 }
 
-bool Client::GenPassKey(char* key) {
-	char* passKey=nullptr;
-	*passKey += ((char)('A'+((int)emu_random.Int(0, 25))));
-	*passKey += ((char)('A'+((int)emu_random.Int(0, 25))));
-	memcpy(key, passKey, strlen(passKey));
-	return true;
-}
-
 void Client::QueuePacket(const EQApplicationPacket* app, bool ack_req) {
 	Log.Out(Logs::Detail, Logs::World_Server, "Sending EQApplicationPacket OpCode 0x%04x",app->GetOpcode());
 
@@ -943,16 +960,15 @@ void Client::SendGuildList() {
 	outapp = new EQApplicationPacket(OP_GuildsList);
 
 	//ask the guild manager to build us a nice guild list packet
-	OldGuildsList_Struct* guildstruct = guild_mgr.MakeOldGuildList(outapp->size);
-	outapp->pBuffer = reinterpret_cast<uchar*>(guildstruct);
-	//safe_delete_array(guildstruct);
-
+	outapp->pBuffer = guild_mgr.MakeOldGuildList(outapp->size);
 	if(outapp->pBuffer == nullptr) {
-		safe_delete(outapp);
+		Log.Out(Logs::Detail, Logs::Guilds, "Unable to make guild list!");
 		return;
 	}
 
-	eqs->FastQueuePacket((EQApplicationPacket **)&outapp);
+	Log.Out(Logs::Detail, Logs::Guilds, "Sending OP_GuildsList of length %d", outapp->size);
+
+	eqs->FastQueuePacket(&outapp);
 }
 
 // @merth: I have no idea what this struct is for, so it's hardcoded for now
@@ -1023,6 +1039,13 @@ bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 {
 	if (!RuleB(Character, CanCreate))
 		return false;
+
+	if(charcount >= 8)
+	{
+		Log.Out(Logs::General, Logs::World_Server, "%s already has %d characters. OPCharCreate returning false.", name, charcount);
+		return false;
+	}
+
 	PlayerProfile_Struct pp;
 	ExtendedProfile_Struct ext;
 	Inventory inv;
@@ -1164,6 +1187,7 @@ bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 		return false;
 	}
 	Log.Out(Logs::Detail, Logs::World_Server,"Character creation successful: %s", pp.name);
+	++charcount;
 	return true;
 }
 
@@ -1362,8 +1386,8 @@ void Client::SetRacialLanguages( PlayerProfile_Struct *pp )
 			pp->languages[LANG_COMMON_TONGUE] = 100;
 			pp->languages[LANG_DARK_ELVISH] = 100;
 			pp->languages[LANG_DARK_SPEECH] = 100;
-			pp->languages[LANG_ELDER_ELVISH] = 100;
-			pp->languages[LANG_ELVISH] = 25;
+			pp->languages[LANG_ELDER_ELVISH] = 54;
+			pp->languages[LANG_ELVISH] = 54;
 			break;
 		}
 	case DWARF:
@@ -1408,8 +1432,8 @@ void Client::SetRacialLanguages( PlayerProfile_Struct *pp )
 	case HIGH_ELF:
 		{
 			pp->languages[LANG_COMMON_TONGUE] = 100;
-			pp->languages[LANG_DARK_ELVISH] = 25;
-			pp->languages[LANG_ELDER_ELVISH] = 25;
+			pp->languages[LANG_DARK_ELVISH] = 51;
+			pp->languages[LANG_ELDER_ELVISH] = 51;
 			pp->languages[LANG_ELVISH] = 100;
 			break;
 		}
@@ -1449,7 +1473,7 @@ void Client::SetRacialLanguages( PlayerProfile_Struct *pp )
 		{
 			pp->languages[LANG_COMMON_TONGUE] = 100;
 			pp->languages[LANG_COMBINE_TONGUE] = 100;
-			pp->languages[LANG_ERUDIAN] = 25;
+			pp->languages[LANG_ERUDIAN] = 32;
 			pp->languages[LANG_VAH_SHIR] = 100;
 			break;
 		}
@@ -1472,7 +1496,7 @@ bool Client::GetSessionLimit()
 {
 	if (RuleI(World, AccountSessionLimit) >= 0 && cle->Admin() < (RuleI(World, ExemptAccountLimitStatus)) && (RuleI(World, ExemptAccountLimitStatus) != -1)) 
 	{
-		if(database.CheckAccountActive(cle->AccountID()))
+		if(client_list.CheckAccountActive(cle->AccountID()))
 		{
 			Log.Out(Logs::Detail, Logs::World_Server,"Account %d attempted to login with an active player in the world.", cle->AccountID());
 			return true;

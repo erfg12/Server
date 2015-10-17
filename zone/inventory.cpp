@@ -149,14 +149,12 @@ uint32 Client::NukeItem(uint32 itemnum, uint8 where_to_check) {
 bool Client::CheckLoreConflict(const Item_Struct* item) {
 	if (!item)
 		return false;
-	if (!(item->LoreFlag))
+	if (item->Lore[0] != '*')
 		return false;
 
-	if (item->LoreGroup == -1)	// Standard lore items; look everywhere except unused, return the result
+	if (item->Lore[0] == '*')	// Standard lore items; look everywhere except unused, return the result
 		return (m_inv.HasItem(item->ID, 0, ~invWhereUnused) != INVALID_INDEX);
 
-	//If the item has a lore group, we check for other items with the same group and return the result
-	return (m_inv.HasItemByLoreGroup(item->LoreGroup, ~invWhereUnused) != INVALID_INDEX);
 }
 
 bool Client::SummonItem(uint32 item_id, int16 quantity, bool attuned, uint16 to_slot, bool force_charges) {
@@ -246,7 +244,7 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, bool attuned, uint16 to_
 		uint32 slottest = 22; // can't change '22' just yet...
 
 		if(!(slots & ((uint32)1 << slottest))) {
-			Message(0, "This item is not equipable at slot %u - moving to cursor.", to_slot);
+			Message(CC_Default, "This item is not equipable at slot %u - moving to cursor.", to_slot);
 			Log.Out(Logs::Detail, Logs::Inventory, "Player %s on account %s attempted to equip an item unusable in slot %u - moved to cursor.\n(Item: %u)\n",
 				GetName(), account_name, to_slot, item->ID);
 
@@ -710,18 +708,18 @@ bool Client::AutoPutLootInInventory(ItemInst& inst, bool try_worn, bool try_curs
 							continue; // Can't auto-equip
 						}
 					}
-					if( m_inv[MainSecondary] )
-					{
-						uint8 instrument = m_inv[MainSecondary]->GetItem()->ItemType;
-						if( 
-							instrument == ItemTypeWindInstrument ||
-							instrument == ItemTypeStringedInstrument ||
-							instrument == ItemTypeBrassInstrument ||
-							instrument == ItemTypePercussionInstrument
-						) {
-							Log.Out(Logs::Detail, Logs::Inventory, "Cannot equip a primary weapon with %s already in the secondary.", m_inv[MainSecondary]->GetItem()->Name);
-							continue; // Do not auto-equip Primary when instrument is in Secondary
-						}
+				}
+				if( i == MainPrimary && m_inv[MainSecondary] )
+				{
+					uint8 instrument = m_inv[MainSecondary]->GetItem()->ItemType;
+					if( 
+						instrument == ItemTypeWindInstrument ||
+						instrument == ItemTypeStringedInstrument ||
+						instrument == ItemTypeBrassInstrument ||
+						instrument == ItemTypePercussionInstrument
+					) {
+						Log.Out(Logs::Detail, Logs::Inventory, "Cannot equip a primary item with %s already in the secondary.", m_inv[MainSecondary]->GetItem()->Name);
+						continue; // Do not auto-equip Primary when instrument is in Secondary
 					}
 				}
 				if( i== MainSecondary && m_inv[MainPrimary]) // check to see if primary slot is a two hander
@@ -863,9 +861,7 @@ int Client::GetItemLinkHash(const ItemInst* inst) {
 			item->Size,
 			item->Weight,
 			item->ItemClass,
-			item->ItemType,
-			item->Favor,
-			item->GuildFavor);
+			item->ItemType);
 	} else if (item->ItemClass == 2) {	//book
 		MakeAnyLenString(&hash_str, "%d%s%d%d%09X",
 			item->ID,
@@ -887,7 +883,6 @@ int Client::GetItemLinkHash(const ItemInst* inst) {
 			item->Name,
 			item->Mana,
 			item->HP,
-			item->Favor,
 			item->Light,
 			item->Icon,
 			item->Price,
@@ -896,8 +891,7 @@ int Client::GetItemLinkHash(const ItemInst* inst) {
 			item->Size,
 			item->ItemClass,
 			item->ItemType,
-			item->AC,
-			item->GuildFavor);
+			item->AC);
 	}
 
 	//this currently crashes zone, so someone feel free to fix this so we can work with hashes:
@@ -1125,7 +1119,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	}
 	// Check for No Drop Hacks
 	Mob* with = trade->With();
-	if ((with && with->IsClient() && dst_slot_id >= EmuConstants::TRADE_BEGIN && dst_slot_id <= EmuConstants::TRADE_END)
+	if ((with && with->IsClient() && !with->CastToClient()->IsBecomeNPC() && dst_slot_id >= EmuConstants::TRADE_BEGIN && dst_slot_id <= EmuConstants::TRADE_END)
 	&& GetInv().CheckNoDrop(src_slot_id)
 	&& RuleI(World, FVNoDropFlag) == 0 || RuleI(Character, MinStatusForNoDropExemptions) < Admin() && RuleI(World, FVNoDropFlag) == 2) {
 		DeleteItemInInventory(src_slot_id);
@@ -1311,9 +1305,6 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 	else {
 		// Not dealing with charges - just do direct swap
 		if(src_inst && dst_slot_id <= EmuConstants::EQUIPMENT_END && dst_slot_id >= EmuConstants::EQUIPMENT_BEGIN) {
-			if (src_inst->GetItem()->Attuneable) {
-				src_inst->SetInstNoDrop(true);
-			}
 			SetMaterial(dst_slot_id,src_inst->GetItem()->ID);
 		}
 		if(!m_inv.SwapItem(src_slot_id, dst_slot_id)) {
@@ -1366,6 +1357,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 
 		// When we have a bag on the cursor filled with items that is new (zoned with it, summoned it, picked it up from the ground)
 		// the client is only aware of the bag. So, we have to send packets for each item within the bag once it is placed in the inventory.
+		// This is a workaround hack until we can figure out how to send these items to the client while they are still on the cursor.
 		const ItemInst* baginst = m_inv[dst_slot_id];
 		if(src_slot_id == MainCursor && baginst && baginst->IsType(ItemClassContainer))
 		{
@@ -1799,9 +1791,8 @@ void Client::RemoveDuplicateLore(bool client_update) {
 
 		for (auto iter = local_2.begin(); iter != local_2.end(); ++iter) {
 			auto inst = *iter;
-			if (!inst->GetItem()->LoreFlag ||
-				((inst->GetItem()->LoreGroup == -1) && (m_inv.HasItem(inst->GetID(), 0, invWhereCursor) == INVALID_INDEX)) ||
-				(inst->GetItem()->LoreGroup && (~inst->GetItem()->LoreGroup) && (m_inv.HasItemByLoreGroup(inst->GetItem()->LoreGroup, invWhereCursor) == INVALID_INDEX))) {
+			if ((inst->GetItem()->Lore[0] != '*') ||
+				((inst->GetItem()->Lore[0] == '*') && (m_inv.HasItem(inst->GetID(), 0, invWhereCursor) == INVALID_INDEX))) {
 				
 				m_inv.PushCursor(*inst);
 			}
@@ -1834,7 +1825,7 @@ void Client::MoveSlotNotAllowed(bool client_update)
 		}
 	}
 
-	// No need to check inventory, cursor, bank or shared bank since they allow max item size and containers -U
+	// No need to check inventory, cursor, bank since they allow max item size and containers -U
 	// Code can be added to check item size vs. container size, but it is left to attrition for now.
 }
 
@@ -1886,7 +1877,7 @@ uint32 Client::GetEquipmentColor(uint8 material_slot) const
 }
 
 // Send an item packet (including all subitems of the item)
-void Client::SendItemPacket(int16 slot_id, const ItemInst* inst, ItemPacketType packet_type, int16 fromid)
+void Client::SendItemPacket(int16 slot_id, const ItemInst* inst, ItemPacketType packet_type, int16 fromid, int16 toid, int16 skill)
 {
 	if (!inst)
 		return;
@@ -1903,6 +1894,8 @@ void Client::SendItemPacket(int16 slot_id, const ItemInst* inst, ItemPacketType 
 		opcode = OP_ItemLinkResponse;
 	else if(packet_type==ItemPacketTradeView)
 		opcode = OP_TradeItemPacket;
+	else if(packet_type==ItemPacketStolenItem)
+		opcode = OP_PickPocket;
 	else
 		opcode = OP_ItemPacket;
 	//opcode = (packet_type==ItemPacketViewLink) ? OP_ItemLinkResponse : OP_ItemPacket;
@@ -1911,6 +1904,8 @@ void Client::SendItemPacket(int16 slot_id, const ItemInst* inst, ItemPacketType 
 	memcpy(itempacket->SerializedItem, packet.c_str(), packet.length());
 	itempacket->PacketType = packet_type;
 	itempacket->fromid = fromid;
+	itempacket->toid = toid;
+	itempacket->skill = skill;
 
 #if EQDEBUG >= 9
 		DumpPacket(outapp);
@@ -2131,7 +2126,7 @@ bool Client::InterrogateInventory(Client* requester, bool log, bool silent, bool
 		if (cursor_itr == m_inv.cursor_cbegin())
 			continue;
 
-		instmap[8000 + limbo] = *cursor_itr;
+		instmap[EmuConstants::CURSOR_QUEUE_BEGIN + limbo] = *cursor_itr;
 	}
 
 	if (m_inv[MainPowerSource])
@@ -2198,9 +2193,9 @@ void Client::InterrogateInventory_(bool errorcheck, Client* requester, int16 hea
 		std::string p;
 		std::string e;
 
-		if (inst) { i = StringFormat("%s (class: %u | augtype: %u)", inst->GetItem()->Name, inst->GetItem()->ItemClass, inst->GetItem()->AugType); }
+		if (inst) { i = StringFormat("%s (class: %u)", inst->GetItem()->Name, inst->GetItem()->ItemClass); }
 		else { i = "NONE"; }
-		if (parent) { p = StringFormat("%s (class: %u | augtype: %u), index: %i", parent->GetItem()->Name, parent->GetItem()->ItemClass, parent->GetItem()->AugType, index); }
+		if (parent) { p = StringFormat("%s (class: %u), index: %i", parent->GetItem()->Name, parent->GetItem()->ItemClass,index); }
 		else { p = "NONE"; }
 		if (localerror) { e = " [ERROR]"; }
 		else { e = ""; }
@@ -2228,7 +2223,7 @@ bool Client::InterrogateInventory_error(int16 head, int16 index, const ItemInst*
 	if ((head == MainCursor) ||
 		(head >= EmuConstants::EQUIPMENT_BEGIN && head <= EmuConstants::EQUIPMENT_END) ||
 		(head >= EmuConstants::WORLD_BEGIN && head <= EmuConstants::WORLD_END) ||
-		(head >= 8000 && head <= 8101) ||
+		(head >= EmuConstants::CURSOR_QUEUE_BEGIN && head <= EmuConstants::CURSOR_QUEUE_END) ||
 		(head == MainPowerSource)) {
 		switch (depth)
 		{
@@ -2332,3 +2327,4 @@ std::string Inventory::GetCustomItemData(int16 slot_id, std::string identifier) 
 	}
 	return "";
 }
+

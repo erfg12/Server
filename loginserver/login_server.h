@@ -21,15 +21,14 @@
 #include "error_log.h"
 #include "config.h"
 #include "database.h"
-#include "database_mysql.h"
-#include "database_postgresql.h"
-#include "options.h"
 #include "server_manager.h"
 #include "client_manager.h"
 
+//atoi is not int32 or uint32 safe!!!!
+#define atoul(str) strtoul(str, nullptr, 10)
+
 /**
-* Login server struct, contains every variable for the server that needs to exist
-* outside the scope of main().
+* Login server struct, contains every variable for the server that needs to exist outside the scope of main().
 */
 struct LoginServer
 {
@@ -39,14 +38,12 @@ public:
 	* but it's the most trivial way to do this.
 	*/
 #ifdef WIN32
-	LoginServer() : config(nullptr), db(nullptr), SM(nullptr) { }
+	LoginServer() : config(nullptr), SM(nullptr) { }
 #else
-	LoginServer() : config(nullptr), db(nullptr) { }
+	LoginServer() : config(nullptr) { }
 #endif
 
 	Config *config;
-	Database *db;
-	Options options;
 	ServerManager *SM;
 	ClientManager *CM;
 };

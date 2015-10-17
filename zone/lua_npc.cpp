@@ -448,6 +448,66 @@ void Lua_NPC::MerchantCloseShop() {
 	self->MerchantCloseShop();
 }
 
+void Lua_NPC::AddQuestLoot(int itemid)
+{
+	Lua_Safe_Call_Void();
+	self->AddQuestLoot(itemid);
+}
+
+void Lua_NPC::AddQuestLoot(int itemid, int charges)
+{
+	Lua_Safe_Call_Void();
+	self->AddQuestLoot(itemid, charges);
+}
+
+void Lua_NPC::AddPetLoot(int itemid)
+{
+	Lua_Safe_Call_Void();
+	self->AddPetLoot(itemid);
+}
+
+void Lua_NPC::AddPetLoot(int itemid, int charges)
+{
+	Lua_Safe_Call_Void();
+	self->AddPetLoot(itemid, charges);
+}
+
+bool Lua_NPC::GetQuestLoot(int itemid)
+{
+	Lua_Safe_Call_Bool();
+	return self->GetQuestLootItem(itemid);
+}
+
+bool Lua_NPC::HasQuestLoot()
+{
+	Lua_Safe_Call_Bool();
+	return self->HasQuestLootItem();
+}
+
+void Lua_NPC::DeleteQuestLoot()
+{
+	Lua_Safe_Call_Void();
+	self->DeleteQuestLoot(0);
+}
+
+void Lua_NPC::DeleteQuestLoot(int itemid1, int itemid2, int itemid3, int itemid4)
+{
+	Lua_Safe_Call_Void();
+	self->DeleteQuestLoot(itemid1, itemid2, itemid3, itemid4);
+}
+
+bool Lua_NPC::QuestLootCount(int itemid1, int itemid2, int itemid3, int itemid4)
+{
+	Lua_Safe_Call_Bool();
+	return self->QuestLootCount(itemid1, itemid2, itemid3, itemid4);
+}
+
+bool Lua_NPC::CanTalk()
+{
+	Lua_Safe_Call_Bool();
+	return self->CanTalk();
+}
+
 luabind::scope lua_register_npc() {
 	return luabind::class_<Lua_NPC, Lua_Mob>("NPC")
 		.def(luabind::constructor<>())
@@ -538,7 +598,17 @@ luabind::scope lua_register_npc() {
 		.def("GetSpawnKillCount", (int(Lua_NPC::*)(void))&Lua_NPC::GetSpawnKillCount)
 		.def("GetScore", (int(Lua_NPC::*)(void))&Lua_NPC::GetScore)
 		.def("MerchantOpenShop", (void(Lua_NPC::*)(void))&Lua_NPC::MerchantOpenShop)
-		.def("MerchantCloseShop", (void(Lua_NPC::*)(void))&Lua_NPC::MerchantCloseShop);
+		.def("MerchantCloseShop", (void(Lua_NPC::*)(void))&Lua_NPC::MerchantCloseShop)
+		.def("AddQuestLoot", (void(Lua_NPC::*)(int))&Lua_NPC::AddQuestLoot)
+		.def("AddQuestLoot", (void(Lua_NPC::*)(int,int))&Lua_NPC::AddQuestLoot)
+		.def("AddPetLoot", (void(Lua_NPC::*)(int))&Lua_NPC::AddQuestLoot)
+		.def("AddPetLoot", (void(Lua_NPC::*)(int,int))&Lua_NPC::AddQuestLoot)
+		.def("GetQuestLoot", (bool(Lua_NPC::*)(int))&Lua_NPC::GetQuestLoot)
+		.def("HasQuestLoot", (bool(Lua_NPC::*)(void))&Lua_NPC::HasQuestLoot)
+		.def("DeleteQuestLoot", (void(Lua_NPC::*)(void))&Lua_NPC::DeleteQuestLoot)
+		.def("DeleteQuestLoot", (void(Lua_NPC::*)(int, int, int, int))&Lua_NPC::DeleteQuestLoot)
+		.def("QuestLootCount", (bool(Lua_NPC::*)(int, int, int, int))&Lua_NPC::QuestLootCount)
+		.def("CanTalk", (bool(Lua_NPC::*)(void))&Lua_NPC::CanTalk);
 }
 
 #endif

@@ -31,6 +31,7 @@
 
 #include "StackWalker.h"
 
+#pragma warning( disable : 4996 )
 
 // If VC7 and later, then use the shipped 'dbghelp.h'-file
 #if _MSC_VER >= 1300
@@ -613,7 +614,7 @@ private:
     ULONGLONG fileVersion = 0;
     if ( (m_parent != nullptr) && (szImg != nullptr) )
     {
-      // try to retrive the file-version:
+      // try to retrieve the file-version:
       if ( (this->m_parent->m_options & StackWalker::RetrieveFileVersion) != 0)
       {
         VS_FIXEDFILEINFO *fInfo = nullptr;

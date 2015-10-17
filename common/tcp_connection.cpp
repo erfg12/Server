@@ -45,6 +45,8 @@ InitWinsock winsock;
 #define TCPN_LOG_RAW_DATA_OUT	0		//1 = info, 2 = length limited dump, 3 = full dump
 #define TCPN_LOG_RAW_DATA_IN	0		//1 = info, 2 = length limited dump, 3 = full dump
 
+#pragma warning( disable : 4996 )
+
 //client version
 TCPConnection::TCPConnection()
 :	ConnectionType(Outgoing),

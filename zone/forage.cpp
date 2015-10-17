@@ -279,6 +279,7 @@ void Client::GoFish()
 		fishing_skill = 100+((fishing_skill-100)/2);
 	}
 
+	float success = 2.0;
 	if (zone->random.Int(0,175) < fishing_skill) {
 		uint32 food_id = 0;
 
@@ -332,6 +333,7 @@ void Client::GoFish()
 
 				safe_delete(inst);
 				inst = m_inv.GetItem(MainCursor);
+				success = 1.0;
 			}
 
 			if(inst) {
@@ -367,7 +369,7 @@ void Client::GoFish()
 		DeleteItemInInventory(MainPrimary, 0, true);
 	}
 
-	if(CheckIncreaseSkill(SkillFishing, nullptr, 5))
+	if(CheckIncreaseSkill(SkillFishing, nullptr, zone->skill_difficulty[SkillFishing].difficulty), success)
 	{
 		if(title_manager.IsNewTradeSkillTitleAvailable(SkillFishing, GetRawSkill(SkillFishing)))
 			NotifyNewTitlesAvailable();
@@ -377,7 +379,7 @@ void Client::GoFish()
 void Client::ForageItem(bool guarantee) {
 
 	int skill_level = GetSkill(SkillForage);
-
+	float success = 2.0;
 	//be wary of the string ids in switch below when changing this.
 	uint32 common_food_ids[MAX_COMMON_FOOD_IDS] = {
 		13046, // Fruit
@@ -493,6 +495,8 @@ void Client::ForageItem(bool guarantee) {
 				args.push_back(inst);
 				parse->EventPlayer(EVENT_FORAGE_SUCCESS, this, "", inst->GetID(), &args);
 			}
+
+			success = 1.0;
 		}
 
 		int ChanceSecondForage = aabonuses.ForageAdditionalItems + itembonuses.ForageAdditionalItems + spellbonuses.ForageAdditionalItems;
@@ -509,7 +513,7 @@ void Client::ForageItem(bool guarantee) {
 		parse->EventPlayer(EVENT_FORAGE_FAILURE, this, "", 0);
 	}
 
-	CheckIncreaseSkill(SkillForage, nullptr, 5);
+	CheckIncreaseSkill(SkillForage, nullptr, zone->skill_difficulty[SkillForage].difficulty, success);
 
 }
 

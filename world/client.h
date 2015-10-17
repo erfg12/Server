@@ -50,7 +50,6 @@ public:
 	void	SendExpansionInfo();
 	void	SendLogServer();
 	void	SendApproveWorld();
-	bool	GenPassKey(char* key);
 
 	inline uint32		GetIP()				{ return ip; }
 	inline uint16		GetPort()			{ return port; }
@@ -109,6 +108,7 @@ private:
 	EQStreamInterface* const eqs;
 
 	uint16	expansion;
+	uint8	charcount;
 };
 
 bool CheckCharCreateInfo(CharCreate_Struct *cc);

@@ -21,6 +21,8 @@
 
 #include "op_codes.h"
 
+#pragma warning( disable : 4244 4996 4267 )
+
 ThreadReturnType EQStreamFactoryReaderLoop(void *eqfs)
 {
 EQStreamFactory *fs=(EQStreamFactory *)eqfs;

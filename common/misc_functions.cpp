@@ -56,6 +56,8 @@
 	#include <errno.h>
 #endif
 
+#pragma warning( disable : 4996 4800 )
+
 void CoutTimestamp(bool ms) {
 	time_t rawtime;
 	struct tm* gmt_t;

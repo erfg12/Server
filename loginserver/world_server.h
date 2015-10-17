@@ -99,9 +99,9 @@ public:
 	std::string GetRemoteIP() const { return remote_ip; }
 
 	/**
-	* Gets what kind of server this server is (legends, preferred, normal)
+	* Gets what kind of server this server is (preferred, normal)
 	*/
-	unsigned int GetServerListID() const { return server_list_id; }
+	//unsigned int GetServerListID() const { return server_list_type; }
 
 	/**
 	* Gets the status of the server.
@@ -140,7 +140,7 @@ private:
 	unsigned int players_online;
 	int status;
 	unsigned int runtime_id;
-	unsigned int server_list_id;
+	unsigned int server_list_type;
 	unsigned int server_type;
 	std::string desc;
 	std::string long_name;

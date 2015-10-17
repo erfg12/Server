@@ -41,9 +41,6 @@ enum {	//values for pTimerType
 	pTimerCombatAbility = 25,
 	pTimerBeggingPickPocket = 26,
 
-	pTimerLayHands = 87,		//these IDs are used by client too
-	pTimerHarmTouch = 89,		//so dont change them
-
 	pTimerItemStart = 100,
 	pTimerItemEnd = 200, //I don't think any items would use one this high but hey, incase.
 	pTimerPeqzoneReuse = 900,
@@ -52,8 +49,11 @@ enum {	//values for pTimerType
 	pTimerAAEffectStart = 3001,	//AA effect timers
 	pTimerAAEffectEnd	= 4999,
 
-	pTimerSpellStart = 5000		//Do not put any timer IDs above this one
+	pTimerSpellStart = 5000,	//Do not put any timer IDs above this one unless it is a spell
 								//if needed, increase its starting ID
+
+	pTimerLayHands = 5087,		//pTimerSpellStart + spell_id
+	pTimerHarmTouch = 5088
 };
 
 class Database;

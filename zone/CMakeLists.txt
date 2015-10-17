@@ -18,6 +18,7 @@ SET(zone_sources
 	embparser_api.cpp
 	embperl.cpp
 	embxs.cpp
+	encounter.cpp
 	entity.cpp
 	exp.cpp
 	fearpath.cpp
@@ -33,6 +34,7 @@ SET(zone_sources
 	lua_corpse.cpp
 	lua_client.cpp
 	lua_door.cpp
+	lua_encounter.cpp
 	lua_entity.cpp
 	lua_entity_list.cpp
 	lua_general.cpp
@@ -107,7 +109,6 @@ SET(zone_sources
 	tradeskills.cpp
 	trading.cpp
 	trap.cpp
-	tune.cpp
 	water_map.cpp
 	water_map_v1.cpp
 	water_map_v2.cpp
@@ -132,6 +133,7 @@ SET(zone_headers
 	embparser.h
 	embperl.h
 	embxs.h
+	encounter.h
 	entity.h
 	errmsg.h
 	event_codes.h
@@ -143,6 +145,7 @@ SET(zone_headers
 	lua_bit.h
 	lua_client.h
 	lua_corpse.h
+	lua_encounter.h
 	lua_entity.h
 	lua_entity_list.h
 	lua_general.h

@@ -80,6 +80,8 @@ void QuestManager::Process() {
 			if(entity_list.IsMobInZone(cur->mob)) {
 				if(cur->mob->IsNPC()) {
 					parse->EventNPC(EVENT_TIMER, cur->mob->CastToNPC(), nullptr, cur->name, 0);
+				} else if (cur->mob->IsEncounter()) {
+					parse->EventEncounter(EVENT_TIMER, cur->mob->CastToEncounter()->GetEncounterName(), cur->name, 0, nullptr);
 				} else {
 					//this is inheriently unsafe if we ever make it so more than npc/client start timers
 					parse->EventPlayer(EVENT_TIMER, cur->mob->CastToClient(), cur->name, 0);
@@ -714,72 +716,6 @@ void QuestManager::level(int newlevel) {
 		initiator->SetLevel(newlevel, true);
 }
 
-void QuestManager::traindisc(int discipline_tome_item_id) {
-	QuestManagerCurrentQuestVars();
-	if (initiator && initiator->IsClient())
-		initiator->TrainDiscipline(discipline_tome_item_id);
-}
-
-bool QuestManager::isdisctome(int item_id) {
-	const Item_Struct *item = database.GetItem(item_id);
-	if(item == nullptr) {
-		return(false);
-	}
-
-	if(item->ItemClass != ItemClassCommon || item->ItemType != ItemTypeSpell) {
-		return(false);
-	}
-
-	//Need a way to determine the difference between a spell and a tome
-	//so they cant turn in a spell and get it as a discipline
-	//this is kinda a hack:
-	if(!(
-		item->Name[0] == 'T' &&
-		item->Name[1] == 'o' &&
-		item->Name[2] == 'm' &&
-		item->Name[3] == 'e' &&
-		item->Name[4] == ' '
-		) && !(
-		item->Name[0] == 'S' &&
-		item->Name[1] == 'k' &&
-		item->Name[2] == 'i' &&
-		item->Name[3] == 'l' &&
-		item->Name[4] == 'l' &&
-		item->Name[5] == ':' &&
-		item->Name[6] == ' '
-		)) {
-		return(false);
-	}
-
-	//we know for sure none of the int casters get disciplines
-	uint32 cbit = 0;
-	cbit |= 1 << (WIZARD-1);
-	cbit |= 1 << (ENCHANTER-1);
-	cbit |= 1 << (MAGICIAN-1);
-	cbit |= 1 << (NECROMANCER-1);
-	if(item->Classes & cbit) {
-		return(false);
-	}
-
-	uint32 spell_id = item->Scroll.Effect;
-	if(!IsValidSpell(spell_id)) {
-		return(false);
-	}
-
-	//we know for sure none of the int casters get disciplines
-	const SPDat_Spell_Struct &spell = spells[spell_id];
-	if(
-		spell.classes[WIZARD - 1] != 255 &&
-		spell.classes[ENCHANTER - 1] != 255 &&
-		spell.classes[MAGICIAN - 1] != 255 &&
-		spell.classes[NECROMANCER - 1] != 255
-	) {
-		return(false);
-	}
-
-	return(true);
-}
-
 void QuestManager::safemove() {
 	QuestManagerCurrentQuestVars();
 	if (initiator && initiator->IsClient())
@@ -869,7 +805,7 @@ uint16 QuestManager::scribespells(uint8 max_level, uint8 min_level) {
 		{
 			if (book_slot == -1) //no more book slots
 				break;
-			if(!IsDiscipline(curspell) && !initiator->HasSpellScribed(curspell)) { //isn't a discipline & we don't already have it scribed
+			if(!initiator->HasSpellScribed(curspell)) { //we don't already have it scribed
 				if (SpellGlobalRule) {
 					// Bool to see if the character has the required QGlobal to scribe it if one exists in the Spell_Globals table
 					SpellGlobalCheckResult = initiator->SpellGlobalCheck(curspell, Char_ID);
@@ -888,71 +824,10 @@ uint16 QuestManager::scribespells(uint8 max_level, uint8 min_level) {
 	return count; //how many spells were scribed successfully
 }
 
-uint16 QuestManager::traindiscs(uint8 max_level, uint8 min_level) {
-	QuestManagerCurrentQuestVars();
-	uint16 count;
-	uint16 curspell;
-
-	uint32 Char_ID = initiator->CharacterID();
-	bool SpellGlobalRule = RuleB(Spells, EnableSpellGlobals);
-	bool SpellGlobalCheckResult = 0;
-
-	for(curspell = 0, count = 0; curspell < SPDAT_RECORDS; curspell++)
-	{
-		if
-		(
-			spells[curspell].classes[WARRIOR] != 0 &&	//check if spell exists
-			spells[curspell].classes[initiator->GetPP().class_-1] <= max_level &&	//maximum level
-			spells[curspell].classes[initiator->GetPP().class_-1] >= min_level &&	//minimum level
-			spells[curspell].skill != 52 &&
-			( !RuleB(Spells, UseCHAScribeHack) || spells[curspell].effectid[EFFECT_COUNT - 1] != 10 )
-		)
-		{
-			if(IsDiscipline(curspell)){
-				//we may want to come up with a function like Client::GetNextAvailableSpellBookSlot() to help speed this up a little
-				for(uint32 r = 0; r < MAX_PP_DISCIPLINES; r++) {
-					if(initiator->GetPP().disciplines.values[r] == curspell) {
-						initiator->Message(CC_Red, "You already know this discipline.");
-						break;	//continue the 1st loop
-					}
-					else if(initiator->GetPP().disciplines.values[r] == 0) {
-						if (SpellGlobalRule) {
-							// Bool to see if the character has the required QGlobal to train it if one exists in the Spell_Globals table
-							SpellGlobalCheckResult = initiator->SpellGlobalCheck(curspell, Char_ID);
-							if (SpellGlobalCheckResult) {
-								initiator->GetPP().disciplines.values[r] = curspell;
-								database.SaveCharacterDisc(Char_ID, r, curspell);
-								initiator->SendDisciplineUpdate();
-								initiator->Message(0, "You have learned a new discipline!");
-								count++;	//success counter
-							}
-							break;	//continue the 1st loop
-						}
-						else {
-							initiator->GetPP().disciplines.values[r] = curspell;
-							database.SaveCharacterDisc(Char_ID, r, curspell);
-							initiator->SendDisciplineUpdate();
-							initiator->Message(0, "You have learned a new discipline!");
-							count++;	//success counter
-							break;	//continue the 1st loop
-						}
-					}	//if we get to this point, there's already a discipline in this slot, so we skip it
-				}
-			}
-		}
-	}
-	return count;	//how many disciplines were learned successfully
-}
-
 void QuestManager::unscribespells() {
 	QuestManagerCurrentQuestVars();
 	initiator->UnscribeSpellAll();
 	}
-
-void QuestManager::untraindiscs() {
-	QuestManagerCurrentQuestVars();
-	initiator->UntrainDiscAll();
-}
 
 void QuestManager::givecash(int copper, int silver, int gold, int platinum) {
 	QuestManagerCurrentQuestVars();
@@ -1216,7 +1091,7 @@ void QuestManager::itemlink(int item_id) {
 		if (inst == nullptr)
 			return;
 		if (initiator->MakeItemLink(link, inst))
-			initiator->Message(0, "%s tells you, %c%s%s%c", owner->GetCleanName(),
+			initiator->Message(CC_Default, "%s tells you, %c%s%s%c", owner->GetCleanName(),
 					0x12, link, inst->GetItem()->Name, 0x12);
 		safe_delete_array(link);
 		safe_delete(inst);
@@ -1915,7 +1790,7 @@ void QuestManager::clearspawntimers() {
 }
 
 void QuestManager::ze(int type, const char *str) {
-	entity_list.Message(0, type, str);
+	entity_list.Message(CC_Default, type, str);
 }
 
 void QuestManager::we(int type, const char *str) {
@@ -2320,9 +2195,9 @@ const char* QuestManager::saylink(char* Phrase, bool silent, const char* LinkNam
 	safe_delete_array(escaped_string);
 
 	if (silent)
-		sayid = sayid + 750000;
+		sayid = sayid + 500;
 	else
-		sayid = sayid + 500000;
+		sayid = sayid + 0;
 
 	//Create the say link as an item link hash
 	char linktext[250];
@@ -2330,9 +2205,7 @@ const char* QuestManager::saylink(char* Phrase, bool silent, const char* LinkNam
 	if (initiator) {
 			static char itemid[7];
 			sprintf(itemid, "%06d", sayid);
-			sprintf(linktext,"%c%c%s%s%s%c",0x12,0x30,itemid,"",LinkName,0x12);
-	} else { // If no initiator, create an RoF saylink, since older clients handle RoF ones better than RoF handles older ones.
-		sprintf(linktext,"%c%06X%s%s%c",0x12,sayid,"0000000000000000000000000000000000000000000000000",LinkName,0x12);
+			sprintf(linktext,"%c%c%s%s%c",0x12,0x30,itemid,LinkName,0x12);
 	}
 
 	strcpy(Phrase,linktext);

@@ -25,6 +25,8 @@
 #include "database.h"
 #include <mysql.h>
 
+#pragma warning( disable : 4244 )
+
 //this is the main object exported to perl.
 class EQDBRes {
 public:

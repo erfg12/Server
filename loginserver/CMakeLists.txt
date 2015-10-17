@@ -4,11 +4,11 @@ SET(eqlogin_sources
 	client.cpp
 	client_manager.cpp
 	config.cpp
-	database_mysql.cpp
-	database_postgresql.cpp
+	database.cpp
 	EQCrypto.cpp
 	error_log.cpp
 	main.cpp
+	salt.cpp
 	server_manager.cpp
 	world_server.cpp
 )
@@ -18,13 +18,11 @@ SET(eqlogin_headers
 	client_manager.h
 	config.h
 	database.h
-	database_mysql.h
-	database_postgresql.h
 	EQCrypto.h
 	error_log.h
 	login_server.h
 	login_structures.h
-	options.h
+	salt.h
 	server_manager.h
 	world_server.h
 )

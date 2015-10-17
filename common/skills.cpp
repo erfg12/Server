@@ -55,3 +55,31 @@ bool EQEmu::IsSpecializedSkill(SkillUseTypes skill)
 		return false;
 	}
 }
+
+bool EQEmu::IsSpellSkill(SkillUseTypes skill)
+{
+	switch (skill) 
+	{
+		case SkillAbjuration:
+		case SkillAlteration: 
+		case SkillBrassInstruments: 
+		case SkillChanneling:
+		case SkillConjuration: 
+		case SkillDivination: 
+		case SkillEvocation: 
+		case SkillMeditate:
+		case SkillSinging: 
+		case SkillSpecializeAbjure: 
+		case SkillSpecializeAlteration: 
+		case SkillSpecializeConjuration:
+		case SkillSpecializeDivination: 
+		case SkillSpecializeEvocation: 
+		case SkillStringedInstruments: 
+		case SkillWindInstruments: 
+		case SkillResearch: 
+		case SkillPercussionInstruments:
+			return true;
+		default:
+			return false;
+	}
+}

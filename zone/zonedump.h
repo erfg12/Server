@@ -124,6 +124,13 @@ struct NPCType
 	uint32  combat_hp_regen;
 	uint32  combat_mana_regen;
 	bool	aggro_pc;
+	uint8	armtexture;
+	uint8	bracertexture;
+	uint8	handtexture;
+	uint8	legtexture;
+	uint8	feettexture;
+	uint8	chesttexture;
+	float	ignore_distance;
 };
 
 namespace player_lootitem {
@@ -134,6 +141,8 @@ namespace player_lootitem {
 		uint16	lootslot;
 		uint8	min_level;		  // 
 		uint8	max_level;		  // 
+		uint8	quest;
+		uint8	pet;
 	};
 }
 
@@ -184,6 +193,7 @@ struct Door {
 	uint32	guild_id;
 	uint16	lock_pick;
 	uint32	keyitem;
+	uint8	nokeyring;
 	uint8	trigger_door;
 	uint8	trigger_type;
 	uint32	door_param;

@@ -131,6 +131,21 @@ uint32 Lua_Door::GetKeyItem() {
 	return self->GetKeyItem();
 }
 
+uint32 Lua_Door::GetAltKeyItem() {
+	Lua_Safe_Call_Int();
+	return self->GetAltKeyItem();
+}
+
+void Lua_Door::SetNoKeyring(int type) {
+	Lua_Safe_Call_Void();
+	self->SetNoKeyring(type);
+}
+
+int Lua_Door::GetNoKeyring() {
+	Lua_Safe_Call_Int();
+	return self->GetNoKeyring();
+}
+
 void Lua_Door::CreateDatabaseEntry() {
 	Lua_Safe_Call_Void();
 	self->CreateDatabaseEntry();
@@ -184,6 +199,9 @@ luabind::scope lua_register_door() {
 		.def("GetLockPick", (uint32(Lua_Door::*)(void))&Lua_Door::GetLockPick)
 		.def("SetKeyItem", (void(Lua_Door::*)(uint32))&Lua_Door::SetKeyItem)
 		.def("GetKeyItem", (uint32(Lua_Door::*)(void))&Lua_Door::GetKeyItem)
+		.def("GetAltKeyItem", (uint32(Lua_Door::*)(void))&Lua_Door::GetAltKeyItem)
+		.def("SetNoKeyring", (void(Lua_Door::*)(int))&Lua_Door::SetNoKeyring)
+		.def("GetNoKeyring", (int(Lua_Door::*)(void))&Lua_Door::GetNoKeyring)
 		.def("CreateDatabaseEntry", (void(Lua_Door::*)(void))&Lua_Door::CreateDatabaseEntry)
 		.def("ForceOpen", (void(Lua_Door::*)(Lua_Mob))&Lua_Door::ForceOpen)
 		.def("ForceOpen", (void(Lua_Door::*)(Lua_Mob,bool))&Lua_Door::ForceOpen)

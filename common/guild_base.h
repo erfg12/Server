@@ -43,8 +43,6 @@ public:
 	bool	DeleteGuild(uint32 guild_id);
 	bool	RenameGuild(uint32 guild_id, const char* name);
 	bool	SetGuildMOTD(uint32 guild_id, const char* motd, const char *setter);
-	bool	SetGuildURL(uint32 GuildID, const char* URL);
-	bool	SetGuildChannel(uint32 GuildID, const char* Channel);
 
 	//character edit actions
 	bool	SetGuildLeader(uint32 guild_id, uint32 leader_char_id);
@@ -80,8 +78,7 @@ public:
 //	bool	GetGuildRanks(uint32 guildeqid, GuildRanks_Struct* gr);
 //	bool	EditGuild(uint32 guild_id, uint8 ranknum, GuildRankLevel_Struct* grl);
 
-	uint8 *MakeGuildList(const char *head_name, uint32 &length) const;	//make a guild list packet, returns ownership of the buffer.
-	struct OldGuildsList_Struct *MakeOldGuildList(uint32 &length) const;	//make a guild list packet, returns ownership of the buffer.
+	unsigned char *MakeOldGuildList(uint32 &length) const;	//make a guild list packet, returns ownership of the buffer.
 
 	static const char *const GuildActionNames[_MaxGuildAction];
 	uint32	DoesAccountContainAGuildLeader(uint32 AccountID);

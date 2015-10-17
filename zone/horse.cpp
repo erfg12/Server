@@ -109,6 +109,7 @@ const NPCType *Horse::BuildHorseType(uint16 spell_id) {
 	npc_type->INT = 75;
 	npc_type->WIS = 75;
 	npc_type->CHA = 75;
+	npc_type->trackable = 1;
 	horses_auto_delete.Insert(npc_type);
 
 	return npc_type;

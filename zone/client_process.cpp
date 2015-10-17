@@ -79,11 +79,14 @@ bool Client::Process() {
 		if(hpupdate_timer.Check())
 			SendHPUpdate();
 
+		if(client_distance_timer.Enabled() && client_distance_timer.Check())
+			entity_list.UpdateDistances(this);
+
 		if(mana_timer.Check())
 			SendManaUpdatePacket();
 
-			if(dead && dead_timer.Check()) {
-				database.MoveCharacterToZone(GetName(), database.GetZoneName(m_pp.binds[0].zoneId));
+		if(dead && dead_timer.Check()) {
+			database.MoveCharacterToZone(GetName(), database.GetZoneName(m_pp.binds[0].zoneId));
 
 			m_pp.zone_id = m_pp.binds[0].zoneId;
 			m_pp.zoneInstance = m_pp.binds[0].instance_id;
@@ -130,6 +133,7 @@ bool Client::Process() {
 			LeaveGroup();
 			Save();
 			instalog = true;
+			database.ClearAccountActive(this->AccountID());
 		}
 
 		if (IsStunned() && stunned_timer.Check()) {
@@ -174,7 +178,14 @@ bool Client::Process() {
 			AI_Process();
 
 		if (bindwound_timer.Check() && bindwound_target != 0) {
-			BindWound(bindwound_target, false);
+			if(BindWound(bindwound_target, false))
+			{
+				CheckIncreaseSkill(SkillBindWound, nullptr, zone->skill_difficulty[SkillBindWound].difficulty, 1.0);
+			}
+			else
+			{
+				Log.Out(Logs::General, Logs::Skills, "Bind wound failed, skillup check skipped.");
+			}
 		}
 
 		if(KarmaUpdateTimer)
@@ -291,7 +302,7 @@ bool Client::Process() {
 				bool tripleAttackSuccess = false;
 				if( auto_attack_target && CanThisClassDoubleAttack() ) {
 
-					CheckIncreaseSkill(SkillDoubleAttack, auto_attack_target, -10);
+					CheckIncreaseSkill(SkillDoubleAttack, auto_attack_target, zone->skill_difficulty[SkillDoubleAttack].difficulty);
 					if(CheckDoubleAttack()) {
 						//should we allow rampage on double attack?
 						if(CheckAAEffect(aaEffectRampage)) {
@@ -385,7 +396,7 @@ bool Client::Process() {
 				DualWieldProbability += DualWieldProbability*float(DWBonus)/ 100.0f;
 
 				float random = zone->random.Real(0, 1);
-				CheckIncreaseSkill(SkillDualWield, auto_attack_target, -10);
+				CheckIncreaseSkill(SkillDualWield, auto_attack_target, zone->skill_difficulty[SkillDualWield].difficulty);
 				if (random < DualWieldProbability){ // Max 78% of DW
 					if(CheckAAEffect(aaEffectRampage)) {
 						entity_list.AEAttack(this, 30, MainSecondary);
@@ -421,7 +432,7 @@ bool Client::Process() {
 			// Send a position packet every 8 seconds - if not done, other clients
 			// see this char disappear after 10-12 seconds of inactivity
 			if (position_timer_counter >= 16) { // Approx. 4 ticks per second
-				entity_list.SendPositionUpdates(this, pLastUpdateWZ, 500, GetTarget(), false);
+				entity_list.SendPositionUpdates(this, pLastUpdateWZ, GetTarget());
 				pLastUpdate = Timer::GetCurrentTime();
 				pLastUpdateWZ = pLastUpdate;
 				position_timer_counter = 0;
@@ -488,6 +499,19 @@ bool Client::Process() {
 			DoEnduranceUpkeep();
 		}
 
+		if(disc_ability_timer.Check())
+		{
+			disc_ability_timer.Disable();
+			FadeDisc();
+			Message_StringID(CC_Default, DISCIPLINE_CONLOST);
+
+			EQApplicationPacket *outapp = new EQApplicationPacket(OP_DisciplineChange, sizeof(ClientDiscipline_Struct));
+			ClientDiscipline_Struct *d = (ClientDiscipline_Struct*)outapp->pBuffer;
+			d->disc_id = 0;
+			QueuePacket(outapp);
+			safe_delete(outapp);
+		}
+
 		if (tic_timer.Check() && !dead) {
 			CalcMaxHP();
 			CalcMaxMana();
@@ -539,28 +563,6 @@ bool Client::Process() {
 		database.SetMQDetectionFlag(this->AccountName(), GetName(), "/MQInstantCamp: Possible instant camp disconnect.", zone->GetShortName());
 		return false;
 	}
-
-	if (client_state == CLIENT_ERROR) {
-		OnDisconnect(true);
-		std::cout << "Client disconnected (cs=e): " << GetName() << std::endl;
-		return false;
-	}
-
-	if (client_state != CLIENT_LINKDEAD && !eqs->CheckState(ESTABLISHED)) {
-		OnDisconnect(true);
-		Log.Out(Logs::General, Logs::Zone_Server, "Client linkdead: %s", name);
-
-		if (GetGM()) 
-			return false;
-		else if(!linkdead_timer.Enabled()){
-			linkdead_timer.Start(RuleI(Zone,ClientLinkdeadMS));
-			client_state = CLIENT_LINKDEAD;
-			AI_Start(CLIENT_LD_TIMEOUT);
-			SendAppearancePacket(AT_Linkdead, 1);
-			UpdateWho();
-		}
-	}
-
 
 	/************ Get all packets from packet manager out queue and process them ************/
 	EQApplicationPacket *app = nullptr;
@@ -627,15 +629,15 @@ bool Client::Process() {
 		}
 		else
 		{
+			Log.Out(Logs::General, Logs::Zone_Server, "Client linkdead: %s", name);
 			LinkDead();
 		}
-		OnDisconnect(true);
 	}
 	// Feign Death 2 minutes and zone forgets you
 	if (forget_timer.Check()) {
 		forget_timer.Disable();
 		entity_list.ClearZoneFeignAggro(this);
-		//Message(0,"Your enemies have forgotten you!");
+		//Message(CC_Default,"Your enemies have forgotten you!");
 	}
 
 	return ret;
@@ -646,7 +648,6 @@ void Client::OnDisconnect(bool hard_disconnect) {
 	database.CharacterQuit(this->CharacterID());
 	if(hard_disconnect)
 	{
-		database.ClearAccountActive(this->AccountID());
 		LeaveGroup();
 		Raid *MyRaid = entity_list.GetRaidByClient(this);
 
@@ -764,7 +765,7 @@ void Client::BulkSendItems()
 
 	// LINKDEAD TRADE ITEMS
 	// Move trade slot items back into normal inventory..need them there now for the proceeding validity checks -U
-	for(slot_id = 3000; slot_id <= 3007; slot_id++) {
+	for(slot_id = EmuConstants::TRADE_BEGIN; slot_id <= EmuConstants::TRADE_END; slot_id++) {
 		ItemInst* inst = m_inv.PopItem(slot_id);
 		if(inst) {
 			bool is_arrow = (inst->GetItem()->ItemType == ItemTypeArrow) ? true : false;
@@ -816,7 +817,96 @@ void Client::BulkSendItems()
 	}
 }
 
-void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
+void Client::SendCursorItems()
+{
+	/* Send stuff on the cursor which isnt sent in bulk */
+	for (auto iter = m_inv.cursor_cbegin(); iter != m_inv.cursor_cend(); ++iter) {
+		const ItemInst *inst = *iter;
+		SendItemPacket(MainCursor, inst, ItemPacketSummonItem);
+	}
+}
+
+void Client::FillPPItems()
+{
+	int16 slot_id = 0;
+	int i = 0;
+	memset(m_pp.invItemProperties, 0, sizeof(OldItemProperties_Struct)*30);
+	for (slot_id = MainCursor; slot_id <= EmuConstants::GENERAL_END; slot_id++) 
+	{
+		const ItemInst* inst = m_inv[slot_id];
+		if (inst){
+			m_pp.inventory[i] = inst->GetItem()->ID;
+			m_pp.invItemProperties[i].charges = inst->GetCharges();
+		}
+		else
+			m_pp.inventory[i] = 0xFFFF;
+
+		++i;
+	}
+
+	i = 0;
+	memset(m_pp.bagItemProperties, 0, sizeof(OldItemProperties_Struct)*80);
+	for (slot_id = EmuConstants::GENERAL_BAGS_BEGIN; slot_id <= EmuConstants::GENERAL_BAGS_END; slot_id++) 
+	{
+		const ItemInst* inst = m_inv[slot_id];
+		if (inst){
+			m_pp.containerinv[i] = inst->GetItem()->ID;
+			m_pp.bagItemProperties[i].charges = inst->GetCharges();
+		}
+		else
+			m_pp.containerinv[i] = 0xFFFF;
+
+		++i;
+	}
+
+	i = 0;
+	memset(m_pp.cursorItemProperties, 0, sizeof(OldItemProperties_Struct)*10);
+	for (slot_id = EmuConstants::CURSOR_BAG_BEGIN; slot_id <= EmuConstants::CURSOR_BAG_END; slot_id++) 
+	{
+		const ItemInst* inst = m_inv[slot_id];
+		if (inst){
+			m_pp.cursorbaginventory[i] = inst->GetItem()->ID;
+			m_pp.cursorItemProperties[i].charges = inst->GetCharges();
+		}
+		else
+			m_pp.cursorbaginventory[i] = 0xFFFF;
+
+		++i;
+	}
+
+	i = 0;
+	memset(m_pp.bankinvitemproperties, 0, sizeof(OldItemProperties_Struct)*8);
+	for (slot_id = EmuConstants::BANK_BEGIN; slot_id <= EmuConstants::BANK_END; slot_id++) 
+	{
+		const ItemInst* inst = m_inv[slot_id];
+		if (inst){
+			m_pp.bank_inv[i] = inst->GetItem()->ID;
+			m_pp.bankinvitemproperties[i].charges = inst->GetCharges();
+		}
+		else
+			m_pp.bank_inv[i] = 0xFFFF;
+
+		++i;
+	}
+
+	i = 0;
+	memset(m_pp.bankbagitemproperties, 0, sizeof(OldItemProperties_Struct)*80);
+	for (slot_id = EmuConstants::BANK_BAGS_BEGIN; slot_id <= EmuConstants::BANK_BAGS_END; slot_id++) 
+	{
+		const ItemInst* inst = m_inv[slot_id];
+		if (inst){
+			m_pp.bank_cont_inv[i] = inst->GetItem()->ID;
+			m_pp.bankbagitemproperties[i].charges = inst->GetCharges();
+		}
+		else
+			m_pp.bank_cont_inv[i] = 0xFFFF;
+
+		++i;
+	}
+}
+
+void Client::BulkSendMerchantInventory(int merchant_id, int npcid) 
+{
 	const Item_Struct* handyitem = nullptr;
 	uint32 numItemSlots = 79; //The max number of items passed in the transaction.
 	const Item_Struct *item;
@@ -851,6 +941,19 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 		int32 fac = merch ? merch->GetPrimaryFaction() : 0;
 		if (fac != 0 && GetModCharacterFactionLevel(fac) < ml.faction_required)
 			continue;
+
+		if(ml.quantity > 0)
+		{
+			if(ml.qty_left <= 0)
+			{
+				Log.Out(Logs::General, Logs::Trading, "Merchant is skipping item %d that has %d left.", ml.item, ml.qty_left);
+				continue;
+			}
+			else
+			{
+				Log.Out(Logs::General, Logs::Trading, "Merchant is sending item %d that has %d left in slot %d.", ml.item, ml.qty_left, ml.slot);
+			}
+		}
 
 		handychance = zone->random.Int(0, merlist.size() + tmp_merlist.size() - 1);
 
@@ -889,7 +992,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 		// Account for merchant lists with gaps.
 		if (ml.slot >= i) {
 			if (ml.slot > i)
-				Log.Out(Logs::General, Logs::None, "(WARNING) Merchantlist contains gap at slot %d. Merchant: %d, NPC: %d", i, merchant_id, npcid);
+				Log.Out(Logs::General, Logs::Trading, "(WARNING) Merchantlist contains gap at slot %d. Merchant: %d, NPC: %d", i, merchant_id, npcid);
 			i = ml.slot + 1;
 		}
 	}
@@ -905,10 +1008,15 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 			else
 				handychance--;
 			int charges = 1;
-			//if(item->ItemClass==ItemClassCommon && (int16)ml.charges <= item->MaxCharges)
-			//	charges=ml.charges;
-			//else
-			charges = item->MaxCharges;
+			if(database.ItemQuantityType(item->ID) == Quantity_Charges)
+			{
+				if(ml.charges > 0)
+				{
+					charges = zone->GetTempMerchantQtyNoSlot(npcid, item->ID);
+				}
+				else
+					charges = 1;
+			}
 			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
 				if (RuleB(Merchant, UsePriceMod)) {
@@ -919,7 +1027,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 				inst->SetMerchantSlot(ml.slot);
 				inst->SetMerchantCount(ml.charges);
 				if(charges > 0)
-					inst->SetCharges(item->MaxCharges);//inst->SetCharges(charges);
+					inst->SetCharges(charges);
 				else
 					inst->SetCharges(1);
 				if(inst) 
@@ -929,12 +1037,34 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 					size += packet.length();
 					m++;
 				}
-
+				Log.Out(Logs::General, Logs::Trading, "%s was added to merchant in slot %d with %d charges", item->Name, ml.slot, ml.charges);
 			}
 		}
 		tmp_merlist.push_back(ml);
 		i++;
 	}
+
+	uint8 lastslot = i;
+
+	uint32 entityid = 0;
+	if(merch)
+		entityid = merch->GetID();
+
+	EQApplicationPacket* delitempacket = new EQApplicationPacket(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
+	Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
+	delitem->itemslot = lastslot;
+	delitem->npcid = entityid;
+	delitem->playerid = GetID();
+	delitempacket->priority = 6;
+
+	if(merch)
+		entity_list.QueueClients(merch, delitempacket); //que for anyone that could be using the merchant so they see the update
+	else
+		QueuePacket(delitempacket);
+
+	safe_delete(delitempacket);
+	Log.Out(Logs::General, Logs::Trading, "Cleared last merchant slot %d", lastslot);
+
 	//this resets the slot
 	zone->tmpmerchanttable[npcid] = tmp_merlist;
 	if (merch != nullptr && handyitem) {
@@ -963,8 +1093,6 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 			Message_StringID(CC_Default, GENERIC_STRINGID_SAY, merch->GetCleanName(), handy_id, this->GetName(), handyitem->Name);
 		else
 			Message_StringID(CC_Default, GENERIC_STRINGID_SAY, merch->GetCleanName(), handy_id, this->GetName());
-
-		merch->CastToNPC()->FaceTarget(this->CastToMob());
 	}
 
 		int8 count = 0;
@@ -1143,25 +1271,6 @@ void Client::OPMemorizeSpell(const EQApplicationPacket* app)
 	Save();
 }
 
-void Client::BreakInvis()
-{
-	if (invisible)
-	{
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SpawnAppearance, sizeof(SpawnAppearance_Struct));
-		SpawnAppearance_Struct* sa_out = (SpawnAppearance_Struct*)outapp->pBuffer;
-		sa_out->spawn_id = GetID();
-		sa_out->type = 0x03;
-		sa_out->parameter = 0;
-		entity_list.QueueClients(this, outapp, true);
-		safe_delete(outapp);
-		invisible = false;
-		invisible_undead = false;
-		invisible_animals = false;
-		hidden = false;
-		improved_hidden = false;
-	}
-}
-
 static uint64 CoinTypeCoppers(uint32 type) {
 	switch(type) {
 	case COINTYPE_PP:
@@ -1274,23 +1383,6 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 			// can't move coin from trade
 			break;
 		}
-		case 4:	// shared bank
-		{
-			uint32 distance = 0;
-			NPC *banker = entity_list.GetClosestBanker(this, distance);
-			if(!banker || distance > USE_NPC_RANGE2)
-			{
-				char *hacked_string = nullptr;
-				MakeAnyLenString(&hacked_string, "Player tried to make use of a banker(shared coin move) but %s is non-existant or too far away (%u units).",
-					banker ? banker->GetName() : "UNKNOWN NPC", distance);
-				database.SetMQDetectionFlag(AccountName(), GetName(), hacked_string, zone->GetShortName());
-				safe_delete_array(hacked_string);
-				return;
-			}
-			if(mc->cointype1 == COINTYPE_PP)	// there's only platinum here
-				from_bucket = (int32 *) &m_pp.platinum_shared;
-			break;
-		}
 	}
 
 	switch(mc->to_slot)
@@ -1374,23 +1466,6 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 			}
 			break;
 		}
-		case 4:	// shared bank
-		{
-			uint32 distance = 0;
-			NPC *banker = entity_list.GetClosestBanker(this, distance);
-			if(!banker || distance > USE_NPC_RANGE2)
-			{
-				char *hacked_string = nullptr;
-				MakeAnyLenString(&hacked_string, "Player tried to make use of a banker(shared coin move) but %s is non-existant or too far away (%u units).",
-					banker ? banker->GetName() : "UNKNOWN NPC", distance);
-				database.SetMQDetectionFlag(AccountName(), GetName(), hacked_string, zone->GetShortName());
-				safe_delete_array(hacked_string);
-				return;
-			}
-			if(mc->cointype2 == COINTYPE_PP)	// there's only platinum here
-				to_bucket = (int32 *) &m_pp.platinum_shared;
-			break;
-		}
 	}
 
 	if(!from_bucket)
@@ -1424,23 +1499,6 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 	{
 		if(*to_bucket + amount_to_add > *to_bucket)	// overflow check
 			*to_bucket += amount_to_add;
-
-		//shared bank plat
-		if (RuleB(Character, SharedBankPlat))
-		{
-			if (to_bucket == &m_pp.platinum_shared || from_bucket == &m_pp.platinum_shared)
-			{
-				if (from_bucket == &m_pp.platinum_shared)
-					amount_to_add = 0 - amount_to_take;
-
-				database.SetSharedPlatinum(AccountID(),amount_to_add);
-			}
-		}
-		else{
-			if (to_bucket == &m_pp.platinum_shared || from_bucket == &m_pp.platinum_shared){
-				this->Message(CC_Red, "::: WARNING! ::: SHARED BANK IS DISABLED AND YOUR PLATINUM WILL BE DESTROYED IF YOU PUT IT HERE");
-			}
-		}
 	}
 
 	// if this is a trade move, inform the person being traded with
@@ -1472,6 +1530,7 @@ void Client::OPMoveCoin(const EQApplicationPacket* app)
 	}
 
 	SaveCurrency();
+	RecalcWeight();
 }
 
 void Client::OPGMTraining(const EQApplicationPacket *app)
@@ -1632,7 +1691,6 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 			case SkillFletching:
 			case SkillJewelryMaking:
 			case SkillPottery:
-			case SkillFishing:
 				if(skilllevel >= RuleI(Skills, MaxTrainTradeskills)) {
 					Message_StringID(CC_Red, MORE_SKILLED_THAN_I, pTrainer->GetCleanName());
 					SetSkill(skill, skilllevel);
@@ -1721,7 +1779,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 				}
 			}
 
-			Message(0, "Local: Summoning %s to %f, %f, %f", gms->charname, gms->x, gms->y, gms->z);
+			Message(CC_Default, "Local: Summoning %s to %f, %f, %f", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || this->Admin() >= st->CastToClient()->Admin()))
 				st->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), (float)gms->x, (float)gms->y, (float)gms->z, this->GetHeading(), true);
 			else
@@ -1732,7 +1790,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 			uint8 tmp = gms->charname[strlen(gms->charname)-1];
 			if (!worldserver.Connected())
 			{
-				Message(0, "Error: World server disconnected");
+				Message(CC_Default, "Error: World server disconnected");
 			}
 			else if (tmp < '0' || tmp > '9') // dont send to world if it's not a player's name
 			{
@@ -1810,7 +1868,8 @@ void Client::DoStaminaUpdate() {
 	bool aamod = false;
 	//This is our stomach size. It probably shouldn't be changed from 6000. 
 	int value = RuleI(Character,ConsumptionValue);
-	if(zone->GetZoneID() != bazaar && !GetGM()) {
+	if(zone->GetZoneID() != bazaar && !GetGM()) 
+	{
 		//Change this rule to raise or lower rate of food consumption.
 		float loss = RuleR(Character, FoodLossPerUpdate);
 
@@ -1882,16 +1941,18 @@ void Client::DoStaminaUpdate() {
 
 		Log.Out(Logs::Detail, Logs::None, "We digested %f units of food and %f units of water. Our hunger is: %i and our thirst is: %i. Our race is: %i and timer is set to: %i. Famished is: %i. Endurance is: %i (%i percent) Fatigue is: %i Desert: %i Horse: %i AAMod: %i", loss, loss+waterloss, m_pp.hunger_level, m_pp.thirst_level, GetRace(), stamina_timer.GetDuration(), m_pp.famished, GetEndurance(), GetEndurancePercent(), GetFatiguePercent(), desert, horse, aamod);
 
+		m_pp.fatigue = GetFatiguePercent();
 		sta->food = m_pp.hunger_level > value ? value : m_pp.hunger_level;
 		sta->water = m_pp.thirst_level> value ? value : m_pp.thirst_level;
-		sta->fatigue=GetFatiguePercent();
+		sta->fatigue = m_pp.fatigue;
 
 	}
-	else {
+	else 
+	{
 		// No auto food/drink consumption in the Bazaar or for GMs
 		sta->food = value;
 		sta->water = value;
-		sta->fatigue=GetFatiguePercent();
+		sta->fatigue = m_pp.fatigue;
 	}
 	FastQueuePacket(&outapp);
 }
@@ -1973,60 +2034,5 @@ void Client::CalcRestState() {
 
 	if(RuleB(Character, RestRegenEndurance))
 		RestRegenEndurance = (GetMaxEndurance() * RuleI(Character, RestRegenPercent) / 100);
-}
-
-void Client::DoTracking()
-{
-	if(TrackingID == 0)
-		return;
-
-	Mob *m = entity_list.GetMob(TrackingID);
-
-	if(!m || m->IsCorpse())
-	{
-		Message_StringID(MT_Skills, TRACK_LOST_TARGET);
-
-		TrackingID = 0;
-
-		return;
-	}
-
-	float RelativeHeading = GetHeading() - CalculateHeadingToTarget(m->GetX(), m->GetY());
-
-	if(RelativeHeading < 0)
-		RelativeHeading += 256;
-
-	if((RelativeHeading <= 16) || (RelativeHeading >= 240))
-	{
-		Message_StringID(MT_Skills, TRACK_STRAIGHT_AHEAD, m->GetCleanName());
-	}
-	else if((RelativeHeading > 16) && (RelativeHeading <= 48))
-	{
-		Message_StringID(MT_Skills, TRACK_AHEAD_AND_TO, m->GetCleanName(), "right");
-	}
-	else if((RelativeHeading > 48) && (RelativeHeading <= 80))
-	{
-		Message_StringID(MT_Skills, TRACK_TO_THE, m->GetCleanName(), "right");
-	}
-	else if((RelativeHeading > 80) && (RelativeHeading <= 112))
-	{
-		Message_StringID(MT_Skills, TRACK_BEHIND_AND_TO, m->GetCleanName(), "right");
-	}
-	else if((RelativeHeading > 112) && (RelativeHeading <= 144))
-	{
-		Message_StringID(MT_Skills, TRACK_BEHIND_YOU, m->GetCleanName());
-	}
-	else if((RelativeHeading > 144) && (RelativeHeading <= 176))
-	{
-		Message_StringID(MT_Skills, TRACK_BEHIND_AND_TO, m->GetCleanName(), "left");
-	}
-	else if((RelativeHeading > 176) && (RelativeHeading <= 208))
-	{
-		Message_StringID(MT_Skills, TRACK_TO_THE, m->GetCleanName(), "left");
-	}
-	else if((RelativeHeading > 208) && (RelativeHeading < 240))
-	{
-		Message_StringID(MT_Skills, TRACK_AHEAD_AND_TO, m->GetCleanName(), "left");
-	}
 }
 

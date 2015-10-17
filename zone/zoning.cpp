@@ -154,9 +154,9 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	/* Load up the Safe Coordinates, restrictions and verify the zone name*/
 	float safe_x, safe_y, safe_z;
 	int16 minstatus = 0;
-	uint8 minlevel = 0;
+	uint8 minlevel = 0, expansion = 0;
 	char flag_needed[128];
-	if(!database.GetSafePoints(target_zone_name, database.GetInstanceVersion(target_instance_id), &safe_x, &safe_y, &safe_z, &minstatus, &minlevel, flag_needed)) {
+	if(!database.GetSafePoints(target_zone_name, database.GetInstanceVersion(target_instance_id), &safe_x, &safe_y, &safe_z, &minstatus, &minlevel, flag_needed, &expansion)) {
 		//invalid zone...
 		Message(CC_Red, "Invalid target zone while getting safe points.");
 		Log.Out(Logs::General, Logs::Error, "Zoning %s: Unable to get safe coordinates for zone '%s'.", GetName(), target_zone_name);
@@ -254,6 +254,13 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	int8 myerror = 1;		//1 is succes
 
 	//not sure when we would use ZONE_ERROR_NOTREADY
+	
+	bool has_expansion = expansion & m_pp.expansions;
+	if(!ignorerestrictions && Admin() < minStatusToIgnoreZoneFlags && expansion > ClassicEQ && !has_expansion)
+	{
+		myerror = ZONE_ERROR_NOEXPANSION;
+		Log.Out(Logs::General, Logs::Error, "Zoning %s: Does not have the required expansion (%d) to enter %s. Player expansions: %d", GetName(), expansion, target_zone_name, m_pp.expansions);
+	}
 
 	//enforce min status and level
 	if (!ignorerestrictions && (Admin() < minstatus || GetLevel() < minlevel))
@@ -561,7 +568,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 		zone_mode = zm;
 
 		if(zm == ZoneSolicited || zm == ZoneToSafeCoords) {
-			Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (ZS/ZTS). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+			Log.Out(Logs::Detail, Logs::EQMac, "Zoning packet about to be sent (ZS/ZTS). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 			RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 
@@ -580,7 +587,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 		else if (zm == ZoneToBindPoint) {
 			//TODO: Find a better packet that works with EQMac on death. Sending OP_RequestClientZoneChange here usually does not zone the
 			//player correctly (it starts the zoning process, then disconnect.) OP_GMGoto seems to work 90% of the time. It's a hack, but it works...
-			Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (ZTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+			Log.Out(Logs::Detail, Logs::EQMac, "Zoning packet about to be sent (ZTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMGoto, sizeof(GMGoto_Struct));
 			GMGoto_Struct* gmg = (GMGoto_Struct*) outapp->pBuffer;
 	
@@ -599,7 +606,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			zone_mode = zm;
 
 			if(zoneID == GetZoneID()) {
-				Log.Out(Logs::General, Logs::EQMac, "Zoning packet NOT being sent (GTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+				Log.Out(Logs::Detail, Logs::EQMac, "Zoning packet NOT being sent (GTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 				//Not doing inter-zone for same zone gates. Client is supposed to handle these, based on PP info it is fed.
 				//properly handle proximities
 				entity_list.ProcessMove(this, glm::vec3(m_Position));
@@ -609,7 +616,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			else
 			{
 				zone_mode = zm;
-				Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (GTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+				Log.Out(Logs::Detail, Logs::EQMac, "Zoning packet about to be sent (GTB). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 				EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 				RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 
@@ -627,7 +634,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 		else if(zm == EvacToSafeCoords)
 		{
 			zone_mode = zm;
-			Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (ETSC). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+			Log.Out(Logs::Detail, Logs::EQMac, "Zoning packet about to be sent (ETSC). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 			EQApplicationPacket* outapp = new EQApplicationPacket(OP_RequestClientZoneChange, sizeof(RequestClientZoneChange_Struct));
 			RequestClientZoneChange_Struct* gmg = (RequestClientZoneChange_Struct*) outapp->pBuffer;
 
@@ -653,7 +660,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 		}
 		else {
 			if(zoneID == GetZoneID()) {
-				Log.Out(Logs::General, Logs::EQMac, "Zoning packet about to be sent (GOTO). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
+				Log.Out(Logs::Detail, Logs::EQMac, "Zoning packet about to be sent (GOTO). We are headed to zone: %i, at %f, %f, %f", zoneID, x, y, z);
 				//properly handle proximities
 				entity_list.ProcessMove(this, glm::vec3(m_Position));
 				m_Proximity = glm::vec3(m_Position);
@@ -676,7 +683,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			FastQueuePacket(&outapp);
 		}
 
-		Log.Out(Logs::Detail, Logs::None, "Player %s has requested a zoning to LOC x=%f, y=%f, z=%f, heading=%f in zoneid=%i and type=%i", GetName(), x, y, z, heading, zoneID, zm);
+		Log.Out(Logs::Detail, Logs::EQMac, "Player %s has requested a zoning to LOC x=%f, y=%f, z=%f, heading=%f in zoneid=%i and type=%i", GetName(), x, y, z, heading, zoneID, zm);
 		//Clear zonesummon variables if we're zoning to our own zone
 		//Client wont generate a zone change packet to the server in this case so
 		//They aren't needed and it keeps behavior on next zone attempt from being undefined.
@@ -715,6 +722,11 @@ void Client::Gate()
 
 void NPC::Gate() {
 	entity_list.MessageClose_StringID(this, true, 200, MT_Spells, GATES, GetCleanName());
+	
+	if (GetHPRatio() < 25)
+	{
+		SetHP(GetMaxHP() / 4);
+	}
 
 	Mob::Gate();
 }
@@ -759,14 +771,18 @@ void Client::GoToDeath() {
 	MovePC(m_pp.binds[0].zoneId, m_pp.binds[0].instance_id, 0.0f, 0.0f, 0.0f, 0.0f, 1, ZoneToBindPoint);
 }
 
-void Client::SetZoneFlag(uint32 zone_id) {
-	if(HasZoneFlag(zone_id))
+void Client::SetZoneFlag(uint32 zone_id, uint8 key) {
+	if(HasZoneFlag(zone_id, key))
 		return;
 
-	zone_flags.insert(zone_id);
+	ClearZoneFlag(zone_id);
 
-	// Retrieve all waypoints for this grid
-	std::string query = StringFormat("INSERT INTO zone_flags (charID,zoneID) VALUES(%d,%d)", CharacterID(), zone_id);
+	ZoneFlags_Struct* zfs = new ZoneFlags_Struct;
+	zfs->zoneid = zone_id;
+	zfs->key = key;
+	ZoneFlags.Insert(zfs);
+
+	std::string query = StringFormat("INSERT INTO character_zone_flags (id,zoneID,key_) VALUES(%d,%d,%d)", CharacterID(), zone_id, key);
 	auto results = database.QueryDatabase(query);
 	if(!results.Success())
 		Log.Out(Logs::General, Logs::Error, "MySQL Error while trying to set zone flag for %s: %s", GetName(), results.ErrorMessage().c_str());
@@ -776,20 +792,29 @@ void Client::ClearZoneFlag(uint32 zone_id) {
 	if(!HasZoneFlag(zone_id))
 		return;
 
-	zone_flags.erase(zone_id);
+	LinkedListIterator<ZoneFlags_Struct*> iterator(ZoneFlags);
+	iterator.Reset();
+	while (iterator.MoreElements())
+	{
+		ZoneFlags_Struct* zfs = iterator.GetData();
+		if (zfs->zoneid == zone_id)
+		{
+			iterator.RemoveCurrent(true);
+		}
+		iterator.Advance();
+	}
 
-	// Retrieve all waypoints for this grid
-	std::string query = StringFormat("DELETE FROM zone_flags WHERE charID=%d AND zoneID=%d", CharacterID(), zone_id);
+	std::string query = StringFormat("DELETE FROM character_zone_flags WHERE id=%d AND zoneID=%d", CharacterID(), zone_id);
 	auto results = database.QueryDatabase(query);
 	if(!results.Success())
 		Log.Out(Logs::General, Logs::Error, "MySQL Error while trying to clear zone flag for %s: %s", GetName(), results.ErrorMessage().c_str());
 
 }
 
-void Client::LoadZoneFlags() {
-
-	// Retrieve all waypoints for this grid
-	std::string query = StringFormat("SELECT zoneID from zone_flags WHERE charID=%d", CharacterID());
+void Client::LoadZoneFlags(LinkedList<ZoneFlags_Struct*>* ZoneFlags) 
+{
+	ZoneFlags->Clear();
+	std::string query = StringFormat("SELECT zoneID, key_ from character_zone_flags WHERE id=%d order by zoneID", CharacterID());
 	auto results = database.QueryDatabase(query);
     if (!results.Success()) {
         Log.Out(Logs::General, Logs::Error, "MySQL Error while trying to load zone flags for %s: %s", GetName(), results.ErrorMessage().c_str());
@@ -797,28 +822,62 @@ void Client::LoadZoneFlags() {
     }
 
 	for(auto row = results.begin(); row != results.end(); ++row)
-		zone_flags.insert(atoi(row[0]));
+	{
+		ZoneFlags_Struct* zfs = new ZoneFlags_Struct;
+		zfs->zoneid = atoi(row[0]);
+		zfs->key = atoi(row[1]);
+		ZoneFlags->Insert(zfs);
+	}
 }
 
-bool Client::HasZoneFlag(uint32 zone_id) const {
-	return(zone_flags.find(zone_id) != zone_flags.end());
+bool Client::HasZoneFlag(uint32 zone_id, uint8 key) {
+
+	LinkedListIterator<ZoneFlags_Struct*> iterator(ZoneFlags);
+	iterator.Reset();
+	while (iterator.MoreElements())
+	{
+		ZoneFlags_Struct* zfs = iterator.GetData();
+		if (zfs->zoneid == zone_id && zfs->key >= key)
+		{
+			return true;
+		}
+		iterator.Advance();
+	}
+	return false;
 }
 
-void Client::SendZoneFlagInfo(Client *to) const {
-	if(zone_flags.empty()) {
-		to->Message(0, "%s has no zone flags.", GetName());
+uint8 Client::GetZoneFlagKey(uint32 zone_id) {
+
+	LinkedListIterator<ZoneFlags_Struct*> iterator(ZoneFlags);
+	iterator.Reset();
+	while (iterator.MoreElements())
+	{
+		ZoneFlags_Struct* zfs = iterator.GetData();
+		if (zfs->zoneid == zone_id)
+		{
+			return zfs->key;
+		}
+		iterator.Advance();
+	}
+
+	return 0;
+}
+
+void Client::SendZoneFlagInfo(Client *to) {
+	if(ZoneFlags.Count() == 0) {
+		to->Message(CC_Default, "%s has no zone flags.", GetName());
 		return;
 	}
 
-	std::set<uint32>::const_iterator cur, end;
-	cur = zone_flags.begin();
-	end = zone_flags.end();
+	to->Message(CC_Default, "Flags for %s:", GetName());
 	char empty[1] = { '\0' };
-
-	to->Message(0, "Flags for %s:", GetName());
-
-	for(; cur != end; ++cur) {
-		uint32 zoneid = *cur;
+	LinkedListIterator<ZoneFlags_Struct*> iterator(ZoneFlags);
+	iterator.Reset();
+	while (iterator.MoreElements())
+	{
+		ZoneFlags_Struct* zfs = iterator.GetData();
+		uint32 zoneid = zfs->zoneid;
+		uint8 key = zfs->key;
 
 		const char *short_name = database.GetZoneName(zoneid);
 
@@ -835,9 +894,11 @@ void Client::SendZoneFlagInfo(Client *to) const {
 			strcpy(flag_name, "(ERROR GETTING NAME)");
 		}
 
-		to->Message(0, "Has Flag %s for zone %s (%d,%s)", flag_name, long_name, zoneid, short_name);
+		to->Message(CC_Default, "Has Flag %s for zone %s (%d,%s) Key: %d", flag_name, long_name, zoneid, short_name, key);
 		if(long_name != empty)
 			delete[] long_name;
+
+		iterator.Advance();
 	}
 }
 
@@ -851,9 +912,9 @@ bool Client::CanBeInZone() {
 
 	float safe_x, safe_y, safe_z;
 	int16 minstatus = 0;
-	uint8 minlevel = 0;
+	uint8 minlevel = 0, expansion = 0;
 	char flag_needed[128];
-	if(!database.GetSafePoints(zone->GetShortName(), zone->GetInstanceVersion(), &safe_x, &safe_y, &safe_z, &minstatus, &minlevel, flag_needed)) {
+	if(!database.GetSafePoints(zone->GetShortName(), zone->GetInstanceVersion(), &safe_x, &safe_y, &safe_z, &minstatus, &minlevel, flag_needed, &expansion)) {
 		//this should not happen...
 		Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Unable to query zone info for ourself '%s'", zone->GetShortName());
 		return(false);
@@ -874,6 +935,13 @@ bool Client::CanBeInZone() {
 			Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Character does not have the flag to be in this zone (%s)!", flag_needed);
 			return(false);
 		}
+	}
+
+	bool has_expansion = expansion & m_pp.expansions;
+	if(Admin() < minStatusToIgnoreZoneFlags && expansion > ClassicEQ && !has_expansion)
+	{
+		Log.Out(Logs::Detail, Logs::Character, "[CLIENT] Character does not have the required expansion (%d ~ %d)!", m_pp.expansions, expansion);
+		return(false);
 	}
 
 	return(true);

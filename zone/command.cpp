@@ -37,6 +37,7 @@
 #include <sstream>
 #include <algorithm>
 #include <ctime>
+#include <thread>
 
 #ifdef _WINDOWS
 #define strcasecmp _stricmp
@@ -149,10 +150,11 @@ int command_init(void){
 		command_add("advnpc", "analog for advnpcspawn [maketype|makegroup|addgroupentry|addgroupspawn][removegroupspawn|movespawn|editgroupbox|cleargroupbox].", 250, command_advnpcspawn) ||
 		command_add("advnpcspawn", "[maketype|makegroup|addgroupentry|addgroupspawn][removegroupspawn|movespawn|editgroupbox|cleargroupbox].", 250, command_advnpcspawn) ||
 		command_add("aggro", "(range) [-v] - Display aggro information for all mobs 'range' distance from your target. -v is verbose faction info.", 95, command_aggro) ||
-		command_add("aggrozone", "[aggro] - Aggro every mob in the zone with X aggro. Default is 0. Not recommend if you're not invulnerable.", 250, command_aggrozone) ||
+		command_add("aggrozone", "[aggro] [0/1: Enforce ignore distance. If 0 or not set, all will come] - Aggro every mob in the zone with X aggro. Default is 0. Not recommend if you're not invulnerable.", 250, command_aggrozone) ||
 		command_add("ai", "[factionid/spellslist/con/guard/roambox/stop/start] - Modify AI on NPC target.", 250, command_ai) ||
 		command_add("altactivate", "[argument] - activates alternate advancement abilities, use altactivate help for more information.", 170, command_altactivate) ||
 		command_add("appearance", "[type] [value] - Send an appearance packet for you or your target.", 250, command_appearance) ||
+		command_add("apply_shared_memory", "[shared_memory_name] - Tells every zone and world to apply a specific shared memory segment by name.", 250, command_apply_shared_memory) ||
 		command_add("attack", "[targetname] - Make your NPC target attack targetname.", 160, command_attack) ||
 
 		command_add("ban", "[name][reason] - Ban by character name.", 100, command_ban) ||
@@ -160,6 +162,7 @@ int command_init(void){
 		command_add("beardcolor", "- Change the beard color of your target.", 250, command_beardcolor) ||
 		command_add("bestz", "- Ask map for a good Z coord for your x,y coords.", 20, command_bestz) ||
 		command_add("bind", "- Sets your targets bind spot to their current location.", 81, command_bind) ||
+		command_add("boatinfo", "- Gets infomation about the boats currently spawned in the zone.", 81, command_boatinfo) ||
 		command_add("bug", "- Bug report system. Encase your bug in quotes. Type: #bug <quote>I have a bug</quote>.", 90, command_bug) ||
 
 		command_add("cast", nullptr, 160, command_castspell) ||
@@ -224,6 +227,7 @@ int command_init(void){
 		command_add("gm", "- Turn player target's or your GM flag on or off.", 95, command_gm) ||
 		command_add("gmhideme", nullptr, 81, command_hideme) ||
 		command_add("gmspeed", "[on/off] - Turn GM speed hack on/off for you or your player target.", 150, command_gmspeed) ||
+		command_add("godmode", "[on/off] - Turns on/off hideme, gmspeed, invul, and flymode.", 200, command_godmode) ||
 		command_add("goto", "[x] [y] [z] - Teleport to the provided coordinates or to your target.", 20, command_goto) ||
 		command_add("grid", "[add/delete] [grid_num] [wandertype] [pausetype] - Create/delete a wandering grid.", 250, command_grid) ||
 		command_add("guild", "- Guild manipulation commands. Use argument help for more info.", 90, command_guild) ||
@@ -240,6 +244,7 @@ int command_init(void){
 		command_add("helm", "- Change the helm of your target.", 250, command_helm) ||
 		command_add("help", "[search term] - List available commands and their description, specify partial command as argument to search.", 0, command_help) ||
 		command_add("hideme", "[on/off] - Hide yourself from spawn lists.", 81, command_hideme) ||
+		command_add("hotfix", "[hotfix_name] - Reloads shared memory into a hotfix, equiv to load_shared_memory followed by apply_shared_memory", 250, command_hotfix) ||
 		command_add("hp", "- Refresh your HP bar from the server.", 255, command_hp) ||
 
 		command_add("instance", "- Modify Instances.", 255, command_instance) ||
@@ -255,13 +260,14 @@ int command_init(void){
 		command_add("iteminfo", "- Get information about the item on your cursor.", 50, command_iteminfo) ||
 		command_add("itemsearch", "[search criteria] - Search for an item.", 100, command_itemsearch) ||
 		command_add("itemtest", "- merth's test function.", 255, command_itemtest) ||
-
+		command_add("keyring", "Displays target's keyring items.", 90, command_keyring) ||
 		command_add("kick", "[charname] - Disconnect charname.", 90, command_kick) ||
 		command_add("kill", "- Kill your target.", 150, command_kill) ||
 
 		command_add("lastname", "[new lastname] - Set your or your player target's lastname.", 90, command_lastname) ||
 		command_add("level", "[level] - Set your or your target's level.", 80, command_level) ||
 		command_add("listnpcs", "[name/range] - Search NPCs.", 90, command_listnpcs) ||
+		command_add("load_shared_memory", "[shared_memory_name] - Reloads shared memory and uses the input as output", 250, command_load_shared_memory) ||
 		command_add("loc", "- Print out your or your target's current location and heading.", 0, command_loc) ||
 		command_add("lock", "- Lock the worldserver.", 250, command_lock) ||
 		command_add("logs", "Manage anything to do with logs.", 180, command_logs) ||
@@ -338,11 +344,13 @@ int command_init(void){
 		command_add("reloadallrules", "Executes a reload of all rules.", 180, command_reloadallrules) ||
 		command_add("reloademote", "Reloads NPC Emotes.", 180, command_reloademote) ||
 		command_add("reloadlevelmods", nullptr, 255, command_reloadlevelmods) ||
+		command_add("reloadmerchants", "Reloads NPC merchant list.", 255, command_reloadmerchants) ||
 		command_add("reloadqst", " - Clear quest cache (any argument causes it to also stop all timers).", 160, command_reloadqst) ||
 		command_add("reloadquest", " - Clear quest cache (any argument causes it to also stop all timers).", 160, command_reloadqst) ||
 		command_add("reloadrulesworld", "Executes a reload of all rules in world specifically.", 180, command_reloadworldrules) ||
 		command_add("reloadstatic", "- Reload Static Zone Data.", 180, command_reloadstatic) ||
 		command_add("reloadtitles", "- Reload player titles from the database.", 180, command_reloadtitles) ||
+		command_add("reloadtraps", "- Repops all traps in the current zone.", 80, command_reloadtraps) ||
 		command_add("reloadworld", "[0|1] - Clear quest cache and reload all rules (0 - no repop, 1 - repop).", 250, command_reloadworld) ||
 		command_add("reloadzonepoints", "- Reload zone points from database.", 180, command_reloadzps) ||
 		command_add("reloadzps", nullptr, 180, command_reloadzps) ||
@@ -385,10 +393,11 @@ int command_init(void){
 		command_add("showpetspell", "[spellid/searchstring] - search pet summoning spells.", 50, command_showpetspell) ||
 		command_add("showskills", "- Show the values of your or your player target's skills.", 50, command_showskills) ||
 		command_add("showspellslist", "Shows spell list of targeted NPC.", 95, command_showspellslist) ||
-		command_add("showstats", "- Show details about you or your target.", 50, command_showstats) ||
+		command_add("showstats", "[quick stats]- Show details about you or your target. Quick stats shows only key stats.", 50, command_showstats) ||
 		command_add("shutdown", "- Shut this zone process down.", 250, command_shutdown) ||
 		command_add("si", nullptr, 160, command_summonitem) ||
 		command_add("size", "[size] - Change size of you or your target.", 100, command_size) ||
+		command_add("skills", "List skill difficulty.", 100, command_skill_difficulty) ||
 		command_add("spawn", "[name] [race] [level] [material] [hp] [gender] [class] [priweapon] [secweapon] [merchantid] - Spawn an NPC.", 250, command_spawn) ||
 		command_add("spawnfix", "- Find targeted NPC in database based on its X/Y/heading and update the database to make it spawn at your current location/heading.", 250, command_spawnfix) ||
 		command_add("spawnstatus", "- Show respawn timer status.", 95, command_spawnstatus) ||
@@ -413,9 +422,8 @@ int command_init(void){
 		command_add("timezone", "[HH] [MM] - Set timezone. Minutes are optional.", 250, command_timezone) ||
 		command_add("title", "[text] [1 = create title table row] - Set your or your player target's title.", 95, command_title) ||
 		command_add("titlesuffix", "[text] [1 = create title table row] - Set your or your player target's title suffix.", 255, command_titlesuffix) ||
-		command_add("traindisc", "[level] - Trains all the disciplines usable by the target, up to level specified. (may freeze client for a few seconds).", 150, command_traindisc) ||
-		command_add("tune", "Calculate ideal statical values related to combat.", 250, command_tune) ||
-
+		command_add("trapinfo", "- Gets infomation about the traps currently spawned in the zone.", 81, command_trapinfo) ||
+		command_add("undeletechar", "- Undelete a character that was previously deleted.", 255, command_undeletechar) ||
 		command_add("undyeme", "- Remove dye from all of your armor slots.", 255, command_undyeme) ||
 		command_add("unfreeze", "- Unfreeze your target.", 160, command_unfreeze) ||
 		command_add("unlock", "- Unlock the worldserver.", 250, command_unlock) ||
@@ -574,25 +582,30 @@ int command_realdispatch(Client *c, const char *message){
 
 	std::string cstr(sep.arg[0] + 1);
 
-	if (commandlist.count(cstr) != 1) {
+	if (commandlist.count(cstr) != 1)
+	{
 		return(-2);
 	}
 
 	CommandRecord *cur = commandlist[cstr];
-	if (c->Admin() < cur->access){
+	if (c->Admin() < cur->access)
+	{
 		c->Message(CC_Red, "Your access level is not high enough to use this command.");
 		return(-1);
 	}
 
 	/* QS: Player_Log_Issued_Commands */
-	if (RuleB(QueryServ, PlayerLogIssuedCommandes)){
+	if (RuleB(QueryServ, PlayerLogIssuedCommandes))
+	{
 		std::string event_desc = StringFormat("Issued command :: '%s' in zoneid:%i instid:%i", message, c->GetZoneID(), c->GetInstanceID());
 		QServ->PlayerLogEvent(Player_Log_Issued_Commands, c->CharacterID(), event_desc);
 	}
 
-	if(cur->access >= COMMANDS_LOGGING_MIN_STATUS) {
-		const char* targetType;
-		if (c->GetTarget()){
+	if(cur->access >= COMMANDS_LOGGING_MIN_STATUS)
+	{
+		const char* targetType = "notarget";
+		if (c->GetTarget())
+		{
 			if (c->GetTarget()->IsClient()) targetType = "player";
 			else if (c->GetTarget()->IsPet()) targetType = "pet";
 			else if (c->GetTarget()->IsNPC()) targetType = "NPC";
@@ -600,22 +613,24 @@ int command_realdispatch(Client *c, const char *message){
 			//else if (c->GetTarget()->IsMob()) targetType = "mob"; //doesn't register correctly so all non-pet/non-players report as NPC
 			database.LogCommands(c->GetName(), c->AccountName(), c->GetY(), c->GetX(), c->GetZ(), message, targetType, c->GetTarget()->GetName(), c->GetTarget()->GetY(), c->GetTarget()->GetX(), c->GetTarget()->GetZ(), c->GetZoneID(), zone->GetShortName());
 		}
-		else{
-			database.LogCommands(c->GetName(), c->AccountName(), c->GetY(), c->GetX(), c->GetZ(), message, "notarget", "notarget", 0, 0, 0, c->GetZoneID(), zone->GetShortName());
+		else
+		{
+			database.LogCommands(c->GetName(), c->AccountName(), c->GetY(), c->GetX(), c->GetZ(), message, targetType, targetType, 0, 0, 0, c->GetZoneID(), zone->GetShortName());
 		}
 		//Log.Out(Logs::General, Logs::Commands, "%s (%s) used command: %s (target=%s)", c->GetName(), c->AccountName(), message, c->GetTarget() ? c->GetTarget()->GetName() : "NONE");
 	}
 
-	if (cur->function == nullptr) {
+	if (cur->function == nullptr)
+	{
 		Log.Out(Logs::General, Logs::Error, "Command '%s' has a null function\n", cstr.c_str());
 		return(-1);
 	}
-	else {
+	else
+	{
 		//dispatch C++ command
 		cur->function(c, &sep);	// dispatch command
 	}
 	return 0;
-
 }
 
 void command_logcommand(Client *c, const char *message){
@@ -689,7 +704,7 @@ void command_resetaa(Client* c, const Seperator *sep){
 		c->Message(CC_Red, "Successfully reset %s's AAs", c->GetTarget()->GetName());
 	}
 	else
-		c->Message(0, "Usage: Target a client and use #resetaa to reset the AA data in their Profile.");
+		c->Message(CC_Default, "Usage: Target a client and use #resetaa to reset the AA data in their Profile.");
 }
 
 void command_resetboat(Client* c, const Seperator *sep){
@@ -699,7 +714,7 @@ void command_resetboat(Client* c, const Seperator *sep){
 		c->Message(CC_Red, "Successfully removed %s from a boat in their PP.", c->GetTarget()->GetName());
 	}
 	else
-		c->Message(0, "Usage: Target a client and use #resetboat to remove any boat in their Profile.");
+		c->Message(CC_Default, "Usage: Target a client and use #resetboat to remove any boat in their Profile.");
 }
 
 void command_sendop(Client *c, const Seperator *sep){
@@ -738,7 +753,7 @@ void command_optest(Client *c, const Seperator *sep){
 void command_help(Client *c, const Seperator *sep){
 	int commands_shown = 0;
 
-	c->Message(0, "Available EQEMu commands:");
+	c->Message(CC_Default, "Available EQEMu commands:");
 
 	std::map<std::string, CommandRecord *>::iterator cur, end;
 	cur = commandlist.begin();
@@ -754,22 +769,22 @@ void command_help(Client *c, const Seperator *sep){
 		if (c->Admin() < cur->second->access)
 			continue;
 		commands_shown++;
-		c->Message(0, "	%c%s %s", COMMAND_CHAR, cur->first.c_str(), cur->second->desc == nullptr ? "" : cur->second->desc);
+		c->Message(CC_Default, "	%c%s %s", COMMAND_CHAR, cur->first.c_str(), cur->second->desc == nullptr ? "" : cur->second->desc);
 	}
-	c->Message(0, "%d command%s listed.", commands_shown, commands_shown != 1 ? "s" : "");
+	c->Message(CC_Default, "%d command%s listed.", commands_shown, commands_shown != 1 ? "s" : "");
 
 }
 
 void command_version(Client *c, const Seperator *sep){
-	c->Message(0, "Current version information.");
-	c->Message(0, "	%s", CURRENT_VERSION);
-	c->Message(0, "	Compiled on: %s at %s", COMPILE_DATE, COMPILE_TIME);
-	c->Message(0, "	Last modified on: %s", LAST_MODIFIED);
+	c->Message(CC_Default, "Current version information.");
+	c->Message(CC_Default, "	%s", CURRENT_VERSION);
+	c->Message(CC_Default, "	Compiled on: %s at %s", COMPILE_DATE, COMPILE_TIME);
+	c->Message(CC_Default, "	Last modified on: %s", LAST_MODIFIED);
 }
 
 void command_setfaction(Client *c, const Seperator *sep){
 	if ((sep->arg[1][0] == 0 || strcasecmp(sep->arg[1], "*") == 0) || ((c->GetTarget() == 0) || (c->GetTarget()->IsClient()))) {
-		c->Message(0, "Usage: #setfaction [faction number]");
+		c->Message(CC_Default, "Usage: #setfaction [faction number]");
 		return;
 	}
 	
@@ -783,9 +798,9 @@ void command_setfaction(Client *c, const Seperator *sep){
 
 void command_serversidename(Client *c, const Seperator *sep){
 	if (c->GetTarget())
-		c->Message(0, c->GetTarget()->GetName());
+		c->Message(CC_Default, c->GetTarget()->GetName());
 	else
-		c->Message(0, "Error: no target");
+		c->Message(CC_Default, "Error: no target");
 }
 
 void command_testcopy(Client *c, const Seperator *sep)
@@ -805,7 +820,7 @@ void command_testcopy(Client *c, const Seperator *sep)
 		int targetID = client->CharacterID();
 		auto targetAcctID = database.GetAccountIDByChar(targetID);
 		const char* targetName = client->GetName();
-		c->Message(0, "Backing up targetName: %s, targetLSID: %i, targetID: %i, targetAcctID: %i", targetName, targetLSID, targetAcctID, targetID);
+		c->Message(CC_Default, "Backing up targetName: %s, targetLSID: %i, targetID: %i, targetAcctID: %i", targetName, targetLSID, targetAcctID, targetID);
 
 		char String[255];
 
@@ -848,7 +863,7 @@ void command_testspawn(Client *c, const Seperator *sep){
 			else if (strlen(sep->arg[2]) >= 9) // 0x0000, 2 bytes
 				*((uint32*)&(((uint8*)&ns->spawn)[atoi(sep->arg[1])])) = hextoi(sep->arg[2]);
 			else
-				c->Message(0, "Error: unexpected hex string length");
+				c->Message(CC_Default, "Error: unexpected hex string length");
 		}
 		else {
 			strcpy((char*)(&((uint8*)&ns->spawn)[atoi(sep->arg[1])]), sep->argplus[2]);
@@ -857,13 +872,13 @@ void command_testspawn(Client *c, const Seperator *sep){
 		c->FastQueuePacket(&outapp);
 	}
 	else
-		c->Message(0, "Usage: #testspawn [memloc] [value] - spawns a NPC for you only, with the specified values set in the spawn struct");
+		c->Message(CC_Default, "Usage: #testspawn [memloc] [value] - spawns a NPC for you only, with the specified values set in the spawn struct");
 }
 
 void command_wc(Client *c, const Seperator *sep){
 	if (sep->argnum < 2)
 	{
-		c->Message(0, "Usage: #wc [wear slot] [material] [ [hero_forge_model] [elite_material] [unknown06] [unknown18] ]");
+		c->Message(CC_Default, "Usage: #wc [wear slot] [material] [ [hero_forge_model] [elite_material] [unknown06] [unknown18] ]");
 	}
 	else if (c->GetTarget() == nullptr) {
 		c->Message(CC_Red, "You must have a target to do a wear change.");
@@ -905,28 +920,28 @@ void command_wc(Client *c, const Seperator *sep){
 }
 
 void command_numauths(Client *c, const Seperator *sep){
-	c->Message(0, "NumAuths: %i", zone->CountAuth());
-	c->Message(0, "Your WID: %i", c->GetWID());
+	c->Message(CC_Default, "NumAuths: %i", zone->CountAuth());
+	c->Message(CC_Default, "Your WID: %i", c->GetWID());
 }
 
 void command_setanim(Client *c, const Seperator *sep){
 	if (c->GetTarget() && sep->IsNumber(1)) {
 		int num = atoi(sep->arg[1]);
 		if (num < 0 || num >= _eaMaxAppearance) {
-			c->Message(0, "Invalid animation number, between 0 and %d", _eaMaxAppearance - 1);
+			c->Message(CC_Default, "Invalid animation number, between 0 and %d", _eaMaxAppearance - 1);
 		}
 		c->GetTarget()->SetAppearance(EmuAppearance(num));
 	}
 	else
-		c->Message(0, "Usage: #setanim [animnum]");
+		c->Message(CC_Default, "Usage: #setanim [animnum]");
 }
 
 void command_connectworldserver(Client *c, const Seperator *sep){
 	if (worldserver.Connected())
-		c->Message(0, "Error: Already connected to world server");
+		c->Message(CC_Default, "Error: Already connected to world server");
 	else
 	{
-		c->Message(0, "Attempting to connect to world server...");
+		c->Message(CC_Default, "Attempting to connect to world server...");
 		worldserver.AsyncConnect();
 	}
 }
@@ -934,46 +949,46 @@ void command_connectworldserver(Client *c, const Seperator *sep){
 void command_serverinfo(Client *c, const Seperator *sep){
 #ifdef _WINDOWS
 	char intbuffer[sizeof(unsigned long)];
-	c->Message(0, "Operating system information.");
-	c->Message(0, "	%s", Ver_name);
-	c->Message(0, "	Build number: %s", ultoa(Ver_build, intbuffer, 10));
-	c->Message(0, "	Minor version: %s", ultoa(Ver_min, intbuffer, 10));
-	c->Message(0, "	Major version: %s", ultoa(Ver_maj, intbuffer, 10));
-	c->Message(0, "	Platform Id: %s", ultoa(Ver_pid, intbuffer, 10));
+	c->Message(CC_Default, "Operating system information.");
+	c->Message(CC_Default, "	%s", Ver_name);
+	c->Message(CC_Default, "	Build number: %s", ultoa(Ver_build, intbuffer, 10));
+	c->Message(CC_Default, "	Minor version: %s", ultoa(Ver_min, intbuffer, 10));
+	c->Message(CC_Default, "	Major version: %s", ultoa(Ver_maj, intbuffer, 10));
+	c->Message(CC_Default, "	Platform Id: %s", ultoa(Ver_pid, intbuffer, 10));
 #else
 	char buffer[255];
-	c->Message(0, "Operating system information: %s", GetOS(buffer));
+	c->Message(CC_Default, "Operating system information: %s", GetOS(buffer));
 #endif
 }
 
 void command_getvariable(Client *c, const Seperator *sep){
 	char tmp[512];
 	if (database.GetVariable(sep->argplus[1], tmp, sizeof(tmp)))
-		c->Message(0, "%s = %s", sep->argplus[1], tmp);
+		c->Message(CC_Default, "%s = %s", sep->argplus[1], tmp);
 	else
-		c->Message(0, "GetVariable(%s) returned false", sep->argplus[1]);
+		c->Message(CC_Default, "GetVariable(%s) returned false", sep->argplus[1]);
 }
 
 void command_chat(Client *c, const Seperator *sep){
 	if (sep->arg[2][0] == 0)
-		c->Message(0, "Usage: #chat [channum] [message]");
+		c->Message(CC_Default, "Usage: #chat [channum] [message]");
 	else
 		if (!worldserver.SendChannelMessage(0, 0, (uint8)atoi(sep->arg[1]), 0, 0, sep->argplus[2]))
-			c->Message(0, "Error: World server disconnected");
+			c->Message(CC_Default, "Error: World server disconnected");
 }
 
 void command_showpetspell(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #ShowPetSpells [spellid | searchstring]");
+		c->Message(CC_Default, "Usage: #ShowPetSpells [spellid | searchstring]");
 	else if (SPDAT_RECORDS <= 0)
-		c->Message(0, "Spells not loaded");
+		c->Message(CC_Default, "Spells not loaded");
 	else if (Seperator::IsNumber(sep->argplus[1]))
 	{
 		int spellid = atoi(sep->argplus[1]);
 		if (spellid <= 0 || spellid >= SPDAT_RECORDS)
-			c->Message(0, "Error: Number out of range");
+			c->Message(CC_Default, "Error: Number out of range");
 		else
-			c->Message(0, "	%i: %s, %s", spellid, spells[spellid].teleport_zone, spells[spellid].name);
+			c->Message(CC_Default, "	%i: %s, %s", spellid, spells[spellid].teleport_zone, spells[spellid].name);
 	}
 	else
 	{
@@ -991,7 +1006,7 @@ void command_showpetspell(Client *c, const Seperator *sep){
 				char* pdest = strstr(sName, sCriteria);
 				if ((pdest != nullptr) && (count <= 20))
 				{
-					c->Message(0, "	%i: %s, %s", i, spells[i].teleport_zone, spells[i].name);
+					c->Message(CC_Default, "	%i: %s, %s", i, spells[i].teleport_zone, spells[i].name);
 					count++;
 				}
 				else if (count > 20)
@@ -999,9 +1014,9 @@ void command_showpetspell(Client *c, const Seperator *sep){
 			}
 		}
 		if (count > 20)
-			c->Message(0, "20 spells found... max reached.");
+			c->Message(CC_Default, "20 spells found... max reached.");
 		else
-			c->Message(0, "%i spells found.", count);
+			c->Message(CC_Default, "%i spells found.", count);
 	}
 }
 
@@ -1012,22 +1027,22 @@ void command_ipc(Client *c, const Seperator *sep){
 		if (c->GetTarget()->CastToNPC()->IsInteractive())
 		{
 			c->GetTarget()->CastToNPC()->interactive = false;
-			c->Message(0, "Disabling IPC");
+			c->Message(CC_Default, "Disabling IPC");
 		}
 		else
 		{
 			c->GetTarget()->CastToNPC()->interactive = true;
-			c->Message(0, "Enabling IPC");
+			c->Message(CC_Default, "Enabling IPC");
 		}
 	}
 	else
-		c->Message(0, "Error: You must target an NPC");
+		c->Message(CC_Default, "Error: You must target an NPC");
 }
 #endif /* IPC */
 
 void command_npcloot(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->Message(0, "Error: No target");
+		c->Message(CC_Default, "Error: No target");
 	// #npcloot show
 	else if (strcasecmp(sep->arg[1], "show") == 0)
 	{
@@ -1036,11 +1051,11 @@ void command_npcloot(Client *c, const Seperator *sep){
 		else if (c->GetTarget()->IsCorpse())
 			c->GetTarget()->CastToCorpse()->QueryLoot(c);
 		else
-			c->Message(0, "Error: Target's type doesnt have loot");
+			c->Message(CC_Default, "Error: Target's type doesnt have loot");
 	}
 	// These 2 types are *BAD* for the next few commands
 	else if (c->GetTarget()->IsClient() || c->GetTarget()->IsCorpse())
-		c->Message(0, "Error: Invalid target type, try a NPC =).");
+		c->Message(CC_Default, "Error: Invalid target type, try a NPC =).");
 	// #npcloot add
 	else if (strcasecmp(sep->arg[1], "add") == 0)
 	{
@@ -1051,34 +1066,38 @@ void command_npcloot(Client *c, const Seperator *sep){
 			const Item_Struct* dbitem = database.GetItem(item);
 			if (dbitem)
 			{
+				bool quest = false;
+				if (sep->arg[4][0] != 0 && sep->IsNumber(4))
+					quest = atoi(sep->arg[4]);
+
 				if (sep->arg[3][0] != 0 && sep->IsNumber(3))
-					c->GetTarget()->CastToNPC()->AddItem(item, atoi(sep->arg[3]), 0);
+					c->GetTarget()->CastToNPC()->AddItem(item, atoi(sep->arg[3]), 0, quest);
 				else
 				{
 					if(database.ItemQuantityType(item) == Quantity_Charges)
 					{
 						int8 charges = dbitem->MaxCharges;
-						c->GetTarget()->CastToNPC()->AddItem(item, charges, 0);
+						c->GetTarget()->CastToNPC()->AddItem(item, charges, 0, quest);
 					}
 					else
-						c->GetTarget()->CastToNPC()->AddItem(item, 1, 0);
+						c->GetTarget()->CastToNPC()->AddItem(item, 1, 0, quest);
 				}
-				c->Message(0, "Added item(%i) to the %s's loot.", item, c->GetTarget()->GetName());
+				c->Message(CC_Default, "Added item(%i) to the %s's loot.", item, c->GetTarget()->GetName());
 			}
 			else
-				c->Message(0, "Error: #npcloot add: Item(%i) does not exist!", item);
+				c->Message(CC_Default, "Error: #npcloot add: Item(%i) does not exist!", item);
 		}
 		else if (!sep->IsNumber(2))
-			c->Message(0, "Error: #npcloot add: Itemid must be a number.");
+			c->Message(CC_Default, "Error: #npcloot add: Itemid must be a number.");
 		else
-			c->Message(0, "Error: #npcloot add: This is not a valid target.");
+			c->Message(CC_Default, "Error: #npcloot add: This is not a valid target.");
 	}
 	// #npcloot remove
 	else if (strcasecmp(sep->arg[1], "remove") == 0)
 	{
 		//#npcloot remove all
 		if (strcasecmp(sep->arg[2], "all") == 0)
-			c->Message(0, "Error: #npcloot remove all: Not yet implemented.");
+			c->Message(CC_Default, "Error: #npcloot remove all: Not yet implemented.");
 		//#npcloot remove itemid
 		else
 		{
@@ -1086,12 +1105,12 @@ void command_npcloot(Client *c, const Seperator *sep){
 			{
 				uint32 item = atoi(sep->arg[2]);
 				c->GetTarget()->CastToNPC()->RemoveItem(item);
-				c->Message(0, "Removed item(%i) from the %s's loot.", item, c->GetTarget()->GetName());
+				c->Message(CC_Default, "Removed item(%i) from the %s's loot.", item, c->GetTarget()->GetName());
 			}
 			else if (!sep->IsNumber(2))
-				c->Message(0, "Error: #npcloot remove: Item must be a number.");
+				c->Message(CC_Default, "Error: #npcloot remove: Item must be a number.");
 			else
-				c->Message(0, "Error: #npcloot remove: This is not a valid target.");
+				c->Message(CC_Default, "Error: #npcloot remove: This is not a valid target.");
 		}
 	}
 	// #npcloot money
@@ -1102,16 +1121,16 @@ void command_npcloot(Client *c, const Seperator *sep){
 			if ((atoi(sep->arg[2]) < 34465 && atoi(sep->arg[2]) >= 0) && (atoi(sep->arg[3]) < 34465 && atoi(sep->arg[3]) >= 0) && (atoi(sep->arg[4]) < 34465 && atoi(sep->arg[4]) >= 0) && (atoi(sep->arg[5]) < 34465 && atoi(sep->arg[5]) >= 0))
 			{
 				c->GetTarget()->CastToNPC()->AddCash(atoi(sep->arg[5]), atoi(sep->arg[4]), atoi(sep->arg[3]), atoi(sep->arg[2]));
-				c->Message(0, "Set %i Platinum, %i Gold, %i Silver, and %i Copper as %s's money.", atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), c->GetTarget()->GetName());
+				c->Message(CC_Default, "Set %i Platinum, %i Gold, %i Silver, and %i Copper as %s's money.", atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), atoi(sep->arg[5]), c->GetTarget()->GetName());
 			}
 			else
-				c->Message(0, "Error: #npcloot money: Values must be between 0-34465.");
+				c->Message(CC_Default, "Error: #npcloot money: Values must be between 0-34465.");
 		}
 		else
-			c->Message(0, "Usage: #npcloot money platinum gold silver copper");
+			c->Message(CC_Default, "Usage: #npcloot money platinum gold silver copper");
 	}
 	else
-		c->Message(0, "Usage: #npcloot [show/money/add/remove] [itemid/all/money: pp gp sp cp] [quantity]");
+		c->Message(CC_Default, "Usage: #npcloot [show/money/add/remove] [itemid/all/money: pp gp sp cp] [quantity] [quest]");
 }
 
 void command_gm(Client *c, const Seperator *sep){
@@ -1123,10 +1142,10 @@ void command_gm(Client *c, const Seperator *sep){
 
 	if (sep->arg[1][0] != 0) {
 		t->SetGM(state);
-		c->Message(0, "%s is %s a GM.", t->GetName(), state ? "now" : "no longer");
+		c->Message(CC_Default, "%s is %s a GM.", t->GetName(), state ? "now" : "no longer");
 	}
 	else
-		c->Message(0, "Usage: #gm [on/off]");
+		c->Message(CC_Default, "Usage: #gm [on/off]");
 }
 
 void command_summon(Client *c, const Seperator *sep){
@@ -1140,11 +1159,11 @@ void command_summon(Client *c, const Seperator *sep){
 		else
 		{
 			if (!worldserver.Connected())
-				c->Message(0, "Error: World server disconnected.");
+				c->Message(CC_Default, "Error: World server disconnected.");
 			else
 			{ // player is in another zone
 				//Taking this command out until we test the factor of 8 in ServerOP_ZonePlayer
-				//c->Message(0, "Summoning player from another zone not yet implemented.");
+				//c->Message(CC_Default, "Summoning player from another zone not yet implemented.");
 				//return;
 
 				ServerPacket* pack = new ServerPacket(ServerOP_ZonePlayer, sizeof(ServerZonePlayer_Struct));
@@ -1168,9 +1187,9 @@ void command_summon(Client *c, const Seperator *sep){
 	else
 	{
 		/*if(c->Admin() < 150)
-		c->Message(0, "You need a NPC/corpse target for this command");
+		c->Message(CC_Default, "You need a NPC/corpse target for this command");
 		else*/
-		c->Message(0, "Usage: #summon [charname] Either target or charname is required");
+		c->Message(CC_Default, "Usage: #summon [charname] Either target or charname is required");
 		return;
 	}
 
@@ -1179,13 +1198,13 @@ void command_summon(Client *c, const Seperator *sep){
 
 	if (t->IsNPC())
 	{ // npc target
-		c->Message(0, "Summoning NPC %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
+		c->Message(CC_Default, "Summoning NPC %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
 		t->CastToNPC()->GMMove(c->GetX(), c->GetY(), c->GetZ(), c->GetHeading());
 		t->CastToNPC()->SaveGuardSpot(true);
 	}
 	else if (t->IsCorpse())
 	{ // corpse target
-		c->Message(0, "Summoning corpse %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
+		c->Message(CC_Default, "Summoning corpse %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
 		t->CastToCorpse()->GMMove(c->GetX(), c->GetY(), c->GetZ(), c->GetHeading());
 	}
 	else if (t->IsClient())
@@ -1197,7 +1216,7 @@ void command_summon(Client *c, const Seperator *sep){
 			return;
 		}
 
-		c->Message(0, "Summoning player %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
+		c->Message(CC_Default, "Summoning player %s to %1.1f, %1.1f, %1.1f", t->GetName(), c->GetX(), c->GetY(), c->GetZ());
 		t->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), c->GetX(), c->GetY(), c->GetZ(), c->GetHeading(), 2, GMSummon);
 	}
 }
@@ -1205,7 +1224,7 @@ void command_summon(Client *c, const Seperator *sep){
 void command_zone(Client *c, const Seperator *sep){
 	if (c->Admin() < commandZoneToCoords &&
 		(sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))) {
-		c->Message(0, "Your status is not high enough to zone to specific coordinates.");
+		c->Message(CC_Default, "Your status is not high enough to zone to specific coordinates.");
 		return;
 	}
 
@@ -1214,30 +1233,30 @@ void command_zone(Client *c, const Seperator *sep){
 	if (sep->IsNumber(1))
 	{
 		if (atoi(sep->arg[1]) == 26 && (c->Admin() < commandZoneToSpecials)){ //cshome
-			c->Message(0, "Only Guides and above can goto that zone.");
+			c->Message(CC_Default, "Only Guides and above can goto that zone.");
 			return;
 		}
 		zoneid = atoi(sep->arg[1]);
 	}
 	else if (sep->arg[1][0] == 0)
 	{
-		c->Message(0, "Usage: #zone [zonename]");
-		c->Message(0, "Optional Usage: #zone [zonename] y x z");
+		c->Message(CC_Default, "Usage: #zone [zonename]");
+		c->Message(CC_Default, "Optional Usage: #zone [zonename] y x z");
 		return;
 	}
 	else if (zone->GetZoneID() == load && c->Admin() < commandZoneToSpecials) {	// Zone: 'Load'
-		c->Message(0, "The Gods brought you here, only they can send you away.");
+		c->Message(CC_Default, "The Gods brought you here, only they can send you away.");
 		return;
 	}
 	else {
 		if ((strcasecmp(sep->arg[1], "cshome") == 0) && (c->Admin() < commandZoneToSpecials)){
-			c->Message(0, "Only Guides and above can goto that zone.");
+			c->Message(CC_Default, "Only Guides and above can goto that zone.");
 			return;
 		}
 
 		zoneid = database.GetZoneID(sep->arg[1]);
 		if (zoneid == 0) {
-			c->Message(0, "Unable to locate zone '%s'", sep->arg[1]);
+			c->Message(CC_Default, "Unable to locate zone '%s'", sep->arg[1]);
 			return;
 		}
 	}
@@ -1254,14 +1273,14 @@ void command_zone(Client *c, const Seperator *sep){
 void command_zone_instance(Client *c, const Seperator *sep){
 	if (c->Admin() < commandZoneToCoords &&
 		(sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4))) {
-		c->Message(0, "Your status is not high enough to zone to specific coordinates.");
+		c->Message(CC_Default, "Your status is not high enough to zone to specific coordinates.");
 		return;
 	}
 
 	if (sep->arg[1][0] == 0)
 	{
-		c->Message(0, "Usage: #zoneinstance [instance id]");
-		c->Message(0, "Optional Usage: #zoneinstance [instance id] y x z");
+		c->Message(CC_Default, "Usage: #zoneinstance [instance id]");
+		c->Message(CC_Default, "Optional Usage: #zoneinstance [instance id] y x z");
 		return;
 	}
 
@@ -1273,26 +1292,26 @@ void command_zone_instance(Client *c, const Seperator *sep){
 		instanceid = atoi(sep->arg[1]);
 		if (!instanceid)
 		{
-			c->Message(0, "Must enter a valid instance id.");
+			c->Message(CC_Default, "Must enter a valid instance id.");
 			return;
 		}
 
 		zoneid = database.ZoneIDFromInstanceID(instanceid);
 		if (!zoneid)
 		{
-			c->Message(0, "Instance not found or zone is set to null.");
+			c->Message(CC_Default, "Instance not found or zone is set to null.");
 			return;
 		}
 	}
 	else
 	{
-		c->Message(0, "Must enter a valid instance id.");
+		c->Message(CC_Default, "Must enter a valid instance id.");
 		return;
 	}
 
 	if (!database.VerifyInstanceAlive(instanceid, c->CharacterID()))
 	{
-		c->Message(0, "Instance ID expiried or you are not apart of this instance.");
+		c->Message(CC_Default, "Instance ID expiried or you are not apart of this instance.");
 		return;
 	}
 
@@ -1321,7 +1340,7 @@ void command_peqzone(Client *c, const Seperator *sep){
 	}
 
 	if (c->GetHPRatio() < 75) {
-		c->Message(0, "You cannot use this command with less than 75 percent health.");
+		c->Message(CC_Default, "You cannot use this command with less than 75 percent health.");
 		return;
 	}
 
@@ -1334,7 +1353,7 @@ void command_peqzone(Client *c, const Seperator *sep){
 		|| c->AutoAttackEnabled()
 		|| c->GetInvul()
 		) {
-		c->Message(0, "You cannot use this command in your current state. Settle down and wait.");
+		c->Message(CC_Default, "You cannot use this command in your current state. Settle down and wait.");
 		return;
 	}
 
@@ -1355,15 +1374,15 @@ void command_peqzone(Client *c, const Seperator *sep){
 	}
 	else if (sep->arg[1][0] == 0 || sep->IsNumber(2) || sep->IsNumber(3) || sep->IsNumber(4) || sep->IsNumber(5))
 	{
-		c->Message(0, "Usage: #peqzone [zonename]");
-		c->Message(0, "Optional Usage: #peqzone [zoneid]");
+		c->Message(CC_Default, "Usage: #peqzone [zonename]");
+		c->Message(CC_Default, "Optional Usage: #peqzone [zoneid]");
 		return;
 	}
 	else {
 		zoneid = database.GetZoneID(sep->arg[1]);
 		destzone = database.GetPEQZone(zoneid, 0);
 		if (zoneid == 0) {
-			c->Message(0, "Unable to locate zone '%s'", sep->arg[1]);
+			c->Message(CC_Default, "Unable to locate zone '%s'", sep->arg[1]);
 			return;
 		}
 		if (destzone == 0){
@@ -1388,9 +1407,9 @@ void command_peqzone(Client *c, const Seperator *sep){
 
 void command_movechar(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0 || sep->arg[2][0] == 0)
-		c->Message(0, "Usage: #movechar [charactername] [zonename]");
+		c->Message(CC_Default, "Usage: #movechar [charactername] [zonename]");
 	else if (c->Admin() < commandMovecharToSpecials && strcasecmp(sep->arg[2], "cshome") == 0 || strcasecmp(sep->arg[2], "load") == 0 || strcasecmp(sep->arg[2], "load2") == 0)
-		c->Message(0, "Invalid zone name");
+		c->Message(CC_Default, "Invalid zone name");
 	else
 	{
 		uint32 tmp = database.GetAccountIDByChar(sep->arg[1]);
@@ -1398,14 +1417,14 @@ void command_movechar(Client *c, const Seperator *sep){
 		{
 			if (c->Admin() >= commandMovecharSelfOnly || tmp == c->AccountID())
 				if (!database.MoveCharacterToZone((char*)sep->arg[1], (char*)sep->arg[2]))
-					c->Message(0, "Character Move Failed!");
+					c->Message(CC_Default, "Character Move Failed!");
 				else
-					c->Message(0, "Character has been moved.");
+					c->Message(CC_Default, "Character has been moved.");
 			else
 				c->Message(CC_Red, "You cannot move characters that are not on your account.");
 		}
 		else
-			c->Message(0, "Character Does Not Exist");
+			c->Message(CC_Default, "Character Does Not Exist");
 	}
 }
 
@@ -1424,7 +1443,7 @@ void command_bug(Client *c, const Seperator *sep)
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "list") == 0)
@@ -1449,7 +1468,7 @@ void command_bug(Client *c, const Seperator *sep)
 	{
 		if (sep->arg[2][0] == 0)
 		{
-			c->Message(0, "Usage: #bug view (bug number) Type #bug list for a list");
+			c->Message(CC_Default, "Usage: #bug view (bug number) Type #bug list for a list");
 			return;
 		}
 		Log.Out(Logs::Detail, Logs::Normal, "Bug viewed by %s, bug number:", c->GetName(), atoi(sep->arg[2]));
@@ -1474,7 +1493,7 @@ void command_bug(Client *c, const Seperator *sep)
 		{
 			if (sep->arg[1][0] == 0 || sep->arg[2][0] == 0 || strcasecmp(sep->arg[2], "*") == 0)
 			{
-				c->Message(0, "Usage: #bug delete (bug number) Type #bug list for a list");
+				c->Message(CC_Default, "Usage: #bug delete (bug number) Type #bug list for a list");
 				return;
 			}
 
@@ -1488,14 +1507,14 @@ void command_bug(Client *c, const Seperator *sep)
 			Log.Out(Logs::Detail, Logs::Normal, "Delete bug request from %s, bug number:", c->GetName(), atoi(sep->arg[2]));
 		}
 		else
-			c->Message(0, "Your access level is not high enough to use this command.");
+			c->Message(CC_Default, "Your access level is not high enough to use this command.");
 	}
 	else
 	{
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 }
@@ -1518,7 +1537,7 @@ void command_petition(Client *c, const Seperator *sep)
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "list") == 0)
@@ -1548,7 +1567,7 @@ void command_petition(Client *c, const Seperator *sep)
 	{
 		if (sep->arg[2][0] == 0)
 		{
-			c->Message(0, "Usage: #petition view (petition number) Type #petition list for a list");
+			c->Message(CC_Default, "Usage: #petition view (petition number) Type #petition list for a list");
 			return;
 		}
 		Log.Out(Logs::Detail, Logs::Normal, "Petition viewed by %s, petition number:", c->GetName(), atoi(sep->arg[2]));
@@ -1569,7 +1588,7 @@ void command_petition(Client *c, const Seperator *sep)
 	{
 		if (sep->arg[2][0] == 0)
 		{
-			c->Message(0, "Usage: #petition info (petition number) Type #petition list for a list");
+			c->Message(CC_Default, "Usage: #petition info (petition number) Type #petition list for a list");
 			return;
 		}
 
@@ -1593,7 +1612,7 @@ void command_petition(Client *c, const Seperator *sep)
 		{
 			if (sep->arg[2][0] == 0 || sep->arg[3][0] == 0)
 			{
-				c->Message(0, "Usage: #petition update (petition number) (Text) Make sure you contain the comments in quotes. Type #petition list for a list");
+				c->Message(CC_Default, "Usage: #petition update (petition number) (Text) Make sure you contain the comments in quotes. Type #petition list for a list");
 				return;
 			}
 
@@ -1610,7 +1629,7 @@ void command_petition(Client *c, const Seperator *sep)
 			c->Message(CC_Yellow, "%s, Updated petition comment to ( %s ) for petition: %i", c->GetName(), sep->arg[3], atoi(sep->arg[2]));
 		}
 		else
-			c->Message(0, "Your access level is not high enough to use this command.");
+			c->Message(CC_Default, "Your access level is not high enough to use this command.");
 	}
 	else if (strcasecmp(sep->arg[1], "delete") == 0)
 	{
@@ -1618,7 +1637,7 @@ void command_petition(Client *c, const Seperator *sep)
 		{
 			if (sep->arg[1][0] == 0 || sep->arg[2][0] == 0 || strcasecmp(sep->arg[2], "*") == 0)
 			{
-				c->Message(0, "Usage: #petition delete (petition number) Type #petition list for a list");
+				c->Message(CC_Default, "Usage: #petition delete (petition number) Type #petition list for a list");
 				return;
 			}
 
@@ -1632,29 +1651,33 @@ void command_petition(Client *c, const Seperator *sep)
 			Log.Out(Logs::Detail, Logs::Normal, "Delete petition request from %s, petition number:", c->GetName(), atoi(sep->arg[2]));
 		}
 		else
-			c->Message(0, "Your access level is not high enough to use this command.");
+			c->Message(CC_Default, "Your access level is not high enough to use this command.");
 	}
 	else
 	{
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 }
 
 void command_listnpcs(Client *c, const Seperator *sep){
-	if (strcasecmp(sep->arg[1], "all") == 0)
+	if (strcasecmp(sep->arg[1], "attacked") == 0)
+	{
+		entity_list.ListNPCs(c, "null", "null", 3);
+	}
+	else if (strcasecmp(sep->arg[1], "all") == 0)
 		entity_list.ListNPCs(c, sep->arg[1], sep->arg[2], 0);
 	else if (sep->IsNumber(1) && sep->IsNumber(2))
 		entity_list.ListNPCs(c, sep->arg[1], sep->arg[2], 2);
 	else if (sep->arg[1][0] != 0)
 		entity_list.ListNPCs(c, sep->arg[1], sep->arg[2], 1);
 	else {
-		c->Message(0, "Usage of #listnpcs:");
-		c->Message(0, "#listnpcs [#] [#] (Each number would search by ID, ex. #listnpcs 1 30, searches 1-30)");
-		c->Message(0, "#listnpcs [name] (Would search for a npc with [name])");
+		c->Message(CC_Default, "Usage of #listnpcs: (all/attacked/npc_name/#) (#)");
+		c->Message(CC_Default, "#listnpcs [#] [#] (Each number would search by ID, ex. #listnpcs 1 30, searches 1-30)");
+		c->Message(CC_Default, "#listnpcs [name] (Would search for a npc with [name])");
 	}
 }
 
@@ -1727,23 +1750,25 @@ void command_invul(Client *c, const Seperator *sep)
 		else
 		{
 			if (admin < access)
-				c->Message(0, "Your status level only supports self use of this command.");
+				c->Message(CC_Default, "Your status level only supports self use of this command.");
 
-			c->Message(0, "No valid target selected, using command on self.");
+			c->Message(CC_Default, "No valid target selected, using command on self.");
 			t = c;
 		}
 		t->SetInvul(state);
-		c->Message(0, "%s is %s invulnerable from attack.", t->GetName(), state ? "now" : "no longer");
+		uint32 account = t->AccountID();
+		database.SetGMInvul(account, state);
+		c->Message(CC_Default, "%s is %s invulnerable from attack.", t->GetName(), state ? "now" : "no longer");
 	}
 	else
-		c->Message(0, "Usage: #invulnerable [on/off]");
+		c->Message(CC_Default, "Usage: #invulnerable [on/off]");
 }
 
 void command_hideme(Client *c, const Seperator *sep){
 	bool state = atobool(sep->arg[1]);
 
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #hideme [on/off]");
+		c->Message(CC_Default, "Usage: #hideme [on/off]");
 	else
 	{
 		c->SetHideMe(state);
@@ -1753,19 +1778,19 @@ void command_hideme(Client *c, const Seperator *sep){
 
 void command_emote(Client *c, const Seperator *sep){
 	if (sep->arg[3][0] == 0)
-		c->Message(0, "Usage: #emote [name | world | zone] type# message");
+		c->Message(CC_Default, "Usage: #emote [name | world | zone] type# message");
 	else {
 		if (strcasecmp(sep->arg[1], "zone") == 0){
 			char* newmessage = 0;
 			if (strstr(sep->arg[3], "^") == 0)
-				entity_list.Message(0, atoi(sep->arg[2]), sep->argplus[3]);
+				entity_list.Message(CC_Default, atoi(sep->arg[2]), sep->argplus[3]);
 			else{
 				for (newmessage = strtok((char*)sep->arg[3], "^"); newmessage != nullptr; newmessage = strtok(nullptr, "^"))
-					entity_list.Message(0, atoi(sep->arg[2]), newmessage);
+					entity_list.Message(CC_Default, atoi(sep->arg[2]), newmessage);
 			}
 		}
 		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server disconnected");
+			c->Message(CC_Default, "Error: World server disconnected");
 		else if (strcasecmp(sep->arg[1], "world") == 0)
 			worldserver.SendEmoteMessage(0, 0, atoi(sep->arg[2]), sep->argplus[3]);
 		else
@@ -1776,50 +1801,41 @@ void command_emote(Client *c, const Seperator *sep){
 void command_fov(Client *c, const Seperator *sep){
 	if (c->GetTarget())
 		if (c->BehindMob(c->GetTarget(), c->GetX(), c->GetY()))
-			c->Message(0, "You are behind mob %s, it is looking to %d", c->GetTarget()->GetName(), c->GetTarget()->GetHeading());
+			c->Message(CC_Default, "You are behind mob %s, it is looking to %d", c->GetTarget()->GetName(), c->GetTarget()->GetHeading());
 		else
-			c->Message(0, "You are NOT behind mob %s, it is looking to %d", c->GetTarget()->GetName(), c->GetTarget()->GetHeading());
+			c->Message(CC_Default, "You are NOT behind mob %s, it is looking to %d", c->GetTarget()->GetName(), c->GetTarget()->GetHeading());
 	else
-		c->Message(0, "I Need a target!");
+		c->Message(CC_Default, "I Need a target!");
 }
 
 void command_manastat(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget() ? c->GetTarget() : c;
 
-	c->Message(0, "Mana for %s:", target->GetName());
-	c->Message(0, "  Current Mana: %d", target->GetMana());
-	c->Message(0, "  Max Mana: %d", target->GetMaxMana());
+	c->Message(CC_Default, "Mana for %s:", target->GetName());
+	c->Message(CC_Default, "  Current Mana: %d", target->GetMana());
+	c->Message(CC_Default, "  Max Mana: %d", target->GetMaxMana());
 }
 
 void command_npcstats(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->Message(0, "ERROR: No target!");
+		c->Message(CC_Default, "ERROR: No target!");
 	else if (!c->GetTarget()->IsNPC())
-		c->Message(0, "ERROR: Target is not a NPC!");
+		c->Message(CC_Default, "ERROR: Target is not a NPC!");
 	else {
-		c->Message(0, "NPC Stats:");
-		c->Message(0, "Name: %s   NpcID: %u", c->GetTarget()->GetName(), c->GetTarget()->GetNPCTypeID());
-		c->Message(0, "Race: %i  Level: %i  Class: %i  Material: %i", c->GetTarget()->GetRace(), c->GetTarget()->GetLevel(), c->GetTarget()->GetClass(), c->GetTarget()->GetTexture());
-		c->Message(0, "Current HP: %i  Max HP: %i", c->GetTarget()->GetHP(), c->GetTarget()->GetMaxHP());
-		//c->Message(0, "Weapon Item Number: %s",c->GetTarget()->GetWeapNo());
-		c->Message(0, "Gender: %i  Size: %f  Bodytype: %d", c->GetTarget()->GetGender(), c->GetTarget()->GetSize(), c->GetTarget()->GetBodyType());
-		c->Message(0, "Runspeed: %f  Walkspeed: %f", c->GetTarget()->GetRunspeed(), c->GetTarget()->GetWalkspeed());
-		c->Message(0, "Spawn Group: %i  Grid: %i", c->GetTarget()->CastToNPC()->GetSp2(), c->GetTarget()->CastToNPC()->GetGrid());
-		c->Message(0, "EmoteID: %i Attack Speed: %i", c->GetTarget()->CastToNPC()->GetEmoteID(), c->GetTarget()->CastToNPC()->GetAttackTimer());
-		c->GetTarget()->CastToNPC()->QueryLoot(c);
+		c->GetTarget()->CastToNPC()->ShowQuickStats(c);
 	}
 }
 
 void command_zclip(Client *c, const Seperator *sep){
 	// modifys and resends zhdr packet
 	if (sep->arg[2][0] == 0)
-		c->Message(0, "Usage: #zclip <min clip> <max clip>");
+		c->Message(CC_Default, "Usage: #zclip <min clip> <max clip>");
 	else if (atoi(sep->arg[1]) <= 0)
-		c->Message(0, "ERROR: Min clip can not be zero or less!");
+		c->Message(CC_Default, "ERROR: Min clip can not be zero or less!");
 	else if (atoi(sep->arg[2]) <= 0)
-		c->Message(0, "ERROR: Max clip can not be zero or less!");
+		c->Message(CC_Default, "ERROR: Max clip can not be zero or less!");
 	else if (atoi(sep->arg[1])>atoi(sep->arg[2]))
-		c->Message(0, "ERROR: Min clip is greater than max clip!");
+		c->Message(CC_Default, "ERROR: Min clip is greater than max clip!");
 	else {
 		zone->newzone_data.minclip = atof(sep->arg[1]);
 		zone->newzone_data.maxclip = atof(sep->arg[2]);
@@ -1844,26 +1860,26 @@ void command_npccast(Client *c, const Seperator *sep){
 		if (spelltar)
 			c->GetTarget()->CastSpell(atoi(sep->arg[2]), spelltar->GetID());
 		else
-			c->Message(0, "Error: %s not found", sep->arg[1]);
+			c->Message(CC_Default, "Error: %s not found", sep->arg[1]);
 	}
 	else if (c->GetTarget() && c->GetTarget()->IsNPC() && sep->IsNumber(1) && sep->IsNumber(2)) {
 		Mob* spelltar = entity_list.GetMob(atoi(sep->arg[1]));
 		if (spelltar)
 			c->GetTarget()->CastSpell(atoi(sep->arg[2]), spelltar->GetID());
 		else
-			c->Message(0, "Error: target ID %i not found", atoi(sep->arg[1]));
+			c->Message(CC_Default, "Error: target ID %i not found", atoi(sep->arg[1]));
 	}
 	else
-		c->Message(0, "Usage: (needs NPC targeted) #npccast targetname/entityid spellid");
+		c->Message(CC_Default, "Usage: (needs NPC targeted) #npccast targetname/entityid spellid");
 }
 
 void command_zstats(Client *c, const Seperator *sep){
-	c->Message(0, "Zone Header Data:");
-	c->Message(0, "Sky Type: %i", zone->newzone_data.sky);
-	c->Message(0, "Fog Colour: Red: %i; Blue: %i; Green %i", zone->newzone_data.fog_red[0], zone->newzone_data.fog_green[0], zone->newzone_data.fog_blue[0]);
-	c->Message(0, "Safe Coords: %f, %f, %f", zone->newzone_data.safe_x, zone->newzone_data.safe_y, zone->newzone_data.safe_z);
-	c->Message(0, "Underworld Coords: %f", zone->newzone_data.underworld);
-	c->Message(0, "Clip Plane: %f - %f", zone->newzone_data.minclip, zone->newzone_data.maxclip);
+	c->Message(CC_Default, "Zone Header Data:");
+	c->Message(CC_Default, "Sky Type: %i", zone->newzone_data.sky);
+	c->Message(CC_Default, "Fog Colour: Red: %i; Blue: %i; Green %i", zone->newzone_data.fog_red[0], zone->newzone_data.fog_green[0], zone->newzone_data.fog_blue[0]);
+	c->Message(CC_Default, "Safe Coords: %f, %f, %f", zone->newzone_data.safe_x, zone->newzone_data.safe_y, zone->newzone_data.safe_z);
+	c->Message(CC_Default, "Underworld Coords: %f", zone->newzone_data.underworld);
+	c->Message(CC_Default, "Clip Plane: %f - %f", zone->newzone_data.minclip, zone->newzone_data.maxclip);
 }
 
 void command_permaclass(Client *c, const Seperator *sep){
@@ -1873,12 +1889,12 @@ void command_permaclass(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Usage: #permaclass <classnum>");
+		c->Message(CC_Default, "Usage: #permaclass <classnum>");
 	}
 	else if (!t->IsClient())
-		c->Message(0, "Target is not a client.");
+		c->Message(CC_Default, "Target is not a client.");
 	else {
-		c->Message(0, "Setting %s's class...Sending to char select.", t->GetName());
+		c->Message(CC_Default, "Setting %s's class...Sending to char select.", t->GetName());
 		Log.Out(Logs::General, Logs::Normal, "Class change request from %s for %s, requested class:%i", c->GetName(), t->GetName(), atoi(sep->arg[1]) );
 		t->SetBaseClass(atoi(sep->arg[1]));
 		t->Save();
@@ -1893,13 +1909,13 @@ void command_permarace(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Usage: #permarace <racenum>");
-		c->Message(0, "NOTE: Not all models are global. If a model is not global, it will appear as a human on character select and in zones without the model.");
+		c->Message(CC_Default, "Usage: #permarace <racenum>");
+		c->Message(CC_Default, "NOTE: Not all models are global. If a model is not global, it will appear as a human on character select and in zones without the model.");
 	}
 	else if (!t->IsClient())
-		c->Message(0, "Target is not a client.");
+		c->Message(CC_Default, "Target is not a client.");
 	else {
-		c->Message(0, "Setting %s's race - zone to take effect",t->GetName());
+		c->Message(CC_Default, "Setting %s's race - zone to take effect",t->GetName());
 		Log.Out(Logs::General, Logs::Normal, "Permanant race change request from %s for %s, requested race:%i", c->GetName(), t->GetName(), atoi(sep->arg[1]) );
 		uint32 tmp = Mob::GetDefaultGender(atoi(sep->arg[1]), t->GetBaseGender());
 		t->SetBaseRace(atoi(sep->arg[1]));
@@ -1916,13 +1932,13 @@ void command_permagender(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Usage: #permagender <gendernum>");
-		c->Message(0, "Gender Numbers: 0=Male, 1=Female, 2=Neuter");
+		c->Message(CC_Default, "Usage: #permagender <gendernum>");
+		c->Message(CC_Default, "Gender Numbers: 0=Male, 1=Female, 2=Neuter");
 	}
 	else if (!t->IsClient())
-		c->Message(0, "Target is not a client.");
+		c->Message(CC_Default, "Target is not a client.");
 	else {
-		c->Message(0, "Setting %s's gender - zone to take effect",t->GetName());
+		c->Message(CC_Default, "Setting %s's gender - zone to take effect",t->GetName());
 		Log.Out(Logs::General, Logs::Normal, "Permanant gender change request from %s for %s, requested gender:%i", c->GetName(), t->GetName(), atoi(sep->arg[1]) );
 		t->SetBaseGender(atoi(sep->arg[1]));
 		t->Save();
@@ -1934,7 +1950,7 @@ void command_weather(Client *c, const Seperator *sep)
 {
 	if (!(sep->arg[1][0] == '0' || sep->arg[1][0] == '1' || sep->arg[1][0] == '2')) 
 	{
-		c->Message(0, "Usage: #weather <0/1/2> - Off/Rain/Snow <1-3> - intensity");
+		c->Message(CC_Default, "Usage: #weather <0/1/2> - Off/Rain/Snow <1-3> - intensity");
 	}
 
 	//Turn off weather
@@ -1992,16 +2008,16 @@ void command_weather(Client *c, const Seperator *sep)
 void command_zheader(Client *c, const Seperator *sep){
 	// sends zhdr packet
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Usage: #zheader <zone name>");
+		c->Message(CC_Default, "Usage: #zheader <zone name>");
 	}
 	else if (database.GetZoneID(sep->argplus[1]) == 0)
-		c->Message(0, "Invalid Zone Name: %s", sep->argplus[1]);
+		c->Message(CC_Default, "Invalid Zone Name: %s", sep->argplus[1]);
 	else {
 
 		if (zone->LoadZoneCFG(sep->argplus[1], true))
-			c->Message(0, "Successfully loaded zone header for %s from database.", sep->argplus[1]);
+			c->Message(CC_Default, "Successfully loaded zone header for %s from database.", sep->argplus[1]);
 		else
-			c->Message(0, "Failed to load zone header %s from database", sep->argplus[1]);
+			c->Message(CC_Default, "Failed to load zone header %s from database", sep->argplus[1]);
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
 		entity_list.QueueClients(c, outapp);
@@ -2012,9 +2028,9 @@ void command_zheader(Client *c, const Seperator *sep){
 void command_zsky(Client *c, const Seperator *sep){
 	// modifys and resends zhdr packet
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #zsky <sky type>");
+		c->Message(CC_Default, "Usage: #zsky <sky type>");
 	else if (atoi(sep->arg[1])<0 || atoi(sep->arg[1])>255)
-		c->Message(0, "ERROR: Sky type can not be less than 0 or greater than 255!");
+		c->Message(CC_Default, "ERROR: Sky type can not be less than 0 or greater than 255!");
 	else {
 		zone->newzone_data.sky = atoi(sep->arg[1]);
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
@@ -2027,13 +2043,13 @@ void command_zsky(Client *c, const Seperator *sep){
 void command_zcolor(Client *c, const Seperator *sep){
 	// modifys and resends zhdr packet
 	if (sep->arg[3][0] == 0)
-		c->Message(0, "Usage: #zcolor <red> <green> <blue>");
+		c->Message(CC_Default, "Usage: #zcolor <red> <green> <blue>");
 	else if (atoi(sep->arg[1])<0 || atoi(sep->arg[1])>255)
-		c->Message(0, "ERROR: Red can not be less than 0 or greater than 255!");
+		c->Message(CC_Default, "ERROR: Red can not be less than 0 or greater than 255!");
 	else if (atoi(sep->arg[2])<0 || atoi(sep->arg[2])>255)
-		c->Message(0, "ERROR: Green can not be less than 0 or greater than 255!");
+		c->Message(CC_Default, "ERROR: Green can not be less than 0 or greater than 255!");
 	else if (atoi(sep->arg[3])<0 || atoi(sep->arg[3])>255)
-		c->Message(0, "ERROR: Blue can not be less than 0 or greater than 255!");
+		c->Message(CC_Default, "ERROR: Blue can not be less than 0 or greater than 255!");
 	else {
 		for (int z = 0; z<4; z++) {
 			zone->newzone_data.fog_red[z] = atoi(sep->arg[1]);
@@ -2082,7 +2098,7 @@ void command_gassign(Client *c, const Seperator *sep){
 		database.AssignGrid(c, atoi(sep->arg[1]), spawn2id);
 	}
 	else
-		c->Message(0, "Usage: #gassign [num] - must have an npc target!");
+		c->Message(CC_Default, "Usage: #gassign [num] - must have an npc target!");
 }
 
 void command_ai(Client *c, const Seperator *sep){
@@ -2093,37 +2109,37 @@ void command_ai(Client *c, const Seperator *sep){
 			if (target->IsNPC())
 				target->CastToNPC()->SetNPCFactionID(atoi(sep->arg[2]));
 			else
-				c->Message(0, "%s is not an NPC.", target->GetName());
+				c->Message(CC_Default, "%s is not an NPC.", target->GetName());
 		}
 		else
-			c->Message(0, "Usage: (targeted) #ai factionid [factionid]");
+			c->Message(CC_Default, "Usage: (targeted) #ai factionid [factionid]");
 	}
 	else if (strcasecmp(sep->arg[1], "spellslist") == 0) {
 		if (target && sep->IsNumber(2) && atoi(sep->arg[2]) >= 0) {
 			if (target->IsNPC())
 				target->CastToNPC()->AI_AddNPCSpells(atoi(sep->arg[2]));
 			else
-				c->Message(0, "%s is not an NPC.", target->GetName());
+				c->Message(CC_Default, "%s is not an NPC.", target->GetName());
 		}
 		else
-			c->Message(0, "Usage: (targeted) #ai spellslist [npc_spells_id]");
+			c->Message(CC_Default, "Usage: (targeted) #ai spellslist [npc_spells_id]");
 	}
 	else if (strcasecmp(sep->arg[1], "con") == 0) {
 		if (target && sep->arg[2][0] != 0) {
 			Mob* tar2 = entity_list.GetMob(sep->arg[2]);
 			if (tar2)
-				c->Message(0, "%s considering %s: %i", target->GetName(), tar2->GetName(), tar2->GetReverseFactionCon(target));
+				c->Message(CC_Default, "%s considering %s: %i", target->GetName(), tar2->GetName(), tar2->GetReverseFactionCon(target));
 			else
-				c->Message(0, "Error: %s not found.", sep->arg[2]);
+				c->Message(CC_Default, "Error: %s not found.", sep->arg[2]);
 		}
 		else
-			c->Message(0, "Usage: (targeted) #ai con [mob name]");
+			c->Message(CC_Default, "Usage: (targeted) #ai con [mob name]");
 	}
 	else if (strcasecmp(sep->arg[1], "guard") == 0) {
 		if (target && target->IsNPC())
 			target->CastToNPC()->SaveGuardSpot();
 		else
-			c->Message(0, "Usage: (targeted) #ai guard - sets npc to guard the current location (use #summon to move)");
+			c->Message(CC_Default, "Usage: (targeted) #ai guard - sets npc to guard the current location (use #summon to move)");
 	}
 	else if (strcasecmp(sep->arg[1], "roambox") == 0) {
 		if (target && target->IsAIControlled() && target->IsNPC()) {
@@ -2146,39 +2162,39 @@ void command_ai(Client *c, const Seperator *sep){
 				target->CastToNPC()->AI_SetRoambox(atof(sep->arg[2]), atof(sep->arg[3]), tmp, tmp2);
 			}
 			else {
-				c->Message(0, "Usage: #ai roambox dist max_x min_x max_y min_y [delay] [mindelay]");
-				c->Message(0, "Usage: #ai roambox dist roamdist [delay] [mindelay]");
+				c->Message(CC_Default, "Usage: #ai roambox dist max_x min_x max_y min_y [delay] [mindelay]");
+				c->Message(CC_Default, "Usage: #ai roambox dist roamdist [delay] [mindelay]");
 			}
 		}
 		else
-			c->Message(0, "You need a AI NPC targeted");
+			c->Message(CC_Default, "You need a AI NPC targeted");
 	}
 	else if (strcasecmp(sep->arg[1], "stop") == 0 && c->Admin() >= commandToggleAI) {
 		if (target) {
 			if (target->IsAIControlled())
 				target->AI_Stop();
 			else
-				c->Message(0, "Error: Target is not AI controlled");
+				c->Message(CC_Default, "Error: Target is not AI controlled");
 		}
 		else
-			c->Message(0, "Usage: Target a Mob with AI enabled and use this to turn off their AI.");
+			c->Message(CC_Default, "Usage: Target a Mob with AI enabled and use this to turn off their AI.");
 	}
 	else if (strcasecmp(sep->arg[1], "start") == 0 && c->Admin() >= commandToggleAI) {
 		if (target) {
 			if (!target->IsAIControlled())
 				target->AI_Start();
 			else
-				c->Message(0, "Error: Target is already AI controlled");
+				c->Message(CC_Default, "Error: Target is already AI controlled");
 		}
 		else
-			c->Message(0, "Usage: Target a Mob with AI disabled and use this to turn on their AI.");
+			c->Message(CC_Default, "Usage: Target a Mob with AI disabled and use this to turn on their AI.");
 	}
 	else {
-		c->Message(0, "#AI Sub-commands");
-		c->Message(0, "  factionid");
-		c->Message(0, "  spellslist");
-		c->Message(0, "  con");
-		c->Message(0, "  guard");
+		c->Message(CC_Default, "#AI Sub-commands");
+		c->Message(CC_Default, "  factionid");
+		c->Message(CC_Default, "  spellslist");
+		c->Message(CC_Default, "  con");
+		c->Message(CC_Default, "  guard");
 	}
 }
 
@@ -2189,7 +2205,7 @@ void command_worldshutdown(Client *c, const Seperator *sep){
 	if (worldserver.Connected()) {
 		if (sep->IsNumber(1) && sep->IsNumber(2) && ((time = atoi(sep->arg[1]))>0) && ((interval = atoi(sep->arg[2]))>0)) {
 			worldserver.SendEmoteMessage(0, 0, 15, "<SYSTEMWIDE MESSAGE>:SYSTEM MSG:World coming down in %i seconds, everyone log out before this time.", time);
-			c->Message(0, "Sending shutdown packet now, World will shutdown in: %i Seconds with an interval of: %i", time, interval);
+			c->Message(CC_Default, "Sending shutdown packet now, World will shutdown in: %i Seconds with an interval of: %i", time, interval);
 			ServerPacket* pack = new ServerPacket(ServerOP_ShutdownAll, sizeof(WorldShutDown_Struct));
 			WorldShutDown_Struct* wsd = (WorldShutDown_Struct*)pack->pBuffer;
 			wsd->time = time * 1000;
@@ -2199,7 +2215,7 @@ void command_worldshutdown(Client *c, const Seperator *sep){
 		}
 		else if (strcasecmp(sep->arg[1], "now") == 0){
 			worldserver.SendEmoteMessage(0, 0, 15, "<SYSTEMWIDE MESSAGE>:SYSTEM MSG:World coming down, everyone log out now.");
-			c->Message(0, "Sending shutdown packet");
+			c->Message(CC_Default, "Sending shutdown packet");
 			ServerPacket* pack = new ServerPacket;
 			pack->opcode = ServerOP_ShutdownAll;
 			pack->size = 0;
@@ -2207,7 +2223,7 @@ void command_worldshutdown(Client *c, const Seperator *sep){
 			safe_delete(pack);
 		}
 		else if (strcasecmp(sep->arg[1], "disable") == 0){
-			c->Message(0, "Shutdown prevented, next time I may not be so forgiving...");
+			c->Message(CC_Default, "Shutdown prevented, next time I may not be so forgiving...");
 			ServerPacket* pack = new ServerPacket(ServerOP_ShutdownAll, sizeof(WorldShutDown_Struct));
 			WorldShutDown_Struct* wsd = (WorldShutDown_Struct*)pack->pBuffer;
 			wsd->time = 0;
@@ -2216,14 +2232,14 @@ void command_worldshutdown(Client *c, const Seperator *sep){
 			safe_delete(pack);
 		}
 		else{
-			c->Message(0, "#worldshutdown - Shuts down the server and all zones.");
-			c->Message(0, "Usage: #worldshutdown now - Shuts down the server and all zones immediately.");
-			c->Message(0, "Usage: #worldshutdown disable - Stops the server from a previously scheduled shut down.");
-			c->Message(0, "Usage: #worldshutdown [timer] [interval] - Shuts down the server and all zones after [timer] seconds and sends warning every [interval] seconds.");
+			c->Message(CC_Default, "#worldshutdown - Shuts down the server and all zones.");
+			c->Message(CC_Default, "Usage: #worldshutdown now - Shuts down the server and all zones immediately.");
+			c->Message(CC_Default, "Usage: #worldshutdown disable - Stops the server from a previously scheduled shut down.");
+			c->Message(CC_Default, "Usage: #worldshutdown [timer] [interval] - Shuts down the server and all zones after [timer] seconds and sends warning every [interval] seconds.");
 		}
 	}
 	else
-		c->Message(0, "Error: World server disconnected");
+		c->Message(CC_Default, "Error: World server disconnected");
 }
 
 void command_sendzonespawns(Client *c, const Seperator *sep){
@@ -2251,7 +2267,7 @@ void command_dbspawn2(Client *c, const Seperator *sep){
 		database.CreateSpawn2(c, atoi(sep->arg[1]), zone->GetShortName(), c->GetPosition(), atoi(sep->arg[2]), atoi(sep->arg[3]), cond, cond_min);
 	}
 	else {
-		c->Message(0, "Usage: #dbspawn2 spawngroup respawn variance [condition_id] [condition_min]");
+		c->Message(CC_Default, "Usage: #dbspawn2 spawngroup respawn variance [condition_id] [condition_min]");
 	}
 }
 
@@ -2261,34 +2277,34 @@ void command_shutdown(Client *c, const Seperator *sep){
 
 void command_delacct(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Format: #delacct accountname");
+		c->Message(CC_Default, "Format: #delacct accountname");
 	else
 		if (database.DeleteAccount(sep->arg[1]))
-			c->Message(0, "The account was deleted.");
+			c->Message(CC_Default, "The account was deleted.");
 		else
-			c->Message(0, "Unable to delete account.");
+			c->Message(CC_Default, "Unable to delete account.");
 }
 
 void command_setpass(Client *c, const Seperator *sep){
 	if (sep->argnum != 2)
-		c->Message(0, "Format: #setpass accountname password");
+		c->Message(CC_Default, "Format: #setpass accountname password");
 	else {
 		int16 tmpstatus = 0;
 		uint32 tmpid = database.GetAccountIDByName(sep->arg[1], &tmpstatus);
 		if (!tmpid)
-			c->Message(0, "Error: Account not found");
+			c->Message(CC_Default, "Error: Account not found");
 		else if (tmpstatus > c->Admin())
-			c->Message(0, "Cannot change password: Account's status is higher than yours");
+			c->Message(CC_Default, "Cannot change password: Account's status is higher than yours");
 		else if (database.SetLocalPassword(tmpid, sep->arg[2]))
-			c->Message(0, "Password changed.");
+			c->Message(CC_Default, "Password changed.");
 		else
-			c->Message(0, "Error changing password.");
+			c->Message(CC_Default, "Error changing password.");
 	}
 }
 
 void command_setlsinfo(Client *c, const Seperator *sep){
 	if (sep->argnum != 2)
-		c->Message(0, "Format: #setlsinfo email password");
+		c->Message(CC_Default, "Format: #setlsinfo email password");
 	else {
 		ServerPacket* pack = new ServerPacket(ServerOP_LSAccountUpdate, sizeof(ServerLSAccountUpdate_Struct));
 		ServerLSAccountUpdate_Struct* s = (ServerLSAccountUpdate_Struct *)pack->pBuffer;
@@ -2297,20 +2313,20 @@ void command_setlsinfo(Client *c, const Seperator *sep){
 		strn0cpy(s->useremail, sep->arg[1], 100);
 		strn0cpy(s->userpassword, sep->arg[2], 16);
 		worldserver.SendPacket(pack);
-		c->Message(0, "Login Server update packet sent.");
+		c->Message(CC_Default, "Login Server update packet sent.");
 	}
 }
 
 void command_grid(Client *c, const Seperator *sep){
 	if (strcasecmp("max", sep->arg[1]) == 0)
-		c->Message(0, "Highest grid ID in this zone: %d", database.GetHighestGrid(zone->GetZoneID()));
+		c->Message(CC_Default, "Highest grid ID in this zone: %d", database.GetHighestGrid(zone->GetZoneID()));
 	else if (strcasecmp("add", sep->arg[1]) == 0)
 		database.ModifyGrid(c, false, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), zone->GetZoneID());
 	else if (strcasecmp("delete", sep->arg[1]) == 0)
 		database.ModifyGrid(c, true, atoi(sep->arg[2]), 0, 0, zone->GetZoneID());
 	else {
-		c->Message(0, "Usage: #grid add/delete grid_num wandertype pausetype");
-		c->Message(0, "Usage: #grid max - displays the highest grid ID used in this zone (for add)");
+		c->Message(CC_Default, "Usage: #grid add/delete grid_num wandertype pausetype");
+		c->Message(CC_Default, "Usage: #grid max - displays the highest grid ID used in this zone (for add)");
 	}
 }
 
@@ -2332,7 +2348,7 @@ void command_wp(Client *c, const Seperator *sep){
 	else if (strcasecmp("delete", sep->arg[1]) == 0)
 		database.DeleteWaypoint(c, atoi(sep->arg[2]), wp, zone->GetZoneID());
 	else
-		c->Message(0, "Usage: #wp add/delete grid_num pause wp_num [-h]");
+		c->Message(CC_Default, "Usage: #wp add/delete grid_num pause wp_num [-h]");
 }
 
 void command_iplookup(Client *c, const Seperator *sep){
@@ -2349,33 +2365,32 @@ void command_iplookup(Client *c, const Seperator *sep){
 void command_size(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #size [0 - 255] (Decimal increments are allowed)");
-	else {
+	{
+		// ChangeSize just sends the AT_Size apperance packet, which doesn't support float.
+		// All attempts to workaround this using the illusion packet have failed. 
+		c->Message(CC_Default, "Usage: #size [0 - 255] This command does not support decimals.");
+	}
+	else 
+	{
 		float newsize = atof(sep->arg[1]);
 		if (newsize > 255)
-			c->Message(0, "Error: #size: Size can not be greater than 255.");
+		{
+			c->Message(CC_Default, "Error: #size: Size can not be greater than 255.");
+			return;
+		}
 		else if (newsize < 0)
-			c->Message(0, "Error: #size: Size can not be less than 0.");
+		{
+			c->Message(CC_Default, "Error: #size: Size can not be less than 0.");
+			return;
+		}
 		else if (!target)
-			c->Message(0, "Error: this command requires a target");
-		else {
-			uint16 Race = target->GetRace();
-			uint8 Gender = target->GetGender();
-			uint8 Texture = 0xFF;
-			uint8 HelmTexture = 0xFF;
-			uint8 HairColor = target->GetHairColor();
-			uint8 BeardColor = target->GetBeardColor();
-			uint8 EyeColor1 = target->GetEyeColor1();
-			uint8 EyeColor2 = target->GetEyeColor2();
-			uint8 HairStyle = target->GetHairStyle();
-			uint8 LuclinFace = target->GetLuclinFace();
-			uint8 Beard = target->GetBeard();
-
-			//	target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
-			//								EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF, newsize);
+		{
+			target = c;
+		}
+		else 
+		{
 			target->ChangeSize(newsize);
-
-			c->Message(0, "Size = %f", atof(sep->arg[1]));
+			c->Message(CC_Default, "%s is now size %0.1f", target->GetName(), atof(sep->arg[1]));
 		}
 	}
 }
@@ -2394,12 +2409,12 @@ void command_mana(Client *c, const Seperator *sep)
 		t->SetMana(t->CalcMaxMana());
 	else if (admin < access)
 	{
-		c->Message(0, "Your status level only supports self use of this command.");
+		c->Message(CC_Default, "Your status level only supports self use of this command.");
 		c->CastToClient()->SetMana(t->CastToClient()->CalcMaxMana());
 	}
 	else
 	{
-		c->Message(0, "No valid target selected, using command on self.");
+		c->Message(CC_Default, "No valid target selected, using command on self.");
 		c->CastToClient()->SetMana(t->CastToClient()->CalcMaxMana());
 	}
 }
@@ -2410,25 +2425,35 @@ void command_flymode(Client *c, const Seperator *sep){
 	Client *t = c;
 
 	if (strlen(sep->arg[1]) == 1 && !(sep->arg[1][0] == '0' || sep->arg[1][0] == '1' || sep->arg[1][0] == '2'))
-		c->Message(0, "#flymode [0/1/2]");
+		c->Message(CC_Default, "#flymode [0/1/2]");
 	else {
 		if (c->GetTarget() && c->GetTarget()->IsClient() && admin >= access)
 			t = c->GetTarget()->CastToClient();
 		else
 		{
 			if (admin < access)
-				c->Message(0, "Your status level only supports self use of this command.");
+				c->Message(CC_Default, "Your status level only supports self use of this command.");
 
-			c->Message(0, "No valid target selected, using command on self.");
+			c->Message(CC_Default, "No valid target selected, using command on self.");
 			t = c;
 		}
 		t->SendAppearancePacket(AT_Levitate, atoi(sep->arg[1]));
+		uint32 account = c->AccountID();
 		if (sep->arg[1][0] == '1')
-			c->Message(0, "Turning %s's Flymode ON", t->GetName());
+		{
+			c->Message(CC_Default, "Turning %s's Flymode ON", t->GetName());
+			database.SetGMFlymode(account, 1);
+		}
 		else if (sep->arg[1][0] == '2')
-			c->Message(0, "Turning %s's Flymode LEV", t->GetName());
+		{
+			c->Message(CC_Default, "Turning %s's Flymode LEV", t->GetName());
+			database.SetGMFlymode(account, 2);
+		}
 		else
-			c->Message(0, "Turning %s's Flymode OFF", t->GetName());
+		{
+			c->Message(CC_Default, "Turning %s's Flymode OFF", t->GetName());
+			database.SetGMFlymode(account, 0);
+		}
 	}
 }
 
@@ -2438,23 +2463,23 @@ void command_showskills(Client *c, const Seperator *sep){
 	if (c->GetTarget() && c->GetTarget()->IsClient())
 		t = c->GetTarget()->CastToClient();
 
-	c->Message(0, "Skills for %s", t->GetName());
+	c->Message(CC_Default, "Skills for %s", t->GetName());
 	for (SkillUseTypes i = Skill1HBlunt; i <= HIGHEST_SKILL; i = (SkillUseTypes)(i + 1))
-		c->Message(0, "Skill [%d] is at [%d]", i, t->GetSkill(i));
+		c->Message(CC_Default, "Skill [%d] is at [%d]", i, t->GetSkill(i));
 }
 
 void command_findspell(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #FindSpell [spellname]");
+		c->Message(CC_Default, "Usage: #FindSpell [spellname]");
 	else if (SPDAT_RECORDS <= 0)
-		c->Message(0, "Spells not loaded");
+		c->Message(CC_Default, "Spells not loaded");
 	else if (Seperator::IsNumber(sep->argplus[1])) {
 		int spellid = atoi(sep->argplus[1]);
 		if (spellid <= 0 || spellid >= SPDAT_RECORDS) {
-			c->Message(0, "Error: Number out of range");
+			c->Message(CC_Default, "Error: Number out of range");
 		}
 		else {
-			c->Message(0, "  %i: %s", spellid, spells[spellid].name);
+			c->Message(CC_Default, "  %i: %s", spellid, spells[spellid].name);
 		}
 	}
 	else {
@@ -2471,7 +2496,7 @@ void command_findspell(Client *c, const Seperator *sep){
 				strupr(sName);
 				char* pdest = strstr(sName, sCriteria);
 				if ((pdest != nullptr) && (count <= 20)) {
-					c->Message(0, "  %i: %s", i, spells[i].name);
+					c->Message(CC_Default, "  %i: %s", i, spells[i].name);
 					count++;
 				}
 				else if (count > 20)
@@ -2479,15 +2504,15 @@ void command_findspell(Client *c, const Seperator *sep){
 			}
 		}
 		if (count > 20)
-			c->Message(0, "20 spells found... max reached.");
+			c->Message(CC_Default, "20 spells found... max reached.");
 		else
-			c->Message(0, "%i spells found.", count);
+			c->Message(CC_Default, "%i spells found.", count);
 	}
 }
 
 void command_castspell(Client *c, const Seperator *sep){
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #CastSpell spellid");
+		c->Message(CC_Default, "Usage: #CastSpell spellid");
 	else {
 		uint16 spellid = atoi(sep->arg[1]);
 		/*
@@ -2502,7 +2527,7 @@ void command_castspell(Client *c, const Seperator *sep){
 			c->Admin() < commandCastSpecials)
 			c->Message(CC_Red, "Unable to cast spell.");
 		else if (spellid >= SPDAT_RECORDS)
-			c->Message(0, "Error: #CastSpell: Argument out of range");
+			c->Message(CC_Default, "Error: #CastSpell: Argument out of range");
 		else
 			if (c->GetTarget() == 0)
 				if (c->Admin() >= commandInstacast)
@@ -2520,51 +2545,51 @@ void command_castspell(Client *c, const Seperator *sep){
 void command_setlanguage(Client *c, const Seperator *sep){
 	if (strcasecmp(sep->arg[1], "list") == 0)
 	{
-		c->Message(0, "Languages:");
-		c->Message(0, "(0) Common Tongue");
-		c->Message(0, "(1) Barbarian");
-		c->Message(0, "(2) Erudian");
-		c->Message(0, "(3) Elvish");
-		c->Message(0, "(4) Dark Elvish");
-		c->Message(0, "(5) Dwarvish");
-		c->Message(0, "(6) Troll");
-		c->Message(0, "(7) Ogre");
-		c->Message(0, "(8) Gnomish");
-		c->Message(0, "(9) Halfling");
-		c->Message(0, "(10) Thieves Cant");
-		c->Message(0, "(11) Old Erudian");
-		c->Message(0, "(12) Elder Elvish");
-		c->Message(0, "(13) Froglok");
-		c->Message(0, "(14) Goblin");
-		c->Message(0, "(15) Gnoll");
-		c->Message(0, "(16) Combine Tongue");
-		c->Message(0, "(17) Elder Teir`Dal");
-		c->Message(0, "(18) Lizardman");
-		c->Message(0, "(19) Orcish");
-		c->Message(0, "(20) Faerie");
-		c->Message(0, "(21) Dragon");
-		c->Message(0, "(22) Elder Dragon");
-		c->Message(0, "(23) Dark Speech");
-		c->Message(0, "(24) Vah Shir");
-		c->Message(0, "(25) Alaran");
-		c->Message(0, "(26) Hadal");
-		c->Message(0, "(27) Unknown1");
+		c->Message(CC_Default, "Languages:");
+		c->Message(CC_Default, "(0) Common Tongue");
+		c->Message(CC_Default, "(1) Barbarian");
+		c->Message(CC_Default, "(2) Erudian");
+		c->Message(CC_Default, "(3) Elvish");
+		c->Message(CC_Default, "(4) Dark Elvish");
+		c->Message(CC_Default, "(5) Dwarvish");
+		c->Message(CC_Default, "(6) Troll");
+		c->Message(CC_Default, "(7) Ogre");
+		c->Message(CC_Default, "(8) Gnomish");
+		c->Message(CC_Default, "(9) Halfling");
+		c->Message(CC_Default, "(10) Thieves Cant");
+		c->Message(CC_Default, "(11) Old Erudian");
+		c->Message(CC_Default, "(12) Elder Elvish");
+		c->Message(CC_Default, "(13) Froglok");
+		c->Message(CC_Default, "(14) Goblin");
+		c->Message(CC_Default, "(15) Gnoll");
+		c->Message(CC_Default, "(16) Combine Tongue");
+		c->Message(CC_Default, "(17) Elder Teir`Dal");
+		c->Message(CC_Default, "(18) Lizardman");
+		c->Message(CC_Default, "(19) Orcish");
+		c->Message(CC_Default, "(20) Faerie");
+		c->Message(CC_Default, "(21) Dragon");
+		c->Message(CC_Default, "(22) Elder Dragon");
+		c->Message(CC_Default, "(23) Dark Speech");
+		c->Message(CC_Default, "(24) Vah Shir");
+		c->Message(CC_Default, "(25) Alaran");
+		c->Message(CC_Default, "(26) Hadal");
+		c->Message(CC_Default, "(27) Unknown1");
 	}
 	else if (c->GetTarget() == 0)
 	{
-		c->Message(0, "Error: #setlanguage: No target.");
+		c->Message(CC_Default, "Error: #setlanguage: No target.");
 	}
 	else if (!c->GetTarget()->IsClient())
 	{
-		c->Message(0, "Error: Target must be a player.");
+		c->Message(CC_Default, "Error: Target must be a player.");
 	}
 	else if (
 		!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > 27 ||
 		!sep->IsNumber(2) || atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > 100
 		)
 	{
-		c->Message(0, "Usage: #setlanguage [language ID] [value] (0-27, 0-100)");
-		c->Message(0, "Try #setlanguage list for a list of language IDs");
+		c->Message(CC_Default, "Usage: #setlanguage [language ID] [value] (0-27, 0-100)");
+		c->Message(CC_Default, "Try #setlanguage list for a list of language IDs");
 	}
 	else
 	{
@@ -2577,19 +2602,19 @@ void command_setlanguage(Client *c, const Seperator *sep){
 
 void command_setskill(Client *c, const Seperator *sep){
 	if (c->GetTarget() == nullptr) {
-		c->Message(0, "Error: #setskill: No target.");
+		c->Message(CC_Default, "Error: #setskill: No target.");
 	}
 	else if (!c->GetTarget()->IsClient()) {
-		c->Message(0, "Error: #setskill: Target must be a client.");
+		c->Message(CC_Default, "Error: #setskill: Target must be a client.");
 	}
 	else if (
 		!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > HIGHEST_SKILL ||
 		!sep->IsNumber(2) || atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > HIGHEST_CAN_SET_SKILL
 		)
 	{
-		c->Message(0, "Usage: #setskill skill x ");
-		c->Message(0, "       skill = 0 to %d", HIGHEST_SKILL);
-		c->Message(0, "       x = 0 to %d", HIGHEST_CAN_SET_SKILL);
+		c->Message(CC_Default, "Usage: #setskill skill x ");
+		c->Message(CC_Default, "       skill = 0 to %d", HIGHEST_SKILL);
+		c->Message(CC_Default, "       x = 0 to %d", HIGHEST_CAN_SET_SKILL);
 	}
 	else {
 		Log.Out(Logs::General, Logs::Normal, "Set skill request from %s, target:%s skill_id:%i value:%i", c->GetName(), c->GetTarget()->GetName(), atoi(sep->arg[1]), atoi(sep->arg[2]) );
@@ -2602,12 +2627,12 @@ void command_setskill(Client *c, const Seperator *sep){
 
 void command_setskillall(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->Message(0, "Error: #setallskill: No target.");
+		c->Message(CC_Default, "Error: #setallskill: No target.");
 	else if (!c->GetTarget()->IsClient())
-		c->Message(0, "Error: #setskill: Target must be a client.");
+		c->Message(CC_Default, "Error: #setskill: Target must be a client.");
 	else if (!sep->IsNumber(1) || atoi(sep->arg[1]) < 0 || atoi(sep->arg[1]) > HIGHEST_CAN_SET_SKILL) {
-		c->Message(0, "Usage: #setskillall value ");
-		c->Message(0, "       value = 0 to %d", HIGHEST_CAN_SET_SKILL);
+		c->Message(CC_Default, "Usage: #setskillall value ");
+		c->Message(CC_Default, "       value = 0 to %d", HIGHEST_CAN_SET_SKILL);
 	}
 	else {
 		if (c->Admin() >= commandSetSkillsOther || c->GetTarget() == c || c->GetTarget() == 0) {
@@ -2618,7 +2643,7 @@ void command_setskillall(Client *c, const Seperator *sep){
 			}
 		}
 		else
-			c->Message(0, "Error: Your status is not high enough to set anothers skills");
+			c->Message(CC_Default, "Error: Your status is not high enough to set anothers skills");
 	}
 }
 
@@ -2632,7 +2657,7 @@ void command_race(Client *c, const Seperator *sep){
 		t->SendIllusionPacket(atoi(sep->arg[1]));
 	}
 	else
-		c->Message(0, "Usage: #race [0-724] (0 for back to normal)");
+		c->Message(CC_Default, "Usage: #race [0-724] (0 for back to normal)");
 }
 
 void command_gender(Client *c, const Seperator *sep){
@@ -2644,12 +2669,12 @@ void command_gender(Client *c, const Seperator *sep){
 		t->SendIllusionPacket(t->GetRace(), atoi(sep->arg[1]));
 	}
 	else
-		c->Message(0, "Usage: #gender [0/1/2]");
+		c->Message(CC_Default, "Usage: #gender [0/1/2]");
 }
 
 void command_makepet(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == '\0')
-		c->Message(0, "Usage: #makepet pet_type_name (will not survive across zones)");
+		c->Message(CC_Default, "Usage: #makepet pet_type_name (will not survive across zones)");
 	else
 		c->MakePet(0, sep->arg[1]);
 }
@@ -2664,7 +2689,7 @@ void command_level(Client *c, const Seperator *sep){
 		(!c->GetTarget()->IsNPC() && ((c->Admin() < commandLevelNPCAboveCap) && (level > RuleI(Character, MaxLevel))))) ||
 		(admin < access && level > RuleI(Character, MaxLevel)))
 	{
-		c->Message(0, "Error: #Level: Invalid Level");
+		c->Message(CC_Default, "Error: #Level: Invalid Level");
 	}
 	else if (c->GetTarget() && admin >= access)
 	{
@@ -2672,12 +2697,12 @@ void command_level(Client *c, const Seperator *sep){
 	}
 	else if (c->GetTarget() && admin < access && level <= RuleI(Character, MaxLevel) && level > 0)
 	{
-		c->Message(0, "Your status level only supports self use of this command.");
+		c->Message(CC_Default, "Your status level only supports self use of this command.");
 		c->SetLevel(level, true);
 	}
 	else
 	{
-		c->Message(0, "No valid target selected, using command on self.");
+		c->Message(CC_Default, "No valid target selected, using command on self.");
 		c->SetLevel(level, true);
 	}
 }
@@ -2686,16 +2711,16 @@ void command_spawn(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] != 0){
 		Client* client = entity_list.GetClientByName(sep->arg[1]);
 		if (client){
-			c->Message(0, "You cannot spawn a mob with the same name as a character!");
+			c->Message(CC_Default, "You cannot spawn a mob with the same name as a character!");
 			return;
 		}
 	}
 
 	NPC* npc = NPC::SpawnNPC(sep->argplus[1], c->GetPosition(), c);
 	if (!npc) {
-		c->Message(0, "Format: #spawn name race level material hp gender class priweapon secweapon merchantid bodytype - spawns a npc those parameters.");
-		c->Message(0, "Name Format: NPCFirstname_NPCLastname - All numbers in a name are stripped and \"_\" characters become a space.");
-		c->Message(0, "Note: Using \"-\" for gender will autoselect the gender for the race. Using \"-\" for HP will use the calculated maximum HP.");
+		c->Message(CC_Default, "Format: #spawn name race level material hp gender class priweapon secweapon merchantid bodytype - spawns a npc those parameters.");
+		c->Message(CC_Default, "Name Format: NPCFirstname_NPCLastname - All numbers in a name are stripped and \"_\" characters become a space.");
+		c->Message(CC_Default, "Note: Using \"-\" for gender will autoselect the gender for the race. Using \"-\" for HP will use the calculated maximum HP.");
 	}
 }
 
@@ -2713,9 +2738,7 @@ void command_texture(Client *c, const Seperator *sep){
 			{
 			c->SendTextureWC(i, texture);
 			}
-		else if ((c->GetTarget()->GetRace() > 0 && c->GetTarget()->GetRace() <= 12) ||
-			c->GetTarget()->GetRace() == 128 || c->GetTarget()->GetRace() == 130 ||
-			c->GetTarget()->GetRace() == 330 || c->GetTarget()->GetRace() == 522) {
+		else if (c->GetTarget()->IsPlayableRace(c->GetTarget()->GetRace())) {
 			for (i = EmuConstants::MATERIAL_BEGIN; i <= EmuConstants::MATERIAL_TINT_END; i++)
 			{
 				c->GetTarget()->SendTextureWC(i, texture);
@@ -2740,7 +2763,7 @@ void command_texture(Client *c, const Seperator *sep){
 		}
 	}
 	else
-		c->Message(0, "Usage: #texture [texture] [helmtexture] (0-255, 255 for show equipment)");
+		c->Message(CC_Default, "Usage: #texture [texture] [helmtexture] (0-255, 255 for show equipment)");
 }
 
 void command_npctypespawn(Client *c, const Seperator *sep){
@@ -2756,10 +2779,10 @@ void command_npctypespawn(Client *c, const Seperator *sep){
 			entity_list.AddNPC(npc);
 		}
 		else
-			c->Message(0, "NPC Type %i not found", atoi(sep->arg[1]));
+			c->Message(CC_Default, "NPC Type %i not found", atoi(sep->arg[1]));
 	}
 	else
-		c->Message(0, "Usage: #npctypespawn npctypeid factionid");
+		c->Message(CC_Default, "Usage: #npctypespawn npctypeid factionid");
 
 }
 
@@ -2777,12 +2800,12 @@ void command_heal(Client *c, const Seperator *sep)
 		t->Heal();
 	else if (c->GetTarget() && admin < access)
 	{
-		c->Message(0, "Your status level only supports self use of this command.");
+		c->Message(CC_Default, "Your status level only supports self use of this command.");
 		c->CastToClient()->Heal();
 	}
 	else
 	{
-		c->Message(0, "No valid target selected, using command on self.");
+		c->Message(CC_Default, "No valid target selected, using command on self.");
 		c->CastToClient()->Heal();
 	}
 }
@@ -2793,12 +2816,12 @@ void command_appearance(Client *c, const Seperator *sep){
 	// sends any appearance packet
 	// Dev debug command, for appearance types
 	if (sep->arg[2][0] == 0)
-		c->Message(0, "Usage: #appearance type value");
+		c->Message(CC_Default, "Usage: #appearance type value");
 	else {
 		if ((c->GetTarget()))
 			t = c->GetTarget();
 		t->SendAppearancePacket(atoi(sep->arg[1]), atoi(sep->arg[2]));
-		c->Message(0, "Sending appearance packet: target=%s, type=%s, value=%s", t->GetName(), sep->arg[1], sep->arg[2]);
+		c->Message(CC_Default, "Sending appearance packet: target=%s, type=%s, value=%s", t->GetName(), sep->arg[1], sep->arg[2]);
 	}
 }
 
@@ -2808,16 +2831,16 @@ void command_nukeitem(Client *c, const Seperator *sep){
 	if (c->GetTarget() && c->GetTarget()->IsClient() && (sep->IsNumber(1) || sep->IsHexNumber(1))) {
 		itemid = sep->IsNumber(1) ? atoi(sep->arg[1]) : hextoi(sep->arg[1]);
 		numitems = c->GetTarget()->CastToClient()->NukeItem(itemid);
-		c->Message(0, " %u items deleted", numitems);
+		c->Message(CC_Default, " %u items deleted", numitems);
 	}
 	else
-		c->Message(0, "Usage: (targted) #nukeitem itemnum - removes the item from the player's inventory");
+		c->Message(CC_Default, "Usage: (targted) #nukeitem itemnum - removes the item from the player's inventory");
 }
 
 void command_peekinv(Client *c, const Seperator *sep){
 	// Displays what the server thinks the user has in inventory
 	if (!c->GetTarget() || !c->GetTarget()->IsClient()) {
-		c->Message(0, "You must have a PC target selected for this command");
+		c->Message(CC_Default, "You must have a PC target selected for this command");
 		return;
 	}
 
@@ -2825,7 +2848,7 @@ void command_peekinv(Client *c, const Seperator *sep){
 	bool bFound = false;
 	Client* client = c->GetTarget()->CastToClient();
 	const Item_Struct* item = nullptr;
-	c->Message(0, "Displaying inventory for %s...", client->GetName());
+	c->Message(CC_Default, "Displaying inventory for %s...", client->GetName());
 
 	if (bAll || (strcasecmp(sep->arg[1], "worn") == 0)) {
 		// Worn items
@@ -2886,10 +2909,13 @@ void command_peekinv(Client *c, const Seperator *sep){
 				item = (inst) ? inst->GetItem() : nullptr;
 				static char itemid[7];
 				sprintf(itemid, "%06d", (item == 0) ? 0 : item->ID);
-				c->Message((item == 0), "CursorSlot: %i, Depth: %i, Item: %i (%c%06X00000000000000000000000000000000000000000000%s%c), Charges: %i", MainCursor, i,
-					((item == 0) ? 0 : item->ID), 0x12, ((item == 0) ? 0 : item->ID),
-					((item == 0) ? "null" : item->Name), 0x12,
-					((item == 0) ? 0 : inst->GetCharges()));
+				int16 slot = i;
+				if(slot > 0)
+					slot += EmuConstants::CURSOR_QUEUE_BEGIN;
+				c->Message((item == 0), "CursorSlot: %i, Item: %i (%c%c%s%s%c), Charges: %i", slot,
+				((item == 0) ? 0 : item->ID), 0x12, 0x30, ((item == 0) ? 0 : itemid),
+				((item == 0) ? "null" : item->Name), 0x12,
+				((item == 0) ? 0 : inst->GetCharges()));
 
 				if (inst && inst->IsType(ItemClassContainer) && i == 0) { // 'CSD 1' - only display contents of slot 30[0] container..higher ones don't exist
 					for (uint8 j = SUB_BEGIN; j < EmuConstants::ITEM_CONTAINER_SIZE; j++) {
@@ -2897,14 +2923,15 @@ void command_peekinv(Client *c, const Seperator *sep){
 						item = (instbag) ? instbag->GetItem() : nullptr;
 						static char itemid[7];
 						sprintf(itemid, "%06d", (item == 0) ? 0 : item->ID);
-						c->Message((item == 0), "   CursorBagSlot: %i (Slot #%i, Bag #%i), Item: %i (%c%c%s%s%c), Charges: %i",
-							Inventory::CalcSlotId(MainCursor, j),
-							MainCursor, j, ((item == 0) ? 0 : item->ID), 0x12, ((item == 0) ? 0 : item->ID),
+						c->Message((item == 0), "   CursorBagSlot: %i Item: %i (%c%c%s%s%c), Charges: %i",
+							Inventory::CalcSlotId(MainCursor, j), 
+							((item == 0) ? 0 : item->ID), 0x12,  0x30, ((item == 0) ? 0 : itemid),
 							((item == 0) ? "null" : item->Name), 0x12,
 							((item == 0) ? 0 : instbag->GetCharges()));
 					}
 				}
 			}
+			c->Message(CC_Default, "Cursor size: %d", c->GetInv().CursorSize());
 		}
 	}
 
@@ -2969,16 +2996,16 @@ void command_peekinv(Client *c, const Seperator *sep){
 
 	if (!bFound)
 	{
-		c->Message(0, "Usage: #peekinv [worn|cursor|inv|bank|trade|trib|all]");
-		c->Message(0, "  Displays a portion of the targeted user's inventory");
-		c->Message(0, "  Caution: 'all' is a lot of information!");
+		c->Message(CC_Default, "Usage: #peekinv [worn|cursor|inv|bank|trade|trib|all]");
+		c->Message(CC_Default, "  Displays a portion of the targeted user's inventory");
+		c->Message(CC_Default, "  Caution: 'all' is a lot of information!");
 	}
 }
 
 void command_findnpctype(Client *c, const Seperator *sep)
 {
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Usage: #findnpctype [search criteria]");
+		c->Message(CC_Default, "Usage: #findnpctype [search criteria]");
 		return;
 	}
 
@@ -2992,12 +3019,12 @@ void command_findnpctype(Client *c, const Seperator *sep)
 
 	auto results = database.QueryDatabase(query);
 	if (!results.Success()) {
-		c->Message(0, "Error querying database.");
-		c->Message(0, query.c_str());
+		c->Message(CC_Default, "Error querying database.");
+		c->Message(CC_Default, query.c_str());
 	}
 
 	if (results.RowCount() == 0) // No matches found.
-		c->Message(0, "No matches found for %s.", sep->arg[1]);
+		c->Message(CC_Default, "No matches found for %s.", sep->arg[1]);
 
 	// If query runs successfully.
 	int count = 0;
@@ -3007,23 +3034,23 @@ void command_findnpctype(Client *c, const Seperator *sep)
 	for (auto row = results.begin(); row != results.end(); ++row) {
 		// Limit to returning maxrows rows.
 		if (++count > maxrows) {
-			c->Message(0, "%i npc types shown. Too many results.", maxrows);
+			c->Message(CC_Default, "%i npc types shown. Too many results.", maxrows);
 			break;
 		}
 
-		c->Message(0, "  %s: %s", row[0], row[1]);
+		c->Message(CC_Default, "  %s: %s", row[0], row[1]);
 	}
 
 	// If we did not hit the maxrows limit.
 	if (count <= maxrows)
-		c->Message(0, "Query complete. %i rows shown.", count);
+		c->Message(CC_Default, "Query complete. %i rows shown.", count);
 
 }
 
 void command_findzone(Client *c, const Seperator *sep)
 {
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Usage: #findzone [search criteria]");
+		c->Message(CC_Default, "Usage: #findzone [search criteria]");
 		return;
 	}
 
@@ -3043,8 +3070,8 @@ void command_findzone(Client *c, const Seperator *sep)
 
 	auto results = database.QueryDatabase(query);
 	if (!results.Success()) {
-		c->Message(0, "Error querying database.");
-		c->Message(0, query.c_str());
+		c->Message(CC_Default, "Error querying database.");
+		c->Message(CC_Default, query.c_str());
 		return;
 	}
 
@@ -3053,55 +3080,55 @@ void command_findzone(Client *c, const Seperator *sep)
 
 	for (auto row = results.begin(); row != results.end(); ++row) {
 		if (++count > maxrows) {
-			c->Message(0, "%i zones shown. Too many results.", maxrows);
+			c->Message(CC_Default, "%i zones shown. Too many results.", maxrows);
 			break;
 		}
 
-		c->Message(0, "  %s: %s, %s", row[0], row[1], row[2]);
+		c->Message(CC_Default, "  %s: %s, %s", row[0], row[1], row[2]);
 	}
 
 	if (count <= maxrows)
-		c->Message(0, "Query complete. %i rows shown.", count);
+		c->Message(CC_Default, "Query complete. %i rows shown.", count);
 	else if (count == 0)
-		c->Message(0, "No matches found for %s.", sep->arg[1]);
+		c->Message(CC_Default, "No matches found for %s.", sep->arg[1]);
 }
 
 void command_viewnpctype(Client *c, const Seperator *sep){
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #viewnpctype [npctype id]");
+		c->Message(CC_Default, "Usage: #viewnpctype [npctype id]");
 	else
 	{
 		uint32 npctypeid = atoi(sep->arg[1]);
 		const NPCType* npct = database.GetNPCType(npctypeid);
 		if (npct) {
-			c->Message(0, " NPCType Info, ");
-			c->Message(0, "  NPCTypeID: %u", npct->npc_id);
-			c->Message(0, "  Name: %s", npct->name);
-			c->Message(0, "  Level: %i", npct->level);
-			c->Message(0, "  Race: %i", npct->race);
-			c->Message(0, "  Class: %i", npct->class_);
-			c->Message(0, "  MinDmg: %i", npct->min_dmg);
-			c->Message(0, "  MaxDmg: %i", npct->max_dmg);
-			c->Message(0, "  Special Abilities: %s", npct->special_abilities);
-			c->Message(0, "  Spells: %i", npct->npc_spells_id);
-			c->Message(0, "  Loot Table: %i", npct->loottable_id);
-			c->Message(0, "  NPCFactionID: %i", npct->npc_faction_id);
+			c->Message(CC_Default, " NPCType Info, ");
+			c->Message(CC_Default, "  NPCTypeID: %u", npct->npc_id);
+			c->Message(CC_Default, "  Name: %s", npct->name);
+			c->Message(CC_Default, "  Level: %i", npct->level);
+			c->Message(CC_Default, "  Race: %i", npct->race);
+			c->Message(CC_Default, "  Class: %i", npct->class_);
+			c->Message(CC_Default, "  MinDmg: %i", npct->min_dmg);
+			c->Message(CC_Default, "  MaxDmg: %i", npct->max_dmg);
+			c->Message(CC_Default, "  Special Abilities: %s", npct->special_abilities);
+			c->Message(CC_Default, "  Spells: %i", npct->npc_spells_id);
+			c->Message(CC_Default, "  Loot Table: %i", npct->loottable_id);
+			c->Message(CC_Default, "  NPCFactionID: %i", npct->npc_faction_id);
 		}
 		else
-			c->Message(0, "NPC #%d not found", npctypeid);
+			c->Message(CC_Default, "NPC #%d not found", npctypeid);
 	}
 }
 
 void command_reloadqst(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
 	{
-		c->Message(0, "Clearing quest memory cache.");
+		c->Message(CC_Default, "Clearing quest memory cache.");
 		entity_list.ClearAreas();
 		parse->ReloadQuests();
 	}
 	else
 	{
-		c->Message(0, "Clearing quest memory cache and stopping timers.");
+		c->Message(CC_Default, "Clearing quest memory cache and stopping timers.");
 		entity_list.ClearAreas();
 		parse->ReloadQuests(true);
 	}
@@ -3109,16 +3136,16 @@ void command_reloadqst(Client *c, const Seperator *sep){
 }
 
 void command_reloadworld(Client *c, const Seperator *sep){
-	//c->Message(0, "Reloading quest cache, reloading rules, and repopping zones worldwide.");
+	//c->Message(CC_Default, "Reloading quest cache, reloading rules, and repopping zones worldwide.");
 	ServerPacket* pack = new ServerPacket(ServerOP_ReloadWorld, sizeof(ReloadWorld_Struct));
 	ReloadWorld_Struct* RW = (ReloadWorld_Struct*) pack->pBuffer;
 	RW->Option = 0; //Keep it, maybe we'll use it in the future.
 	worldserver.SendPacket(pack);
 	safe_delete(pack);
-	if (!worldserver.SendChannelMessage(c, 0, 6, 0, 0, "Reloading quest cache, reloading rules, and repopping zones worldwide."))
-		c->Message(0, "Error: World server disconnected");
+	if (!worldserver.SendChannelMessage(c, 0, 6, 0, 0, "Reloading quest cache, reloading rules, merchants, emotes, and repopping zones worldwide."))
+		c->Message(CC_Default, "Error: World server disconnected");
 
-	c->Message(CC_Yellow, "You broadcast, Reloading quest cache, reloading rules, and repopping zones worldwide.");
+	c->Message(CC_Yellow, "You broadcast, Reloading quest cache, reloading rules, merchants, emotes, and repopping zones worldwide.");
 }
 
 void command_reloadlevelmods(Client *c, const Seperator *sep){
@@ -3136,14 +3163,14 @@ void command_reloadlevelmods(Client *c, const Seperator *sep){
 
 void command_reloadzps(Client *c, const Seperator *sep){
 	database.LoadStaticZonePoints(&zone->zone_point_list, zone->GetShortName(), zone->GetInstanceVersion());
-	c->Message(0, "Reloading server zone_points.");
+	c->Message(CC_Default, "Reloading server zone_points.");
 }
 
 void command_zoneshutdown(Client *c, const Seperator *sep){
 	if (!worldserver.Connected())
-		c->Message(0, "Error: World server disconnected");
+		c->Message(CC_Default, "Error: World server disconnected");
 	else if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #zoneshutdown zoneshortname");
+		c->Message(CC_Default, "Usage: #zoneshutdown zoneshortname");
 	else {
 		ServerPacket* pack = new ServerPacket(ServerOP_ZoneShutdown, sizeof(ServerZoneStateChange_struct));
 		ServerZoneStateChange_struct* s = (ServerZoneStateChange_struct *)pack->pBuffer;
@@ -3159,9 +3186,9 @@ void command_zoneshutdown(Client *c, const Seperator *sep){
 
 void command_zonebootup(Client *c, const Seperator *sep){
 	if (!worldserver.Connected())
-		c->Message(0, "Error: World server disconnected");
+		c->Message(CC_Default, "Error: World server disconnected");
 	else if (sep->arg[2][0] == 0) {
-		c->Message(0, "Usage: #zonebootup ZoneServerID# zoneshortname");
+		c->Message(CC_Default, "Usage: #zonebootup ZoneServerID# zoneshortname");
 	}
 	else {
 		ServerPacket* pack = new ServerPacket(ServerOP_ZoneBootup, sizeof(ServerZoneStateChange_struct));
@@ -3177,20 +3204,20 @@ void command_zonebootup(Client *c, const Seperator *sep){
 
 void command_kick(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #kick [charname]");
+		c->Message(CC_Default, "Usage: #kick [charname]");
 	else {
 		Client* client = entity_list.GetClientByName(sep->arg[1]);
 		if (client != 0) {
 			if (client->Admin() <= c->Admin()) {
-				client->Message(0, "You have been kicked by %s", c->GetName());
+				client->Message(CC_Default, "You have been kicked by %s", c->GetName());
 				EQApplicationPacket* outapp = new EQApplicationPacket(OP_GMKick, 0);
 				client->QueuePacket(outapp);
 				client->Kick();
-				c->Message(0, "Kick: local: kicking %s", sep->arg[1]);
+				c->Message(CC_Default, "Kick: local: kicking %s", sep->arg[1]);
 			}
 		}
 		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server disconnected");
+			c->Message(CC_Default, "Error: World server disconnected");
 		else {
 			ServerPacket* pack = new ServerPacket(ServerOP_KickPlayer, sizeof(ServerKickPlayer_Struct));
 			ServerKickPlayer_Struct* skp = (ServerKickPlayer_Struct*)pack->pBuffer;
@@ -3209,10 +3236,10 @@ void command_attack(Client *c, const Seperator *sep){
 		if (sictar)
 			c->GetTarget()->CastToNPC()->AddToHateList(sictar, 1, 0);
 		else
-			c->Message(0, "Error: %s not found", sep->arg[1]);
+			c->Message(CC_Default, "Error: %s not found", sep->arg[1]);
 	}
 	else
-		c->Message(0, "Usage: (needs NPC targeted) #attack targetname");
+		c->Message(CC_Default, "Usage: (needs NPC targeted) #attack targetname");
 }
 
 void command_lock(Client *c, const Seperator *sep){
@@ -3239,7 +3266,7 @@ void command_motd(Client *c, const Seperator *sep)
 	ServerMotd_Struct* mss = (ServerMotd_Struct*)outpack->pBuffer;
 	strn0cpy(mss->myname, c->GetName(), 64);
 	strn0cpy(mss->motd, sep->argplus[1], 512);
-	c->Message(0, "MoTD is set.");
+	c->Message(CC_Default, "MoTD is set.");
 	worldserver.SendPacket(outpack);
 	safe_delete(outpack);
 }
@@ -3295,7 +3322,7 @@ void command_equipitem(Client *c, const Seperator *sep){
 				//	di->to_slot				= 0xFFFFFFFF;
 				//	di->number_in_stack		= 0xFFFFFFFF;
 
-				//	c->Message(0, "Deleting %i charges from stack", movecount); // debug line..delete
+				//	c->Message(CC_Default, "Deleting %i charges from stack", movecount); // debug line..delete
 
 				//	for (int16 deletecount=0; deletecount < movecount; deletecount++)
 				// have to use 'movecount' because mi->number_in_stack is 'ENCODED' at this point (i.e., 99 charges returns 22...)
@@ -3317,7 +3344,7 @@ void command_equipitem(Client *c, const Seperator *sep){
 			c->Message(CC_Red, "Error: Item on your cursor cannot be equipped");
 	}
 	else
-		c->Message(0, "Usage: #equipitem slotid[0-21] - equips the item on your cursor to the position");
+		c->Message(CC_Default, "Usage: #equipitem slotid[0-21] - equips the item on your cursor to the position");
 }
 
 void command_zonelock(Client *c, const Seperator *sep){
@@ -3336,7 +3363,7 @@ void command_zonelock(Client *c, const Seperator *sep){
 			worldserver.SendPacket(pack);
 		}
 		else
-			c->Message(0, "Usage: #zonelock lock [zonename]");
+			c->Message(CC_Default, "Usage: #zonelock lock [zonename]");
 	}
 	else if (strcasecmp(sep->arg[1], "unlock") == 0 && c->Admin() >= commandLockZones) {
 		uint16 tmp = database.GetZoneID(sep->arg[2]);
@@ -3346,15 +3373,15 @@ void command_zonelock(Client *c, const Seperator *sep){
 			worldserver.SendPacket(pack);
 		}
 		else
-			c->Message(0, "Usage: #zonelock unlock [zonename]");
+			c->Message(CC_Default, "Usage: #zonelock unlock [zonename]");
 	}
 	else {
-		c->Message(0, "#zonelock sub-commands");
-		c->Message(0, "  list");
+		c->Message(CC_Default, "#zonelock sub-commands");
+		c->Message(CC_Default, "  list");
 		if (c->Admin() >= commandLockZones)
 		{
-			c->Message(0, "  lock [zonename]");
-			c->Message(0, "  unlock [zonename]");
+			c->Message(CC_Default, "  lock [zonename]");
+			c->Message(CC_Default, "  unlock [zonename]");
 		}
 	}
 	safe_delete(pack);
@@ -3392,7 +3419,7 @@ void command_corpse(Client *c, const Seperator *sep)
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "buriedcount") == 0)
@@ -3403,16 +3430,16 @@ void command_corpse(Client *c, const Seperator *sep)
 			t = c->GetTarget()->CastToClient();
 		else
 		{
-			c->Message(0, "You must first select a target!");
+			c->Message(CC_Default, "You must first select a target!");
 			return;
 		}
 
 		uint32 CorpseCount = database.GetCharacterBuriedCorpseCount(t->CharacterID());
 
 		if (CorpseCount > 0)
-			c->Message(0, "Your target has a total of %u buried corpses.", CorpseCount);
+			c->Message(CC_Default, "Your target has a total of %u buried corpses.", CorpseCount);
 		else
-			c->Message(0, "Your target doesn't have any buried corpses.");
+			c->Message(CC_Default, "Your target doesn't have any buried corpses.");
 
 		return;
 	}
@@ -3426,58 +3453,58 @@ void command_corpse(Client *c, const Seperator *sep)
 				t = c->GetTarget()->CastToClient();
 			else
 			{
-				c->Message(0, "You must first turn your GM flag on and select a target!");
+				c->Message(CC_Default, "You must first turn your GM flag on and select a target!");
 				return;
 			}
 
 			Corpse* PlayerCorpse = database.SummonBuriedCharacterCorpses(t->CharacterID(), t->GetZoneID(), zone->GetInstanceID(), t->GetPosition());
 
 			if (!PlayerCorpse)
-				c->Message(0, "Your target doesn't have any buried corpses.");
+				c->Message(CC_Default, "Your target doesn't have any buried corpses.");
 
 			return;
 		}
 		else
-			c->Message(0, "Insufficient status to summon buried corpses.");
+			c->Message(CC_Default, "Insufficient status to summon buried corpses.");
 	}
 	else if (strcasecmp(sep->arg[1], "charid") == 0)
 	{
 		if (c->Admin() >= commandEditPlayerCorpses)
 		{
 			if (target == 0 || !target->IsPlayerCorpse())
-				c->Message(0, "Error: Target must be a player corpse to set ID.");
+				c->Message(CC_Default, "Error: Target must be a player corpse to set ID.");
 			else if (!sep->IsNumber(2))
-				c->Message(0, "Error: charid must be a number.");
+				c->Message(CC_Default, "Error: charid must be a number.");
 			else
-				c->Message(0, "Setting CharID=%u on PlayerCorpse '%s'", target->CastToCorpse()->SetCharID(atoi(sep->arg[2])), target->GetName());
+				c->Message(CC_Default, "Setting CharID=%u on PlayerCorpse '%s'", target->CastToCorpse()->SetCharID(atoi(sep->arg[2])), target->GetName());
 		}
 		else
-			c->Message(0, "Insufficient status to change corpse owner.");
+			c->Message(CC_Default, "Insufficient status to change corpse owner.");
 	}
 	else if (strcasecmp(sep->arg[1], "delete") == 0)
 	{
 		if (target == 0 || !target->IsCorpse())
-			c->Message(0, "Error: Target the corpse you wish to delete");
+			c->Message(CC_Default, "Error: Target the corpse you wish to delete");
 		else if (target->IsNPCCorpse())
 		{
-			c->Message(0, "Depoping %s.", target->GetName());
+			c->Message(CC_Default, "Depoping %s.", target->GetName());
 			target->CastToCorpse()->DepopNPCCorpse();
 		}
 		else if (c->Admin() >= commandEditPlayerCorpses)
 		{
-			c->Message(0, "Deleting %s.", target->GetName());
+			c->Message(CC_Default, "Deleting %s.", target->GetName());
 			target->CastToCorpse()->Delete();
 		}
 		else
-			c->Message(0, "Insufficient status to delete player corpse.");
+			c->Message(CC_Default, "Insufficient status to delete player corpse.");
 	}
 	else if (strcasecmp(sep->arg[1], "deletenpccorpses") == 0)
 	{
 		int32 tmp = entity_list.DeleteNPCCorpses();
 		if (tmp >= 0)
-			c->Message(0, "%d corpses deleted.", tmp);
+			c->Message(CC_Default, "%d corpses deleted.", tmp);
 		else
-			c->Message(0, "DeletePlayerCorpses Error #%d", tmp);
+			c->Message(CC_Default, "DeletePlayerCorpses Error #%d", tmp);
 	}
 	else if (strcasecmp(sep->arg[1], "deleteplayercorpses") == 0)
 	{
@@ -3485,45 +3512,45 @@ void command_corpse(Client *c, const Seperator *sep)
 		{
 			int32 tmp = entity_list.DeletePlayerCorpses();
 			if (tmp >= 0)
-				c->Message(0, "%i corpses deleted.", tmp);
+				c->Message(CC_Default, "%i corpses deleted.", tmp);
 			else
-				c->Message(0, "DeletePlayerCorpses Error #%i", tmp);
+				c->Message(CC_Default, "DeletePlayerCorpses Error #%i", tmp);
 		}
 		else
-			c->Message(0, "Insufficient status to delete player corpse.");
+			c->Message(CC_Default, "Insufficient status to delete player corpse.");
 	}
 	else if (strcasecmp(sep->arg[1], "depop") == 0)
 	{
 		if (target == 0 || !target->IsPlayerCorpse())
-			c->Message(0, "Error: Target must be a player corpse to depop.");
+			c->Message(CC_Default, "Error: Target must be a player corpse to depop.");
 		else if (c->Admin() >= commandEditPlayerCorpses && target->IsPlayerCorpse())
 		{
-			c->Message(0, "Depoping %s.", target->GetName());
+			c->Message(CC_Default, "Depoping %s.", target->GetName());
 			target->CastToCorpse()->DepopPlayerCorpse();
 			if (!sep->arg[2][0] || atoi(sep->arg[2]) != 0)
 				target->CastToCorpse()->Bury();
 		}
 		else
-			c->Message(0, "Insufficient status to depop player corpse.");
+			c->Message(CC_Default, "Insufficient status to depop player corpse.");
 	}
 	else if (strcasecmp(sep->arg[1], "depopall") == 0)
 	{
 		if (target == 0 || !target->IsClient())
-			c->Message(0, "Error: Target must be a player to depop their corpses.");
+			c->Message(CC_Default, "Error: Target must be a player to depop their corpses.");
 		else if (c->Admin() >= commandEditPlayerCorpses && target->IsClient())
 		{
-			c->Message(0, "Depoping %s\'s corpses.", target->GetName());
+			c->Message(CC_Default, "Depoping %s\'s corpses.", target->GetName());
 			target->CastToClient()->DepopAllCorpses();
 			if (!sep->arg[2][0] || atoi(sep->arg[2]) != 0)
 				target->CastToClient()->BuryPlayerCorpses();
 		}
 		else
-			c->Message(0, "Insufficient status to depop player corpses.");
+			c->Message(CC_Default, "Insufficient status to depop player corpses.");
 	}
 	else if (strcasecmp(sep->arg[1], "inspect") == 0)
 	{
 		if (target == 0 || !target->IsCorpse())
-			c->Message(0, "Error: Target must be a corpse to inspect.");
+			c->Message(CC_Default, "Error: Target must be a corpse to inspect.");
 		else
 			target->CastToCorpse()->QueryLoot(c);
 	}
@@ -3544,7 +3571,7 @@ void command_corpse(Client *c, const Seperator *sep)
 	else if (strcasecmp(sep->arg[1], "locate") == 0)
 	{
 		if (target == 0 || !target->IsClient())
-			c->Message(0, "Error: Target must be a player to locate their corpses.");
+			c->Message(CC_Default, "Error: Target must be a player to locate their corpses.");
 		else
 		{
 			c->Message(CC_Red, "CorpseID : Zone , x , y , z , Buried");
@@ -3567,44 +3594,44 @@ void command_corpse(Client *c, const Seperator *sep)
 	else if (strcasecmp(sep->arg[1], "lock") == 0)
 	{
 		if (target == 0 || !target->IsCorpse())
-			c->Message(0, "Error: Target must be a corpse in order to lock.");
+			c->Message(CC_Default, "Error: Target must be a corpse in order to lock.");
 		else {
 			target->CastToCorpse()->Lock();
-			c->Message(0, "Locking %s...", target->GetName());
+			c->Message(CC_Default, "Locking %s...", target->GetName());
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "unlock") == 0)
 	{
 		if (target == 0 || !target->IsCorpse())
-			c->Message(0, "Error: Target must be a corpse in order to unlock.");
+			c->Message(CC_Default, "Error: Target must be a corpse in order to unlock.");
 		else {
 			target->CastToCorpse()->UnLock();
-			c->Message(0, "Unlocking %s...", target->GetName());
+			c->Message(CC_Default, "Unlocking %s...", target->GetName());
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "removecash") == 0)
 	{
 		if (target == 0 || !target->IsCorpse())
-			c->Message(0, "Error: Target the corpse you wish to remove the cash from");
+			c->Message(CC_Default, "Error: Target the corpse you wish to remove the cash from");
 		else if (!target->IsPlayerCorpse() || c->Admin() >= commandEditPlayerCorpses)
 		{
-			c->Message(0, "Removing Cash from %s.", target->GetName());
+			c->Message(CC_Default, "Removing Cash from %s.", target->GetName());
 			target->CastToCorpse()->RemoveCash();
 		}
 		else
-			c->Message(0, "Insufficient status to modify cash on player corpse.");
+			c->Message(CC_Default, "Insufficient status to modify cash on player corpse.");
 	}
 	else if (strcasecmp(sep->arg[1], "reset") == 0)
 	{
 		if (target == 0 || !target->IsCorpse())
-			c->Message(0, "Error: Target the corpse you wish to reset");
+			c->Message(CC_Default, "Error: Target the corpse you wish to reset");
 		else
 			target->CastToCorpse()->ResetLooter();
 	}
 	else if (strcasecmp(sep->arg[1], "backups") == 0)
 	{
 		if (target == 0 || !target->IsClient())
-			c->Message(0, "Error: Target must be a player to list their backups.");
+			c->Message(CC_Default, "Error: Target must be a player to list their backups.");
 		else
 		{
 			c->Message(CC_Red, "CorpseID : Zone , x , y , z , Items");
@@ -3638,13 +3665,13 @@ void command_corpse(Client *c, const Seperator *sep)
 				t = c->GetTarget()->CastToClient();
 			else
 			{
-				c->Message(0, "You must first turn your GM flag on and select a target!");
+				c->Message(CC_Default, "You must first turn your GM flag on and select a target!");
 				return;
 			}
 
 			if (!sep->IsNumber(2))
 			{
-				c->Message(0, "Usage: #corpse restore [corpse_id].");
+				c->Message(CC_Default, "Usage: #corpse restore [corpse_id].");
 				return;
 			}
 			else
@@ -3672,7 +3699,7 @@ void command_corpse(Client *c, const Seperator *sep)
 					Corpse* PlayerCorpse = database.SummonCharacterCorpse(corpseid, t->CharacterID(), t->GetZoneID(), zone->GetInstanceID(), t->GetPosition());
 
 					if (!PlayerCorpse)
-						c->Message(0, "Summoning of backup corpse failed. Please escalate this issue.");
+						c->Message(CC_Default, "Summoning of backup corpse failed. Please escalate this issue.");
 
 					return;
 				}
@@ -3685,7 +3712,7 @@ void command_corpse(Client *c, const Seperator *sep)
 		}
 		else
 		{
-			c->Message(0, "Insufficient status to summon backup corpses.");
+			c->Message(CC_Default, "Insufficient status to summon backup corpses.");
 		}
 	}
 	else
@@ -3693,7 +3720,7 @@ void command_corpse(Client *c, const Seperator *sep)
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 }
@@ -3703,9 +3730,9 @@ void command_fixmob(Client *c, const Seperator *sep){
 	const char* Usage = "Usage: #fixmob [race|gender|texture|helm|face|hair|haircolor|beard|beardcolor|heritage|tattoo|detail] [next|prev]";
 
 	if (!sep->arg[1])
-		c->Message(0, Usage);
+		c->Message(CC_Default, Usage);
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else
 	{
 
@@ -3866,14 +3893,14 @@ void command_fixmob(Client *c, const Seperator *sep){
 
 		if (ChangeType == nullptr)
 		{
-			c->Message(0, Usage);
+			c->Message(CC_Default, Usage);
 		}
 		else
 		{
 			target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 				EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-			c->Message(0, "%s=%i", ChangeType, ChangeSetting);
+			c->Message(CC_Default, "%s=%i", ChangeType, ChangeSetting);
 		}
 	}
 }
@@ -3891,21 +3918,21 @@ void command_gmspeed(Client *c, const Seperator *sep){
 		else
 		{
 			if (admin < access)
-				c->Message(0, "Your status level only supports self use of this command.");
+				c->Message(CC_Default, "Your status level only supports self use of this command.");
 
-			c->Message(0, "No valid target selected, using command on self.");
+			c->Message(CC_Default, "No valid target selected, using command on self.");
 			t = c;
 		}
 		database.SetGMSpeed(t->AccountID(), state ? 1 : 0);
-		c->Message(0, "Turning GMSpeed %s for %s (zone to take effect)", state ? "On" : "Off", t->GetName());
+		c->Message(CC_Default, "Turning GMSpeed %s for %s (zone to take effect)", state ? "On" : "Off", t->GetName());
 	}
 	else
-		c->Message(0, "Usage: #gmspeed [on/off]");
+		c->Message(CC_Default, "Usage: #gmspeed [on/off]");
 }
 
 void command_title(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #title [remove|text] [1 = Create row in title table] - remove or set title to 'text'");
+		c->Message(CC_Default, "Usage: #title [remove|text] [1 = Create row in title table] - remove or set title to 'text'");
 	else {
 		bool Save = (atoi(sep->arg[2]) == 1);
 
@@ -3955,7 +3982,7 @@ void command_title(Client *c, const Seperator *sep){
 
 void command_titlesuffix(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #titlesuffix [remove|text] [1 = create row in title table] - remove or set title suffix to 'text'");
+		c->Message(CC_Default, "Usage: #titlesuffix [remove|text] [1 = create row in title table] - remove or set title suffix to 'text'");
 	else {
 		bool Save = (atoi(sep->arg[2]) == 1);
 
@@ -4006,53 +4033,53 @@ void command_titlesuffix(Client *c, const Seperator *sep){
 
 void command_spellinfo(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #spellinfo [spell_id]");
+		c->Message(CC_Default, "Usage: #spellinfo [spell_id]");
 	else {
 		short int spell_id = atoi(sep->arg[1]);
 		const struct SPDat_Spell_Struct *s = &spells[spell_id];
-		c->Message(0, "Spell info for spell #%d:", spell_id);
-		c->Message(0, "  name: %s", s->name);
-		c->Message(0, "  player_1: %s", s->player_1);
-		c->Message(0, "  teleport_zone: %s", s->teleport_zone);
-		c->Message(0, "  you_cast: %s", s->you_cast);
-		c->Message(0, "  other_casts: %s", s->other_casts);
-		c->Message(0, "  cast_on_you: %s", s->cast_on_you);
-		c->Message(0, "  spell_fades: %s", s->spell_fades);
-		c->Message(0, "  range: %f", s->range);
-		c->Message(0, "  aoerange: %f", s->aoerange);
-		c->Message(0, "  pushback: %f", s->pushback);
-		c->Message(0, "  pushup: %f", s->pushup);
-		c->Message(0, "  cast_time: %d", s->cast_time);
-		c->Message(0, "  recovery_time: %d", s->recovery_time);
-		c->Message(0, "  recast_time: %d", s->recast_time);
-		c->Message(0, "  buffdurationformula: %d", s->buffdurationformula);
-		c->Message(0, "  buffduration: %d", s->buffduration);
-		c->Message(0, "  AEDuration: %d", s->AEDuration);
-		c->Message(0, "  mana: %d", s->mana);
-		c->Message(0, "  base[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->base[0], s->base[1], s->base[2], s->base[3], s->base[4], s->base[5], s->base[6], s->base[7], s->base[8], s->base[9], s->base[10], s->base[11]);
-		c->Message(0, "  base22[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->base2[0], s->base2[1], s->base2[2], s->base2[3], s->base2[4], s->base2[5], s->base2[6], s->base2[7], s->base2[8], s->base2[9], s->base2[10], s->base2[11]);
-		c->Message(0, "  max[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->max[0], s->max[1], s->max[2], s->max[3], s->max[4], s->max[5], s->max[6], s->max[7], s->max[8], s->max[9], s->max[10], s->max[11]);
-		c->Message(0, "  components[4]: %d, %d, %d, %d", s->components[0], s->components[1], s->components[2], s->components[3]);
-		c->Message(0, "  component_counts[4]: %d, %d, %d, %d", s->component_counts[0], s->component_counts[1], s->component_counts[2], s->component_counts[3]);
-		c->Message(0, "  NoexpendReagent[4]: %d, %d, %d, %d", s->NoexpendReagent[0], s->NoexpendReagent[1], s->NoexpendReagent[2], s->NoexpendReagent[3]);
-		c->Message(0, "  formula[12]: 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x", s->formula[0], s->formula[1], s->formula[2], s->formula[3], s->formula[4], s->formula[5], s->formula[6], s->formula[7], s->formula[8], s->formula[9], s->formula[10], s->formula[11]);
-		c->Message(0, "  goodEffect: %d", s->goodEffect);
-		c->Message(0, "  Activated: %d", s->Activated);
-		c->Message(0, "  resisttype: %d", s->resisttype);
-		c->Message(0, "  effectid[12]: 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x", s->effectid[0], s->effectid[1], s->effectid[2], s->effectid[3], s->effectid[4], s->effectid[5], s->effectid[6], s->effectid[7], s->effectid[8], s->effectid[9], s->effectid[10], s->effectid[11]);
-		c->Message(0, "  targettype: %d", s->targettype);
-		c->Message(0, "  basediff: %d", s->basediff);
-		c->Message(0, "  skill: %d", s->skill);
-		c->Message(0, "  zonetype: %d", s->zonetype);
-		c->Message(0, "  EnvironmentType: %d", s->EnvironmentType);
-		c->Message(0, "  TimeOfDay: %d", s->TimeOfDay);
-		c->Message(0, "  classes[15]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d",
+		c->Message(CC_Default, "Spell info for spell #%d:", spell_id);
+		c->Message(CC_Default, "  name: %s", s->name);
+		c->Message(CC_Default, "  player_1: %s", s->player_1);
+		c->Message(CC_Default, "  teleport_zone: %s", s->teleport_zone);
+		c->Message(CC_Default, "  you_cast: %s", s->you_cast);
+		c->Message(CC_Default, "  other_casts: %s", s->other_casts);
+		c->Message(CC_Default, "  cast_on_you: %s", s->cast_on_you);
+		c->Message(CC_Default, "  spell_fades: %s", s->spell_fades);
+		c->Message(CC_Default, "  range: %f", s->range);
+		c->Message(CC_Default, "  aoerange: %f", s->aoerange);
+		c->Message(CC_Default, "  pushback: %f", s->pushback);
+		c->Message(CC_Default, "  pushup: %f", s->pushup);
+		c->Message(CC_Default, "  cast_time: %d", s->cast_time);
+		c->Message(CC_Default, "  recovery_time: %d", s->recovery_time);
+		c->Message(CC_Default, "  recast_time: %d", s->recast_time);
+		c->Message(CC_Default, "  buffdurationformula: %d", s->buffdurationformula);
+		c->Message(CC_Default, "  buffduration: %d", s->buffduration);
+		c->Message(CC_Default, "  AEDuration: %d", s->AEDuration);
+		c->Message(CC_Default, "  mana: %d", s->mana);
+		c->Message(CC_Default, "  base[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->base[0], s->base[1], s->base[2], s->base[3], s->base[4], s->base[5], s->base[6], s->base[7], s->base[8], s->base[9], s->base[10], s->base[11]);
+		c->Message(CC_Default, "  base22[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->base2[0], s->base2[1], s->base2[2], s->base2[3], s->base2[4], s->base2[5], s->base2[6], s->base2[7], s->base2[8], s->base2[9], s->base2[10], s->base2[11]);
+		c->Message(CC_Default, "  max[12]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", s->max[0], s->max[1], s->max[2], s->max[3], s->max[4], s->max[5], s->max[6], s->max[7], s->max[8], s->max[9], s->max[10], s->max[11]);
+		c->Message(CC_Default, "  components[4]: %d, %d, %d, %d", s->components[0], s->components[1], s->components[2], s->components[3]);
+		c->Message(CC_Default, "  component_counts[4]: %d, %d, %d, %d", s->component_counts[0], s->component_counts[1], s->component_counts[2], s->component_counts[3]);
+		c->Message(CC_Default, "  NoexpendReagent[4]: %d, %d, %d, %d", s->NoexpendReagent[0], s->NoexpendReagent[1], s->NoexpendReagent[2], s->NoexpendReagent[3]);
+		c->Message(CC_Default, "  formula[12]: 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x", s->formula[0], s->formula[1], s->formula[2], s->formula[3], s->formula[4], s->formula[5], s->formula[6], s->formula[7], s->formula[8], s->formula[9], s->formula[10], s->formula[11]);
+		c->Message(CC_Default, "  goodEffect: %d", s->goodEffect);
+		c->Message(CC_Default, "  Activated: %d", s->Activated);
+		c->Message(CC_Default, "  resisttype: %d", s->resisttype);
+		c->Message(CC_Default, "  effectid[12]: 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x, 0x%02x", s->effectid[0], s->effectid[1], s->effectid[2], s->effectid[3], s->effectid[4], s->effectid[5], s->effectid[6], s->effectid[7], s->effectid[8], s->effectid[9], s->effectid[10], s->effectid[11]);
+		c->Message(CC_Default, "  targettype: %d", s->targettype);
+		c->Message(CC_Default, "  basediff: %d", s->basediff);
+		c->Message(CC_Default, "  skill: %d", s->skill);
+		c->Message(CC_Default, "  zonetype: %d", s->zonetype);
+		c->Message(CC_Default, "  EnvironmentType: %d", s->EnvironmentType);
+		c->Message(CC_Default, "  TimeOfDay: %d", s->TimeOfDay);
+		c->Message(CC_Default, "  classes[15]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d",
 			s->classes[0], s->classes[1], s->classes[2], s->classes[3], s->classes[4],
 			s->classes[5], s->classes[6], s->classes[7], s->classes[8], s->classes[9],
 			s->classes[10], s->classes[11], s->classes[12], s->classes[13], s->classes[14]);
-		c->Message(0, "  CastingAnim: %d", s->CastingAnim);
-		c->Message(0, "  SpellAffectIndex: %d", s->SpellAffectIndex);
-		c->Message(0, " RecourseLink: %d", s->RecourseLink);
+		c->Message(CC_Default, "  CastingAnim: %d", s->CastingAnim);
+		c->Message(CC_Default, "  SpellAffectIndex: %d", s->SpellAffectIndex);
+		c->Message(CC_Default, " RecourseLink: %d", s->RecourseLink);
 	}
 }
 
@@ -4066,7 +4093,7 @@ void command_lastname(Client *c, const Seperator *sep){
 	if (strlen(sep->arg[1]) <= 70)
 		t->ChangeLastName(sep->arg[1]);
 	else
-		c->Message(0, "Usage: #lastname <lastname> where <lastname> is less than 70 chars long");
+		c->Message(CC_Default, "Usage: #lastname <lastname> where <lastname> is less than 70 chars long");
 }
 
 void command_memspell(Client *c, const Seperator *sep){
@@ -4075,7 +4102,7 @@ void command_memspell(Client *c, const Seperator *sep){
 
 	if (!(sep->IsNumber(1) && sep->IsNumber(2)))
 	{
-		c->Message(0, "Usage: #MemSpell slotid spellid");
+		c->Message(CC_Default, "Usage: #MemSpell slotid spellid");
 	}
 	else
 	{
@@ -4083,40 +4110,60 @@ void command_memspell(Client *c, const Seperator *sep){
 		spell_id = atoi(sep->arg[2]);
 		if (slot > MAX_PP_MEMSPELL || spell_id >= SPDAT_RECORDS)
 		{
-			c->Message(0, "Error: #MemSpell: Arguement out of range");
+			c->Message(CC_Default, "Error: #MemSpell: Arguement out of range");
 		}
 		else
 		{
 			c->MemSpell(spell_id, slot);
-			c->Message(0, "Spell slot changed, have fun!");
+			c->Message(CC_Default, "Spell slot changed, have fun!");
 		}
 	}
 }
 
 void command_save(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->Message(0, "Error: no target");
+		c->Message(CC_Default, "Error: no target");
 	else if (c->GetTarget()->IsClient()) {
 		if (c->GetTarget()->CastToClient()->Save(2))
-			c->Message(0, "%s successfully saved.", c->GetTarget()->GetName());
+			c->Message(CC_Default, "%s successfully saved.", c->GetTarget()->GetName());
 		else
-			c->Message(0, "Manual save for %s failed.", c->GetTarget()->GetName());
+			c->Message(CC_Default, "Manual save for %s failed.", c->GetTarget()->GetName());
 	}
 	else if (c->GetTarget()->IsPlayerCorpse()) {
 		if (c->GetTarget()->CastToMob()->Save())
-			c->Message(0, "%s successfully saved. (dbid=%u)", c->GetTarget()->GetName(), c->GetTarget()->CastToCorpse()->GetCorpseDBID());
+			c->Message(CC_Default, "%s successfully saved. (dbid=%u)", c->GetTarget()->GetName(), c->GetTarget()->CastToCorpse()->GetCorpseDBID());
 		else
-			c->Message(0, "Manual save for %s failed.", c->GetTarget()->GetName());
+			c->Message(CC_Default, "Manual save for %s failed.", c->GetTarget()->GetName());
 	}
 	else
-		c->Message(0, "Error: target not a Client/PlayerCorpse");
+		c->Message(CC_Default, "Error: target not a Client/PlayerCorpse");
 }
 
-void command_showstats(Client *c, const Seperator *sep){
-	if (c->GetTarget() != 0)
+void command_showstats(Client *c, const Seperator *sep)
+{
+	if (sep->IsNumber(1) && atoi(sep->arg[1]) == 1) 
+	{
+		if (c->GetTarget() != 0 && c->GetTarget()->IsClient())
+		{
+			c->GetTarget()->CastToClient()->SendQuickStats(c);
+		}
+		else if(c->GetTarget() != 0 && c->GetTarget()->IsNPC())
+		{
+			c->GetTarget()->CastToNPC()->ShowQuickStats(c);
+		}
+		else
+		{
+			c->SendQuickStats(c);
+		}
+	}
+	else if (c->GetTarget() != 0)
+	{
 		c->GetTarget()->ShowStats(c);
+	}
 	else
+	{
 		c->ShowStats(c);
+	}
 }
 
 void command_mystats(Client *c, const Seperator *sep){
@@ -4139,7 +4186,7 @@ void command_bind(Client *c, const Seperator *sep){
 		if (c->GetTarget()->IsClient())
 			c->GetTarget()->CastToClient()->SetBindPoint();
 		else
-			c->Message(0, "Error: target not a Player");
+			c->Message(CC_Default, "Error: target not a Player");
 	}
 	else
 		c->SetBindPoint();
@@ -4147,16 +4194,16 @@ void command_bind(Client *c, const Seperator *sep){
 
 void command_depop(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0 || !(c->GetTarget()->IsNPC() || c->GetTarget()->IsNPCCorpse()))
-		c->Message(0, "You must have a NPC target for this command. (maybe you meant #depopzone?)");
+		c->Message(CC_Default, "You must have a NPC target for this command. (maybe you meant #depopzone?)");
 	else {
-		c->Message(0, "Depoping '%s'.", c->GetTarget()->GetName());
+		c->Message(CC_Default, "Depoping '%s'.", c->GetTarget()->GetName());
 		c->GetTarget()->Depop();
 	}
 }
 
 void command_depopzone(Client *c, const Seperator *sep){
 	zone->Depop();
-	c->Message(0, "Zone depoped.");
+	c->Message(CC_Default, "Zone depoped.");
 }
 
 void command_repop(Client *c, const Seperator *sep)
@@ -4174,16 +4221,16 @@ void command_repop(Client *c, const Seperator *sep)
 			auto results = database.QueryDatabase(query);
 			iterator.Advance();
 		}
-		c->Message(0, "Zone depop: Force resetting spawn timers.");
+		c->Message(CC_Default, "Zone depop: Force resetting spawn timers.");
 	}
 
 	if (!sep->IsNumber(timearg)) {
-		c->Message(0, "Zone depoped. Repoping now.");
+		c->Message(CC_Default, "Zone depoped. Repoping now.");
 		zone->Repop();
 		return;
 	}
 
-	c->Message(0, "Zone depoped. Repop in %i seconds", atoi(sep->arg[timearg]));
+	c->Message(CC_Default, "Zone depoped. Repop in %i seconds", atoi(sep->arg[timearg]));
 	zone->Repop(atoi(sep->arg[timearg]) * 1000);
 }
 
@@ -4215,7 +4262,7 @@ void command_spawnstatus(Client *c, const Seperator *sep){
 	}
 	else if (strcmp(sep->arg[1], "help") == 0)
 	{
-		c->Message(0, "Usage: #spawnstatus <[a]ll | [d]isabled | [e]nabled | {Spawn2 ID}>");
+		c->Message(CC_Default, "Usage: #spawnstatus <[a]ll | [d]isabled | [e]nabled | {Spawn2 ID}>");
 	}
 	else {
 		zone->SpawnStatus(c);
@@ -4224,15 +4271,15 @@ void command_spawnstatus(Client *c, const Seperator *sep){
 
 void command_nukebuffs(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->BuffFadeAll();
+		c->BuffFadeAll(false, true);
 	else
-		c->GetTarget()->BuffFadeAll();
+		c->GetTarget()->BuffFadeAll(false, true);
 }
 
 void command_zuwcoords(Client *c, const Seperator *sep){
 	// modifys and resends zhdr packet
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #zuwcoords <under world coords>");
+		c->Message(CC_Default, "Usage: #zuwcoords <under world coords>");
 	else {
 		zone->newzone_data.underworld = atof(sep->arg[1]);
 		//float newdata = atof(sep->arg[1]);
@@ -4246,7 +4293,7 @@ void command_zuwcoords(Client *c, const Seperator *sep){
 
 void command_zunderworld(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #zunderworld <zcoord>");
+		c->Message(CC_Default, "Usage: #zunderworld <zcoord>");
 	else {
 		zone->newzone_data.underworld = atof(sep->arg[1]);
 	}
@@ -4255,7 +4302,7 @@ void command_zunderworld(Client *c, const Seperator *sep){
 void command_zsafecoords(Client *c, const Seperator *sep){
 	// modifys and resends zhdr packet
 	if (sep->arg[3][0] == 0)
-		c->Message(0, "Usage: #zsafecoords <safe x> <safe y> <safe z>");
+		c->Message(CC_Default, "Usage: #zsafecoords <safe x> <safe y> <safe z>");
 	else {
 		zone->newzone_data.safe_x = atof(sep->arg[1]);
 		zone->newzone_data.safe_y = atof(sep->arg[2]);
@@ -4278,14 +4325,14 @@ void command_freeze(Client *c, const Seperator *sep){
 	if (c->GetTarget() != 0)
 		c->GetTarget()->SendAppearancePacket(AT_Anim, ANIM_FREEZE);
 	else
-		c->Message(0, "ERROR: Freeze requires a target.");
+		c->Message(CC_Default, "ERROR: Freeze requires a target.");
 }
 
 void command_unfreeze(Client *c, const Seperator *sep){
 	if (c->GetTarget() != 0)
 		c->GetTarget()->SendAppearancePacket(AT_Anim, ANIM_STAND);
 	else
-		c->Message(0, "ERROR: Unfreeze requires a target.");
+		c->Message(CC_Default, "ERROR: Unfreeze requires a target.");
 }
 
 void command_pvp(Client *c, const Seperator *sep){
@@ -4297,10 +4344,10 @@ void command_pvp(Client *c, const Seperator *sep){
 
 	if (sep->arg[1][0] != 0) {
 		t->SetPVP(state);
-		c->Message(0, "%s now follows the ways of %s.", t->GetName(), state ? "discord" : "order");
+		c->Message(CC_Default, "%s now follows the ways of %s.", t->GetName(), state ? "discord" : "order");
 	}
 	else
-		c->Message(0, "Usage: #pvp [on/off]");
+		c->Message(CC_Default, "Usage: #pvp [on/off]");
 }
 
 void command_setxp(Client *c, const Seperator *sep){
@@ -4317,7 +4364,7 @@ void command_setxp(Client *c, const Seperator *sep){
 		int input = atoi(sep->arg[1]);
 
 		if (input > 9999999)
-			c->Message(0, "Error: Value too high.");
+			c->Message(CC_Default, "Error: Value too high.");
 		else if(input == -1)
 		{
 			uint32 newxp = currentXP - exploss;
@@ -4345,23 +4392,23 @@ void command_setxp(Client *c, const Seperator *sep){
 		}
 	}
 	else
-		c->Message(0, "Usage: #setxp number or percentage. If 0, will 'rez' a single death. If -1 will subtract a single death.");
+		c->Message(CC_Default, "Usage: #setxp number or percentage. If 0, will 'rez' a single death. If -1 will subtract a single death.");
 }
 
 void command_name(Client *c, const Seperator *sep){
 	Client *target;
 
 	if ((strlen(sep->arg[1]) == 0) || (!(c->GetTarget() && c->GetTarget()->IsClient())))
-		c->Message(0, "Usage: #name newname (requires player target)");
+		c->Message(CC_Default, "Usage: #name newname (requires player target)");
 	else
 	{
 		target = c->GetTarget()->CastToClient();
 		char *oldname = strdup(target->GetName());
 		if (target->ChangeFirstName(sep->arg[1], c->GetName()))
 		{
-			c->Message(0, "Successfully renamed %s to %s", oldname, sep->arg[1]);
+			c->Message(CC_Default, "Successfully renamed %s to %s", oldname, sep->arg[1]);
 			// until we get the name packet working right this will work
-			c->Message(0, "Sending player to char select.");
+			c->Message(CC_Default, "Sending player to char select.");
 			target->Kick();
 		}
 		else
@@ -4372,16 +4419,16 @@ void command_name(Client *c, const Seperator *sep){
 
 void command_npcspecialattk(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0 || c->GetTarget()->IsClient() || strlen(sep->arg[1]) <= 0 || strlen(sep->arg[2]) <= 0)
-		c->Message(0, "Usage: #npcspecialattk *flagchar* *permtag* (Flags are E(nrage) F(lurry) R(ampage) S(ummon), permtag is 1 = True, 0 = False).");
+		c->Message(CC_Default, "Usage: #npcspecialattk *flagchar* *permtag* (Flags are E(nrage) F(lurry) R(ampage) S(ummon), permtag is 1 = True, 0 = False).");
 	else {
 		c->GetTarget()->CastToNPC()->NPCSpecialAttacks(sep->arg[1], atoi(sep->arg[2]));
-		c->Message(0, "NPC Special Attack set.");
+		c->Message(CC_Default, "NPC Special Attack set.");
 	}
 }
 
 void command_kill(Client *c, const Seperator *sep){
 	if (!c->GetTarget()) {
-		c->Message(0, "Error: #Kill: No target.");
+		c->Message(CC_Default, "Error: #Kill: No target.");
 	}
 	else
 		if (!c->GetTarget()->IsClient() || c->GetTarget()->CastToClient()->Admin() <= c->Admin())
@@ -4397,36 +4444,36 @@ void command_haste(Client *c, const Seperator *sep){
 		c->SetExtraHaste(Haste);
 		// SetAttackTimer must be called to make this take effect, so player needs to change
 		// the primary weapon.
-		c->Message(0, "Haste set to %d%% - Need to re-equip primary weapon before it takes effect", Haste);
+		c->Message(CC_Default, "Haste set to %d%% - Need to re-equip primary weapon before it takes effect", Haste);
 	}
 	else
-		c->Message(0, "Usage: #haste [percentage]");
+		c->Message(CC_Default, "Usage: #haste [percentage]");
 }
 
 void command_damage(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->Message(0, "Error: #Damage: No Target.");
+		c->Message(CC_Default, "Error: #Damage: No Target.");
 	else if (!sep->IsNumber(1)) {
-		c->Message(0, "Usage: #damage x");
+		c->Message(CC_Default, "Usage: #damage x");
 	}
 	else {
 		int32 nkdmg = atoi(sep->arg[1]);
 		if (nkdmg > 2100000000)
-			c->Message(0, "Enter a value less then 2,100,000,000.");
+			c->Message(CC_Default, "Enter a value less then 2,100,000,000.");
 		else
 			c->GetTarget()->Damage(c, nkdmg, SPELL_UNKNOWN, SkillHandtoHand, false);
 	}
 }
 
 void command_zonespawn(Client *c, const Seperator *sep){
-	c->Message(0, "This command is not yet implemented.");
+	c->Message(CC_Default, "This command is not yet implemented.");
 	return;
 
 	/* this was kept from client.cpp verbatim (it was commented out) */
 	//	if (target && target->IsNPC()) {
-	//		Message(0, "Inside main if.");
+	//		Message(CC_Default, "Inside main if.");
 	//		if (strcasecmp(sep->arg[1], "add")==0) {
-	//			Message(0, "Inside add if.");
+	//			Message(CC_Default, "Inside add if.");
 	//			database.DBSpawn(1, StaticGetZoneName(this->GetPP().current_zone), target->CastToNPC());
 	//		}
 	//		else if (strcasecmp(sep->arg[1], "update")==0) {
@@ -4438,21 +4485,21 @@ void command_zonespawn(Client *c, const Seperator *sep){
 	//			}
 	//			else {
 	//				if (database.DBSpawn(3, StaticGetZoneName(this->GetPP().current_zone), target->CastToNPC())) {
-	//					Message(0, "#zonespawn: %s removed successfully!", target->GetName());
+	//					Message(CC_Default, "#zonespawn: %s removed successfully!", target->GetName());
 	//					target->CastToNPC()->Death(target, target->GetHP());
 	//				}
 	//			}
 	//		}
 	//		else
-	//			Message(0, "Error: #dbspawn: Invalid command. (Note: EDIT and REMOVE are NOT in yet.)");
+	//			Message(CC_Default, "Error: #dbspawn: Invalid command. (Note: EDIT and REMOVE are NOT in yet.)");
 	//		if (target->CastToNPC()->GetNPCTypeID() > 0) {
-	//			Message(0, "Spawn is type %i", target->CastToNPC()->GetNPCTypeID());
+	//			Message(CC_Default, "Spawn is type %i", target->CastToNPC()->GetNPCTypeID());
 	//		}
 	//	}
 	//	else if(!target || !target->IsNPC())
-	//		Message(0, "Error: #zonespawn: You must have a NPC targeted!");
+	//		Message(CC_Default, "Error: #zonespawn: You must have a NPC targeted!");
 	//	else
-	//		Message(0, "Usage: #zonespawn [add|edit|remove|remove all]");
+	//		Message(CC_Default, "Usage: #zonespawn [add|edit|remove|remove all]");
 }
 
 void command_npcspawn(Client *c, const Seperator *sep){
@@ -4467,7 +4514,7 @@ void command_npcspawn(Client *c, const Seperator *sep){
 				extra = 1;
 			}
 			database.NPCSpawnDB(0, zone->GetShortName(), zone->GetInstanceVersion(), c, target->CastToNPC(), extra);
-			c->Message(0, "%s created successfully!", target->GetName());
+			c->Message(CC_Default, "%s created successfully!", target->GetName());
 		}
 		else if (strcasecmp(sep->arg[1], "add") == 0) {
 			if (atoi(sep->arg[2]))
@@ -4480,43 +4527,43 @@ void command_npcspawn(Client *c, const Seperator *sep){
 				extra = 1200;
 			}
 			database.NPCSpawnDB(1, zone->GetShortName(), zone->GetInstanceVersion(), c, target->CastToNPC(), extra);
-			c->Message(0, "%s added successfully!", target->GetName());
+			c->Message(CC_Default, "%s added successfully!", target->GetName());
 		}
 		else if (strcasecmp(sep->arg[1], "update") == 0) {
 			database.NPCSpawnDB(2, zone->GetShortName(), zone->GetInstanceVersion(), c, target->CastToNPC());
-			c->Message(0, "%s updated!", target->GetName());
+			c->Message(CC_Default, "%s updated!", target->GetName());
 		}
 		else if (strcasecmp(sep->arg[1], "remove") == 0) {
 			database.NPCSpawnDB(3, zone->GetShortName(), zone->GetInstanceVersion(), c, target->CastToNPC());
-			c->Message(0, "%s removed successfully from database!", target->GetName());
+			c->Message(CC_Default, "%s removed successfully from database!", target->GetName());
 			target->Depop(false);
 		}
 		else if (strcasecmp(sep->arg[1], "delete") == 0) {
 			database.NPCSpawnDB(4, zone->GetShortName(), zone->GetInstanceVersion(), c, target->CastToNPC());
-			c->Message(0, "%s deleted from database!", target->GetName());
+			c->Message(CC_Default, "%s deleted from database!", target->GetName());
 			target->Depop(false);
 		}
 		else {
-			c->Message(0, "Error: #npcspawn: Invalid command.");
-			c->Message(0, "Usage: #npcspawn [create|add|update|remove|delete]");
+			c->Message(CC_Default, "Error: #npcspawn: Invalid command.");
+			c->Message(CC_Default, "Usage: #npcspawn [create|add|update|remove|delete]");
 		}
 	}
 	else
-		c->Message(0, "Error: #npcspawn: You must have a NPC targeted!");
+		c->Message(CC_Default, "Error: #npcspawn: You must have a NPC targeted!");
 }
 
 void command_spawnfix(Client *c, const Seperator *sep)
 {
 	Mob *targetMob = c->GetTarget();
 	if (!targetMob || !targetMob->IsNPC()) {
-		c->Message(0, "Error: #spawnfix: Need an NPC target.");
+		c->Message(CC_Default, "Error: #spawnfix: Need an NPC target.");
 		return;
 	}
 
 	Spawn2* s2 = targetMob->CastToNPC()->respawn2;
 
 	if (!s2) {
-		c->Message(0, "#spawnfix FAILED -- cannot determine which spawn entry in the database this mob came from.");
+		c->Message(CC_Default, "#spawnfix FAILED -- cannot determine which spawn entry in the database this mob came from.");
 		return;
 	}
 
@@ -4529,7 +4576,7 @@ void command_spawnfix(Client *c, const Seperator *sep)
 		return;
 	}
 
-    c->Message(0, "Updating coordinates successful.");
+    c->Message(CC_Default, "Updating coordinates successful.");
     targetMob->Depop(false);
 }
 
@@ -4542,7 +4589,7 @@ void command_loc(Client *c, const Seperator *sep)
 	if(c->GetGM())
 	{
 		glm::vec3 newloc(t->GetX(), t->GetY(), t->GetZ());
-		float newz;
+		float newz = 0;
 		if(zone->zonemap)
 		{
 			newz = zone->zonemap->FindBestZ(newloc, nullptr);
@@ -4552,6 +4599,19 @@ void command_loc(Client *c, const Seperator *sep)
 
 		c->Message(CC_Default, "Bestz is: %1.2f  Calculatedz is: %1.2f Clientz is: %1.2f", newz, newloc.z, t->GetEQZ());
 	}
+
+	if(t->CanCastBindAffinity() && (zone->CanBind() || zone->IsCity() || zone->CanBindOthers()))
+	{
+		c->Message(CC_Default, "%s can bind themself here.", t->GetName());
+	}
+	else if(!t->CanCastBindAffinity() && (zone->IsCity() || zone->IsBindArea(t->GetX(), t->GetY())))
+	{
+		c->Message(CC_Default, "%s can be bound here.", t->GetName());
+	}
+	else
+	{
+		c->Message(CC_Default, "%s cannot bind here.", t->GetName());
+	}
 }
 
 void command_goto(Client *c, const Seperator *sep)
@@ -4560,7 +4620,7 @@ void command_goto(Client *c, const Seperator *sep)
 	if (sep->arg[1][0] == '\0' && c->GetTarget())
 		c->MovePC(zone->GetZoneID(), zone->GetInstanceID(), c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ(), c->GetTarget()->GetHeading(), 0, SummonPC);
 	else if (!(sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3)))
-		c->Message(0, "Usage: #goto [x y z]");
+		c->Message(CC_Default, "Usage: #goto [x y z]");
 	else
 		c->MovePC(zone->GetZoneID(), zone->GetInstanceID(), atof(sep->arg[1]), atof(sep->arg[2]), atof(sep->arg[3]), 0.0f, 0, SummonPC);
 }
@@ -4572,30 +4632,30 @@ void command_iteminfo(Client *c, const Seperator *sep){
 		c->Message(CC_Red, "Error: You need an item on your cursor for this command");
 	else {
 		const Item_Struct* item = inst->GetItem();
-		c->Message(0, "ID: %i Name: %s", item->ID, item->Name);
-		c->Message(0, "  Lore: %s  ND: %i  NS: %i  Type: %i", (item->LoreFlag) ? "true" : "false", item->NoDrop, item->NoRent, item->ItemClass);
-		c->Message(0, "  IDF: %s  Size: %i  Weight: %i  icon_id: %i  Price: %i", item->IDFile, item->Size, item->Weight, item->Icon, item->Price);
+		c->Message(CC_Default, "ID: %i Name: %s", item->ID, item->Name);
+		c->Message(CC_Default, "  Lore: %s  ND: %i  NS: %i  Type: %i", item->Lore, item->NoDrop, item->NoRent, item->ItemClass);
+		c->Message(CC_Default, "  IDF: %s  Size: %i  Weight: %i  icon_id: %i  Price: %i", item->IDFile, item->Size, item->Weight, item->Icon, item->Price);
 		if (c->Admin() >= 200)
-			c->Message(0, "MinStatus: %i", item->MinStatus);
+			c->Message(CC_Default, "MinStatus: %i", item->MinStatus);
 		if (item->ItemClass == ItemClassBook)
-			c->Message(0, "  This item is a Book: %s", item->Filename);
+			c->Message(CC_Default, "  This item is a Book: %s", item->Filename);
 		else if (item->ItemClass == ItemClassContainer)
-			c->Message(0, "  This item is a container with %i slots", item->BagSlots);
+			c->Message(CC_Default, "  This item is a container with %i slots", item->BagSlots);
 		else {
-			c->Message(0, "  equipableSlots: %u equipable Classes: %u", item->Slots, item->Classes);
-			c->Message(0, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Magic, item->Click.Effect, item->Click.Level, item->MaxCharges, inst->GetCharges());
-			c->Message(0, "  EffectType: 0x%02x  CastTime: %.2f", (uint8)item->Click.Type, (double)item->CastTime / 1000);
-			c->Message(0, "  Material: 0x%02x  Color: 0x%08x  Skill: %i", item->Material, item->Color, item->ItemType);
-			c->Message(0, " Required level: %i Required skill: %i Recommended level:%i", item->ReqLevel, item->RecSkill, item->RecLevel);
-			c->Message(0, " Skill mod: %i percent: %i", item->SkillModType, item->SkillModValue);
-			c->Message(0, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->BaneDmgRace, item->BaneDmgBody, item->BaneDmgAmt);
+			c->Message(CC_Default, "  equipableSlots: %u equipable Classes: %u", item->Slots, item->Classes);
+			c->Message(CC_Default, "  Magic: %i  SpellID: %i  Proc Level: %i DBCharges: %i  CurCharges: %i", item->Magic, item->Click.Effect, item->Click.Level, item->MaxCharges, inst->GetCharges());
+			c->Message(CC_Default, "  EffectType: 0x%02x  CastTime: %.2f", (uint8)item->Click.Type, (double)item->CastTime / 1000);
+			c->Message(CC_Default, "  Material: 0x%02x  Color: 0x%08x  Skill: %i", item->Material, item->Color, item->ItemType);
+			c->Message(CC_Default, " Required level: %i Required skill: %i Recommended level:%i", item->ReqLevel, item->RecSkill, item->RecLevel);
+			c->Message(CC_Default, " Skill mod: %i percent: %i", item->SkillModType, item->SkillModValue);
+			c->Message(CC_Default, " BaneRace: %i BaneBody: %i BaneDMG: %i", item->BaneDmgRace, item->BaneDmgBody, item->BaneDmgAmt);
 		}
 	}
 }
 
 void command_uptime(Client *c, const Seperator *sep){
 	if (!worldserver.Connected())
-		c->Message(0, "Error: World server disconnected");
+		c->Message(CC_Default, "Error: World server disconnected");
 	else
 	{
 		ServerPacket* pack = new ServerPacket(ServerOP_Uptime, sizeof(ServerUptime_Struct));
@@ -4611,26 +4671,26 @@ void command_uptime(Client *c, const Seperator *sep){
 void command_flag(Client *c, const Seperator *sep){
 	if (sep->arg[2][0] == 0) {
 		c->UpdateAdmin();
-		c->Message(0, "Refreshed your admin flag from DB.");
+		c->Message(CC_Default, "Refreshed your admin flag from DB.");
 	}
 	else if (!sep->IsNumber(1) || atoi(sep->arg[1]) < -2 || atoi(sep->arg[1]) > 255 || strlen(sep->arg[2]) == 0)
-		c->Message(0, "Usage: #flag [status] [acctname]");
+		c->Message(CC_Default, "Usage: #flag [status] [acctname]");
 
 	else if (c->Admin() < commandChangeFlags) {
 		//this check makes banning players by less than this level
 		//impossible, but i'll leave it in anyways
-		c->Message(0, "You may only refresh your own flag, doing so now.");
+		c->Message(CC_Default, "You may only refresh your own flag, doing so now.");
 		c->UpdateAdmin();
 	}
 	else {
 		if (atoi(sep->arg[1]) > c->Admin())
-			c->Message(0, "You cannot set people's status to higher than your own");
+			c->Message(CC_Default, "You cannot set people's status to higher than your own");
 		else if (atoi(sep->arg[1]) < 0 && c->Admin() < commandBanPlayers)
-			c->Message(0, "You have too low of status to suspend/ban");
+			c->Message(CC_Default, "You have too low of status to suspend/ban");
 		else if (!database.SetAccountStatus(sep->argplus[2], atoi(sep->arg[1])))
-			c->Message(0, "Unable to set GM Flag.");
+			c->Message(CC_Default, "Unable to set GM Flag.");
 		else {
-			c->Message(0, "Set GM Flag on account.");
+			c->Message(CC_Default, "Set GM Flag on account.");
 			ServerPacket* pack = new ServerPacket(ServerOP_FlagUpdate, 6);
 			*((uint32*)pack->pBuffer) = database.GetAccountIDByName(sep->argplus[2]);
 			*((int16*)&pack->pBuffer[4]) = atoi(sep->arg[1]);
@@ -4674,27 +4734,27 @@ void command_guild(Client *c, const Seperator *sep){
 
 	if (strcasecmp(sep->arg[1], "help") == 0) {
 		/*
-		c->Message(0, "Guild commands:");
-		c->Message(0, "  #guild status [name] - shows guild and rank of target");
-		c->Message(0, "  #guild info guildnum - shows info/current structure");
-		c->Message(0, "  #guild invite [charname]");
-		c->Message(0, "  #guild remove [charname]");
-		c->Message(0, "  #guild promote rank [charname]");
-		c->Message(0, "  #guild demote rank [charname]");
-		c->Message(0, "  /guildmotd [newmotd] (use 'none' to clear)");
-		c->Message(0, "  #guild edit rank title newtitle");
-		c->Message(0, "  #guild edit rank permission 0/1");
-		c->Message(0, "  #guild leader newleader (they must be rank0)");
+		c->Message(CC_Default, "Guild commands:");
+		c->Message(CC_Default, "  #guild status [name] - shows guild and rank of target");
+		c->Message(CC_Default, "  #guild info guildnum - shows info/current structure");
+		c->Message(CC_Default, "  #guild invite [charname]");
+		c->Message(CC_Default, "  #guild remove [charname]");
+		c->Message(CC_Default, "  #guild promote rank [charname]");
+		c->Message(CC_Default, "  #guild demote rank [charname]");
+		c->Message(CC_Default, "  /guildmotd [newmotd] (use 'none' to clear)");
+		c->Message(CC_Default, "  #guild edit rank title newtitle");
+		c->Message(CC_Default, "  #guild edit rank permission 0/1");
+		c->Message(CC_Default, "  #guild leader newleader (they must be rank0)");
 		*/
-		c->Message(0, "GM Guild commands:");
-		c->Message(0, "  #guild list - lists all guilds on the server");
-		c->Message(0, "  #guild create {guildleader charname or CharID} guildname");
-		c->Message(0, "  #guild delete guildID");
-		c->Message(0, "  #guild rename guildID newname");
-		c->Message(0, "  #guild set charname guildID    (0=no guild)");
-		c->Message(0, "  #guild setrank charname rank");
-		c->Message(0, "  #guild setleader guildID {guildleader charname or CharID}");
-		//c->Message(0, "  #guild setdoor guildEQID");
+		c->Message(CC_Default, "GM Guild commands:");
+		c->Message(CC_Default, "  #guild list - lists all guilds on the server");
+		c->Message(CC_Default, "  #guild create {guildleader charname or CharID} guildname");
+		c->Message(CC_Default, "  #guild delete guildID");
+		c->Message(CC_Default, "  #guild rename guildID newname");
+		c->Message(CC_Default, "  #guild set charname guildID    (0=no guild)");
+		c->Message(CC_Default, "  #guild setrank charname rank");
+		c->Message(CC_Default, "  #guild setleader guildID {guildleader charname or CharID}");
+		//c->Message(CC_Default, "  #guild setdoor guildEQID");
 	}
 	else if (strcasecmp(sep->arg[1], "status") == 0 || strcasecmp(sep->arg[1], "stat") == 0) {
 		Client* client = 0;
@@ -4703,24 +4763,24 @@ void command_guild(Client *c, const Seperator *sep){
 		else if (target != 0 && target->IsClient())
 			client = target->CastToClient();
 		if (client == 0)
-			c->Message(0, "You must target someone or specify a character name");
+			c->Message(CC_Default, "You must target someone or specify a character name");
 		else if ((client->Admin() >= minStatusToEditOtherGuilds && admin < minStatusToEditOtherGuilds) && client->GuildID() != c->GuildID()) // no peeping for GMs, make sure tell message stays the same
-			c->Message(0, "You must target someone or specify a character name.");
+			c->Message(CC_Default, "You must target someone or specify a character name.");
 		else {
 			if (client->IsInAGuild())
-				c->Message(0, "%s is not in a guild.", client->GetName());
+				c->Message(CC_Default, "%s is not in a guild.", client->GetName());
 			else if (guild_mgr.IsGuildLeader(client->GuildID(), client->CharacterID()))
-				c->Message(0, "%s is the leader of <%s> rank: %s", client->GetName(), guild_mgr.GetGuildName(client->GuildID()), guild_mgr.GetRankName(client->GuildID(), client->GuildRank()));
+				c->Message(CC_Default, "%s is the leader of <%s> rank: %s", client->GetName(), guild_mgr.GetGuildName(client->GuildID()), guild_mgr.GetRankName(client->GuildID(), client->GuildRank()));
 			else
-				c->Message(0, "%s is a member of <%s> rank: %s", client->GetName(), guild_mgr.GetGuildName(client->GuildID()), guild_mgr.GetRankName(client->GuildID(), client->GuildRank()));
+				c->Message(CC_Default, "%s is a member of <%s> rank: %s", client->GetName(), guild_mgr.GetGuildName(client->GuildID()), guild_mgr.GetRankName(client->GuildID(), client->GuildRank()));
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "info") == 0) {
 		if (sep->arg[2][0] == 0 && c->IsInAGuild()) {
 			if (admin >= minStatusToEditOtherGuilds)
-				c->Message(0, "Usage: #guildinfo guild_id");
+				c->Message(CC_Default, "Usage: #guildinfo guild_id");
 			else
-				c->Message(0, "You're not in a guild");
+				c->Message(CC_Default, "You're not in a guild");
 		}
 		else {
 			uint32 tmp = GUILD_NONE;
@@ -4736,19 +4796,19 @@ void command_guild(Client *c, const Seperator *sep){
 	/*
 	else if (strcasecmp(sep->arg[1], "edit") == 0) {
 	if (c->GuildDBID() == 0)
-	c->Message(0, "You arent in a guild!");
+	c->Message(CC_Default, "You arent in a guild!");
 	else if (!sep->IsNumber(2))
-	c->Message(0, "Error: invalid rank #.");
+	c->Message(CC_Default, "Error: invalid rank #.");
 	else if (atoi(sep->arg[2]) < 0 || atoi(sep->arg[2]) > GUILD_MAX_RANK)
-	c->Message(0, "Error: invalid rank #.");
+	c->Message(CC_Default, "Error: invalid rank #.");
 	else if (!c->GuildRank() == 0)
-	c->Message(0, "You must be rank %s to use edit.", guilds[c->GuildEQID()].rank[0].rankname);
+	c->Message(CC_Default, "You must be rank %s to use edit.", guilds[c->GuildEQID()].rank[0].rankname);
 	else if (!worldserver.Connected())
-	c->Message(0, "Error: World server dirconnected");
+	c->Message(CC_Default, "Error: World server dirconnected");
 	else {
 	if (!helper_guild_edit(c, c->GuildDBID(), c->GuildEQID(), atoi(sep->arg[2]), sep->arg[3], sep->argplus[4])) {
-	c->Message(0, "  #guild edit rank title newtitle");
-	c->Message(0, "  #guild edit rank permission 0/1");
+	c->Message(CC_Default, "  #guild edit rank title newtitle");
+	c->Message(CC_Default, "  #guild edit rank permission 0/1");
 	}
 	else {
 	ServerPacket* pack = new ServerPacket(ServerOP_RefreshGuild, 5);
@@ -4761,20 +4821,20 @@ void command_guild(Client *c, const Seperator *sep){
 	}
 	else if (strcasecmp(sep->arg[1], "gmedit") == 0 && admin >= 100) {
 	if (!sep->IsNumber(2))
-	c->Message(0, "Error: invalid guilddbid.");
+	c->Message(CC_Default, "Error: invalid guilddbid.");
 	else if (!sep->IsNumber(3))
-	c->Message(0, "Error: invalid rank #.");
+	c->Message(CC_Default, "Error: invalid rank #.");
 	else if (atoi(sep->arg[3]) < 0 || atoi(sep->arg[3]) > GUILD_MAX_RANK)
-	c->Message(0, "Error: invalid rank #.");
+	c->Message(CC_Default, "Error: invalid rank #.");
 	else if (!worldserver.Connected())
-	c->Message(0, "Error: World server dirconnected");
+	c->Message(CC_Default, "Error: World server dirconnected");
 	else {
 	uint32 eqid = database.GetGuildEQID(atoi(sep->arg[2]));
 	if (eqid == GUILD_NONE)
-	c->Message(0, "Error: Guild not found");
+	c->Message(CC_Default, "Error: Guild not found");
 	else if (!helper_guild_edit(c, atoi(sep->arg[2]), eqid, atoi(sep->arg[3]), sep->arg[4], sep->argplus[5])) {
-	c->Message(0, "  #guild gmedit guilddbid rank title newtitle");
-	c->Message(0, "  #guild gmedit guilddbid rank permission 0/1");
+	c->Message(CC_Default, "  #guild gmedit guilddbid rank title newtitle");
+	c->Message(CC_Default, "  #guild gmedit guilddbid rank permission 0/1");
 	}
 	else {
 	ServerPacket* pack = new ServerPacket(ServerOP_RefreshGuild, 5);
@@ -4787,7 +4847,7 @@ void command_guild(Client *c, const Seperator *sep){
 	*/
 	else if (strcasecmp(sep->arg[1], "set") == 0) {
 		if (!sep->IsNumber(3))
-			c->Message(0, "Usage: #guild set charname guildgbid (0 = clear guildtag)");
+			c->Message(CC_Default, "Usage: #guild set charname guildgbid (0 = clear guildtag)");
 		else {
 			uint32 guild_id = atoi(sep->arg[3]);
 
@@ -4824,24 +4884,24 @@ void command_guild(Client *c, const Seperator *sep){
 				c->Message(CC_Red, "Error putting '%s' into guild %d", sep->arg[2], guild_id);
 			}
 			else {
-				c->Message(0, "%s has been put into guild %d", sep->arg[2], guild_id);
+				c->Message(CC_Default, "%s has been put into guild %d", sep->arg[2], guild_id);
 			}
 		}
 	}
 	/*else if (strcasecmp(sep->arg[1], "setdoor") == 0 && admin >= minStatusToEditOtherGuilds) {
 
 	if (!sep->IsNumber(2))
-	c->Message(0, "Usage: #guild setdoor guildEQid (0 = delete guilddoor)");
+	c->Message(CC_Default, "Usage: #guild setdoor guildEQid (0 = delete guilddoor)");
 	else {
 	// guild doors
 	if((!guilds[atoi(sep->arg[2])].databaseID) && (atoi(sep->arg[2])!=0) )
 	{
 
-	c->Message(0, "These is no guild with this guildEQid");
+	c->Message(CC_Default, "These is no guild with this guildEQid");
 	}
 	else {
 	c->SetIsSettingGuildDoor(true);
-	c->Message(0, "Click on a door you want to become a guilddoor");
+	c->Message(CC_Default, "Click on a door you want to become a guilddoor");
 	c->SetSetGuildDoorID(atoi(sep->arg[2]));
 	}
 	}
@@ -4849,9 +4909,9 @@ void command_guild(Client *c, const Seperator *sep){
 	else if (strcasecmp(sep->arg[1], "setrank") == 0) {
 		int rank = atoi(sep->arg[3]);
 		if (!sep->IsNumber(3))
-			c->Message(0, "Usage: #guild setrank charname rank");
+			c->Message(CC_Default, "Usage: #guild setrank charname rank");
 		else if (rank < 0 || rank > GUILD_MAX_RANK)
-			c->Message(0, "Error: invalid rank #.");
+			c->Message(CC_Default, "Error: invalid rank #.");
 		else {
 			uint32 charid = database.GetCharacterID(sep->arg[2]);
 			if (charid == 0) {
@@ -4871,14 +4931,14 @@ void command_guild(Client *c, const Seperator *sep){
 			if (!guild_mgr.SetGuildRank(charid, rank))
 				c->Message(CC_Red, "Error while setting rank %d on '%s'.", rank, sep->arg[2]);
 			else
-				c->Message(0, "%s has been set to rank %d", sep->arg[2], rank);
+				c->Message(CC_Default, "%s has been set to rank %d", sep->arg[2], rank);
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "create") == 0) {
 		if (sep->arg[3][0] == 0)
-			c->Message(0, "Usage: #guild create {guildleader charname or CharID} guild name");
+			c->Message(CC_Default, "Usage: #guild create {guildleader charname or CharID} guild name");
 		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server dirconnected");
+			c->Message(CC_Default, "Error: World server dirconnected");
 		else {
 			uint32 leader = 0;
 			if (sep->IsNumber(2)) {
@@ -4892,13 +4952,13 @@ void command_guild(Client *c, const Seperator *sep){
 				return;
 			}
 			if (leader == 0) {
-				c->Message(0, "Guild leader not found.");
+				c->Message(CC_Default, "Guild leader not found.");
 				return;
 			}
 
 			uint32 tmp = guild_mgr.FindGuildByLeader(leader);
 			if (tmp != GUILD_NONE) {
-				c->Message(0, "Error: %s already is the leader of DB# %i '%s'.", sep->arg[2], tmp, guild_mgr.GetGuildName(tmp));
+				c->Message(CC_Default, "Error: %s already is the leader of DB# %i '%s'.", sep->arg[2], tmp, guild_mgr.GetGuildName(tmp));
 			}
 			else {
 
@@ -4913,12 +4973,12 @@ void command_guild(Client *c, const Seperator *sep){
 					sep->argplus[3], leader, (unsigned long)id);
 
 				if (id == GUILD_NONE)
-					c->Message(0, "Guild creation failed.");
+					c->Message(CC_Default, "Guild creation failed.");
 				else {
-					c->Message(0, "Guild created: Leader: %i, number %i: %s", leader, id, sep->argplus[3]);
+					c->Message(CC_Default, "Guild created: Leader: %i, number %i: %s", leader, id, sep->argplus[3]);
 
 					if (!guild_mgr.SetGuild(leader, id, GUILD_LEADER))
-						c->Message(0, "Unable to set guild leader's guild in the database. Your going to have to run #guild set");
+						c->Message(CC_Default, "Unable to set guild leader's guild in the database. Your going to have to run #guild set");
 				}
 
 			}
@@ -4926,14 +4986,14 @@ void command_guild(Client *c, const Seperator *sep){
 	}
 	else if (strcasecmp(sep->arg[1], "delete") == 0) {
 		if (!sep->IsNumber(2))
-			c->Message(0, "Usage: #guild delete guildID");
+			c->Message(CC_Default, "Usage: #guild delete guildID");
 		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server dirconnected");
+			c->Message(CC_Default, "Error: World server dirconnected");
 		else {
 			uint32 id = atoi(sep->arg[2]);
 
 			if (!guild_mgr.GuildExists(id)) {
-				c->Message(0, "Guild %d does not exist!", id);
+				c->Message(CC_Default, "Guild %d does not exist!", id);
 				return;
 			}
 
@@ -4953,22 +5013,22 @@ void command_guild(Client *c, const Seperator *sep){
 				guild_mgr.GetGuildName(id), id);
 
 			if (!guild_mgr.DeleteGuild(id))
-				c->Message(0, "Guild delete failed.");
+				c->Message(CC_Default, "Guild delete failed.");
 			else {
-				c->Message(0, "Guild %d deleted.", id);
+				c->Message(CC_Default, "Guild %d deleted.", id);
 			}
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "rename") == 0) {
 		if ((!sep->IsNumber(2)) || sep->arg[3][0] == 0)
-			c->Message(0, "Usage: #guild rename guildID newname");
+			c->Message(CC_Default, "Usage: #guild rename guildID newname");
 		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server dirconnected");
+			c->Message(CC_Default, "Error: World server dirconnected");
 		else {
 			uint32 id = atoi(sep->arg[2]);
 
 			if (!guild_mgr.GuildExists(id)) {
-				c->Message(0, "Guild %d does not exist!", id);
+				c->Message(CC_Default, "Guild %d does not exist!", id);
 				return;
 			}
 
@@ -4988,17 +5048,17 @@ void command_guild(Client *c, const Seperator *sep){
 				guild_mgr.GetGuildName(id), id, sep->argplus[3]);
 
 			if (!guild_mgr.RenameGuild(id, sep->argplus[3]))
-				c->Message(0, "Guild rename failed.");
+				c->Message(CC_Default, "Guild rename failed.");
 			else {
-				c->Message(0, "Guild %d renamed to %s", id, sep->argplus[3]);
+				c->Message(CC_Default, "Guild %d renamed to %s", id, sep->argplus[3]);
 			}
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "setleader") == 0) {
 		if (sep->arg[3][0] == 0 || !sep->IsNumber(2))
-			c->Message(0, "Usage: #guild setleader guild_id {guildleader charname or CharID}");
+			c->Message(CC_Default, "Usage: #guild setleader guild_id {guildleader charname or CharID}");
 		else if (!worldserver.Connected())
-			c->Message(0, "Error: World server dirconnected");
+			c->Message(CC_Default, "Error: World server dirconnected");
 		else {
 			uint32 leader = 0;
 			if (sep->IsNumber(2)) {
@@ -5014,15 +5074,15 @@ void command_guild(Client *c, const Seperator *sep){
 
 			uint32 tmpdb = guild_mgr.FindGuildByLeader(leader);
 			if (leader == 0)
-				c->Message(0, "New leader not found.");
+				c->Message(CC_Default, "New leader not found.");
 			else if (tmpdb != 0) {
-				c->Message(0, "Error: %s already is the leader of guild # %i", sep->arg[2], tmpdb);
+				c->Message(CC_Default, "Error: %s already is the leader of guild # %i", sep->arg[2], tmpdb);
 			}
 			else {
 				uint32 id = atoi(sep->arg[2]);
 
 				if (!guild_mgr.GuildExists(id)) {
-					c->Message(0, "Guild %d does not exist!", id);
+					c->Message(CC_Default, "Guild %d does not exist!", id);
 					return;
 				}
 
@@ -5042,9 +5102,9 @@ void command_guild(Client *c, const Seperator *sep){
 					guild_mgr.GetGuildName(id), id, leader);
 
 				if (!guild_mgr.SetGuildLeader(id, leader))
-					c->Message(0, "Guild leader change failed.");
+					c->Message(CC_Default, "Guild leader change failed.");
 				else {
-					c->Message(0, "Guild leader changed: guild # %d, Leader: %s", id, sep->argplus[3]);
+					c->Message(CC_Default, "Guild leader changed: guild # %d, Leader: %s", id, sep->argplus[3]);
 				}
 			}
 		}
@@ -5057,7 +5117,7 @@ void command_guild(Client *c, const Seperator *sep){
 		guild_mgr.ListGuilds(c);
 	}
 	else {
-		c->Message(0, "Unknown guild command, try #guild help");
+		c->Message(CC_Default, "Unknown guild command, try #guild help");
 	}
 }
 
@@ -5076,12 +5136,12 @@ grl.warpeace = guilds[eqid].rank[rank].warpeace;
 
 if (strcasecmp(what, "title") == 0) {
 if (strlen(value) > 100)
-c->Message(0, "Error: Title has a maxium length of 100 characters.");
+c->Message(CC_Default, "Error: Title has a maxium length of 100 characters.");
 else
 strcpy(grl.rankname, value);
 }
 else if (rank == 0)
-c->Message(0, "Error: Rank 0's permissions can not be changed.");
+c->Message(CC_Default, "Error: Rank 0's permissions can not be changed.");
 else {
 if (!(strlen(value) == 1 && (value[0] == '0' || value[0] == '1')))
 
@@ -5104,16 +5164,16 @@ grl.speakgu = (value[0] == '1');
 else if (strcasecmp(what, "warpeace") == 0)
 grl.warpeace = (value[0] == '1');
 else
-c->Message(0, "Error: Permission name not recognized.");
+c->Message(CC_Default, "Error: Permission name not recognized.");
 }
 if (!database.EditGuild(dbid, rank, &grl))
-c->Message(0, "Error: database.EditGuild() failed");
+c->Message(CC_Default, "Error: database.EditGuild() failed");
 return true;
 }*/
 
 void command_zonestatus(Client *c, const Seperator *sep){
 	if (!worldserver.Connected())
-		c->Message(0, "Error: World server disconnected");
+		c->Message(CC_Default, "Error: World server disconnected");
 	else {
 		ServerPacket* pack = new ServerPacket(ServerOP_ZoneStatus, strlen(c->GetName()) + 2);
 		memset(pack->pBuffer, (uint8)c->Admin(), 1);
@@ -5127,11 +5187,11 @@ void command_manaburn(Client *c, const Seperator *sep){
 	Mob* target = c->GetTarget();
 
 	if (c->GetTarget() == 0)
-		c->Message(0, "#Manaburn needs a target.");
+		c->Message(CC_Default, "#Manaburn needs a target.");
 	else {
 		int cur_level = c->GetAA(MANA_BURN);//ManaBurn ID
 		if (DistanceSquared(c->GetPosition(), target->GetPosition()) > 200)
-			c->Message(0, "You are too far away from your target.");
+			c->Message(CC_Default, "You are too far away from your target.");
 		else {
 			if (cur_level == 1) {
 				if (c->IsAttackAllowed(target))
@@ -5147,7 +5207,7 @@ void command_manaburn(Client *c, const Seperator *sep){
 				}
 			}
 			else
-				c->Message(0, "You have not learned this skill.");
+				c->Message(CC_Default, "You have not learned this skill.");
 		}
 	}
 }
@@ -5155,11 +5215,11 @@ void command_manaburn(Client *c, const Seperator *sep){
 void command_doanim(Client *c, const Seperator *sep){
 	Animation animation = static_cast<Animation>(atoi(sep->arg[1]));
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #DoAnim [number]");
+		c->Message(CC_Default, "Usage: #DoAnim [number]");
 	else
 		if (c->Admin() >= commandDoAnimOthers)
 			if (c->GetTarget() == 0)
-				c->Message(0, "Error: You need a target.");
+				c->Message(CC_Default, "Error: You need a target.");
 			else
 				c->GetTarget()->DoAnim(animation, atoi(sep->arg[2]));
 		else
@@ -5169,7 +5229,7 @@ void command_doanim(Client *c, const Seperator *sep){
 void command_randomfeatures(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!target)
-		c->Message(0, "Error: This command requires a target");
+		c->Message(CC_Default, "Error: This command requires a target");
 	else
 	{
 		uint16 Race = target->GetRace();
@@ -5330,19 +5390,19 @@ void command_randomfeatures(Client *c, const Seperator *sep){
 			target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 				EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-			c->Message(0, "NPC Features Randomized");
+			c->Message(CC_Default, "NPC Features Randomized");
 		}
 		else
-			c->Message(0, "This command requires a Playable Race as the Target");
+			c->Message(CC_Default, "This command requires a Playable Race as the Target");
 	}
 }
 
 void command_face(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #face [number of face]");
+		c->Message(CC_Default, "Usage: #face [number of face]");
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else {
 		uint16 Race = target->GetRace();
 		uint8 Gender = target->GetGender();
@@ -5359,16 +5419,16 @@ void command_face(Client *c, const Seperator *sep){
 		target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 			EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-		c->Message(0, "Face = %i", atoi(sep->arg[1]));
+		c->Message(CC_Default, "Face = %i", atoi(sep->arg[1]));
 	}
 }
 
 void command_helm(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #helm [number of helm texture]");
+		c->Message(CC_Default, "Usage: #helm [number of helm texture]");
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else {
 		uint16 Race = target->GetRace();
 		uint8 Gender = target->GetGender();
@@ -5385,16 +5445,16 @@ void command_helm(Client *c, const Seperator *sep){
 		target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 			EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-		c->Message(0, "Helm = %i", atoi(sep->arg[1]));
+		c->Message(CC_Default, "Helm = %i", atoi(sep->arg[1]));
 	}
 }
 
 void command_hair(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #hair [number of hair style]");
+		c->Message(CC_Default, "Usage: #hair [number of hair style]");
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else {
 		uint16 Race = target->GetRace();
 		uint8 Gender = target->GetGender();
@@ -5411,16 +5471,16 @@ void command_hair(Client *c, const Seperator *sep){
 		target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 			EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-		c->Message(0, "Hair = %i", atoi(sep->arg[1]));
+		c->Message(CC_Default, "Hair = %i", atoi(sep->arg[1]));
 	}
 }
 
 void command_haircolor(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #haircolor [number of hair color]");
+		c->Message(CC_Default, "Usage: #haircolor [number of hair color]");
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else {
 		uint16 Race = target->GetRace();
 		uint8 Gender = target->GetGender();
@@ -5437,16 +5497,16 @@ void command_haircolor(Client *c, const Seperator *sep){
 		target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 			EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-		c->Message(0, "Hair Color = %i", atoi(sep->arg[1]));
+		c->Message(CC_Default, "Hair Color = %i", atoi(sep->arg[1]));
 	}
 }
 
 void command_beard(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #beard [number of beard style]");
+		c->Message(CC_Default, "Usage: #beard [number of beard style]");
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else {
 		uint16 Race = target->GetRace();
 		uint8 Gender = target->GetGender();
@@ -5463,16 +5523,16 @@ void command_beard(Client *c, const Seperator *sep){
 		target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 			EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-		c->Message(0, "Beard = %i", atoi(sep->arg[1]));
+		c->Message(CC_Default, "Beard = %i", atoi(sep->arg[1]));
 	}
 }
 
 void command_beardcolor(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #beardcolor [number of beard color]");
+		c->Message(CC_Default, "Usage: #beardcolor [number of beard color]");
 	else if (!target)
-		c->Message(0, "Error: this command requires a target");
+		c->Message(CC_Default, "Error: this command requires a target");
 	else {
 		uint16 Race = target->GetRace();
 		uint8 Gender = target->GetGender();
@@ -5489,7 +5549,7 @@ void command_beardcolor(Client *c, const Seperator *sep){
 		target->SendIllusionPacket(Race, Gender, Texture, HelmTexture, HairColor, BeardColor,
 			EyeColor1, EyeColor2, HairStyle, LuclinFace, Beard, 0xFF);
 
-		c->Message(0, "Beard Color = %i", atoi(sep->arg[1]));
+		c->Message(CC_Default, "Beard Color = %i", atoi(sep->arg[1]));
 	}
 }
 
@@ -5503,7 +5563,7 @@ void command_scribespells(Client *c, const Seperator *sep){
 
 	if (!sep->arg[1][0])
 	{
-		c->Message(0, "FORMAT: #scribespells <max level> <min level>");
+		c->Message(CC_Default, "FORMAT: #scribespells <max level> <min level>");
 		return;
 	}
 
@@ -5517,17 +5577,17 @@ void command_scribespells(Client *c, const Seperator *sep){
 
 	if (max_level < 1 || min_level < 1)
 	{
-		c->Message(0, "ERROR: Level must be greater than 1.");
+		c->Message(CC_Default, "ERROR: Level must be greater than 1.");
 		return;
 	}
 	if (min_level > max_level) {
-		c->Message(0, "Error: Min Level must be less than or equal to Max Level.");
+		c->Message(CC_Default, "Error: Min Level must be less than or equal to Max Level.");
 		return;
 	}
 
-	t->Message(0, "Scribing spells to spellbook.");
+	t->Message(CC_Default, "Scribing spells to spellbook.");
 	if (t != c)
-		c->Message(0, "Scribing spells for %s.", t->GetName());
+		c->Message(CC_Default, "Scribing spells for %s.", t->GetName());
 	Log.Out(Logs::General, Logs::Normal, "Scribe spells request for %s from %s, levels: %u -> %u", t->GetName(), c->GetName(), min_level, max_level);
 
 	for (curspell = 0, book_slot = t->GetNextAvailableSpellBookSlot(), count = 0; curspell < SPDAT_RECORDS && book_slot < MAX_PP_SPELLBOOK; curspell++, book_slot = t->GetNextAvailableSpellBookSlot(book_slot))
@@ -5546,7 +5606,7 @@ void command_scribespells(Client *c, const Seperator *sep){
 					c->Message(CC_Red, "Error scribing spells: %s ran out of spell book slots on spell %s (%u)", t->GetName(), spells[curspell].name, curspell);
 				break;
 			}
-			if (!IsDiscipline(curspell) && !t->HasSpellScribed(curspell)) {	//isn't a discipline & we don't already have it scribed
+			if (!t->HasSpellScribed(curspell)) {	//we don't already have it scribed
 				t->ScribeSpell(curspell, book_slot);
 				count++;
 			}
@@ -5554,14 +5614,14 @@ void command_scribespells(Client *c, const Seperator *sep){
 	}
 
 	if (count > 0) {
-		t->Message(0, "Successfully scribed %u spells.", count);
+		t->Message(CC_Default, "Successfully scribed %u spells.", count);
 		if (t != c)
-			c->Message(0, "Successfully scribed %u spells for %s.", count, t->GetName());
+			c->Message(CC_Default, "Successfully scribed %u spells for %s.", count, t->GetName());
 	}
 	else {
-		t->Message(0, "No spells scribed.");
+		t->Message(CC_Default, "No spells scribed.");
 		if (t != c)
-			c->Message(0, "No spells scribed for %s.", t->GetName());
+			c->Message(CC_Default, "No spells scribed for %s.", t->GetName());
 	}
 }
 
@@ -5574,21 +5634,21 @@ void command_scribespell(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (!sep->arg[1][0]) {
-		c->Message(0, "FORMAT: #scribespell <spellid>");
+		c->Message(CC_Default, "FORMAT: #scribespell <spellid>");
 		return;
 	}
 
 	spell_id = atoi(sep->arg[1]);
 
 	if (IsValidSpell(spell_id)) {
-		t->Message(0, "Scribing spell: %s (%i) to spellbook.", spells[spell_id].name, spell_id);
+		t->Message(CC_Default, "Scribing spell: %s (%i) to spellbook.", spells[spell_id].name, spell_id);
 
 		if (t != c)
-			c->Message(0, "Scribing spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
+			c->Message(CC_Default, "Scribing spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
 
 		Log.Out(Logs::General, Logs::Normal, "Scribe spell: %s (%i) request for %s from %s.", spells[spell_id].name, spell_id, t->GetName(), c->GetName());
 
-		if (spells[spell_id].classes[WARRIOR] != 0 && spells[spell_id].skill != 52 && spells[spell_id].classes[t->GetPP().class_ - 1] > 0 && !IsDiscipline(spell_id)) {
+		if (spells[spell_id].classes[WARRIOR] != 0 && spells[spell_id].skill != 52 && spells[spell_id].classes[t->GetPP().class_ - 1] > 0) {
 			book_slot = t->GetNextAvailableSpellBookSlot();
 
 			if (book_slot >= 0 && t->FindSpellBookSlotBySpellID(spell_id) < 0)
@@ -5616,7 +5676,7 @@ void command_unmemspell(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (!sep->arg[1][0]) {
-		c->Message(0, "FORMAT: #unmemspell <spellid>");
+		c->Message(CC_Default, "FORMAT: #unmemspell <spellid>");
 		return;
 	}
 
@@ -5628,10 +5688,10 @@ void command_unmemspell(Client *c, const Seperator *sep){
 		if (mem_slot >= 0) {
 			t->UnmemSpell(mem_slot);
 
-			t->Message(0, "Unmemming spell: %s (%i) from gembar.", spells[spell_id].name, spell_id);
+			t->Message(CC_Default, "Unmemming spell: %s (%i) from gembar.", spells[spell_id].name, spell_id);
 
 			if (t != c)
-				c->Message(0, "Unmemming spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
+				c->Message(CC_Default, "Unmemming spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
 
 			Log.Out(Logs::Detail, Logs::Normal, "Unmem spell: %s (%i) request for %s from %s.", spells[spell_id].name, spell_id, t->GetName(), c->GetName());
 		}
@@ -5662,7 +5722,7 @@ void command_unscribespell(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (!sep->arg[1][0]) {
-		c->Message(0, "FORMAT: #unscribespell <spellid>");
+		c->Message(CC_Default, "FORMAT: #unscribespell <spellid>");
 		return;
 	}
 
@@ -5674,10 +5734,10 @@ void command_unscribespell(Client *c, const Seperator *sep){
 		if (book_slot >= 0) {
 			t->UnscribeSpell(book_slot);
 
-			t->Message(0, "Unscribing spell: %s (%i) from spellbook.", spells[spell_id].name, spell_id);
+			t->Message(CC_Default, "Unscribing spell: %s (%i) from spellbook.", spells[spell_id].name, spell_id);
 
 			if (t != c)
-				c->Message(0, "Unscribing spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
+				c->Message(CC_Default, "Unscribing spell: %s (%i) for %s.", spells[spell_id].name, spell_id, t->GetName());
 
 			Log.Out(Logs::General, Logs::Normal, "Unscribe spell: %s (%i) request for %s from %s.", spells[spell_id].name, spell_id, t->GetName(), c->GetName());
 		}
@@ -5703,7 +5763,7 @@ void command_wpinfo(Client *c, const Seperator *sep){
 	Mob *t = c->GetTarget();
 
 	if (t == nullptr || !t->IsNPC()) {
-		c->Message(0, "You must target an NPC to use this.");
+		c->Message(CC_Default, "You must target an NPC to use this.");
 		return;
 	}
 
@@ -5724,7 +5784,7 @@ void command_wpadd(Client *c, const Seperator *sep)
 
 		if (s2info == nullptr)	// Can't figure out where this mob's spawn came from... maybe a dynamic mob created by #spawn
 		{
-			c->Message(0, "#wpadd FAILED -- Can't determine which spawn record in the database this mob came from!");
+			c->Message(CC_Default, "#wpadd FAILED -- Can't determine which spawn record in the database this mob came from!");
 			return;
 		}
 
@@ -5734,7 +5794,7 @@ void command_wpadd(Client *c, const Seperator *sep)
 				pause = atoi(sep->arg[1]);
 			else
 			{
-				c->Message(0, "Usage: #wpadd [pause] [-h]");
+				c->Message(CC_Default, "Usage: #wpadd [pause] [-h]");
 				return;
 			}
 		}
@@ -5747,10 +5807,10 @@ void command_wpadd(Client *c, const Seperator *sep)
 			t->CastToNPC()->SetGrid(tmp_grid);
 
 		t->CastToNPC()->AssignWaypoints(t->CastToNPC()->GetGrid());
-		c->Message(0, "Waypoint added. Use #wpinfo to see waypoints for this NPC (may need to #repop first).");
+		c->Message(CC_Default, "Waypoint added. Use #wpinfo to see waypoints for this NPC (may need to #repop first).");
 	}
 	else
-		c->Message(0, "You must target an NPC to use this.");
+		c->Message(CC_Default, "You must target an NPC to use this.");
 }
 
 void command_interrogateinv(Client *c, const Seperator *sep)
@@ -5769,14 +5829,14 @@ void command_interrogateinv(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "help") == 0) {
 		if (c->Admin() < commandInterrogateInv) {
-			c->Message(0, "Usage: #interrogateinv");
-			c->Message(0, "  Displays your inventory's current in-memory nested storage references");
+			c->Message(CC_Default, "Usage: #interrogateinv");
+			c->Message(CC_Default, "  Displays your inventory's current in-memory nested storage references");
 		}
 		else {
-			c->Message(0, "Usage: #interrogateinv [log] [silent]");
-			c->Message(0, "  Displays your or your Player target inventory's current in-memory nested storage references");
-			c->Message(0, "  [log] - Logs interrogation to file");
-			c->Message(0, "  [silent] - Omits the in-game message portion of the interrogation");
+			c->Message(CC_Default, "Usage: #interrogateinv [log] [silent]");
+			c->Message(CC_Default, "  Displays your or your Player target inventory's current in-memory nested storage references");
+			c->Message(CC_Default, "  [log] - Logs interrogation to file");
+			c->Message(CC_Default, "  [silent] - Omits the in-game message portion of the interrogation");
 		}
 		return;
 	}
@@ -5846,7 +5906,7 @@ void command_d1(Client *c, const Seperator *sep){
 
 void command_summonitem(Client *c, const Seperator *sep){
 	if (!sep->IsNumber(1))
-		c->Message(0, "Usage: #summonitem [item id] [charges], charges are optional");
+		c->Message(CC_Default, "Usage: #summonitem [item id] [charges], charges are optional");
 	else {
 		uint32 itemid = atoi(sep->arg[1]);
 		int16 item_status = 0;
@@ -5913,13 +5973,13 @@ void command_givemoney(Client *c, const Seperator *sep){
 	else {
 		//TODO: update this to the client, otherwise the client doesn't show any weight change until you zone, move an item, etc
 		c->GetTarget()->CastToClient()->AddMoneyToPP(atoi(sep->arg[4]), atoi(sep->arg[3]), atoi(sep->arg[2]), atoi(sep->arg[1]), true);
-		c->Message(0, "Added %i Platinum, %i Gold, %i Silver, and %i Copper to %s's inventory.", atoi(sep->arg[1]), atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), c->GetTarget()->GetName());
+		c->Message(CC_Default, "Added %i Platinum, %i Gold, %i Silver, and %i Copper to %s's inventory.", atoi(sep->arg[1]), atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]), c->GetTarget()->GetName());
 	}
 }
 
 void command_itemsearch(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #itemsearch [search string]");
+		c->Message(CC_Default, "Usage: #itemsearch [search string]");
 	else
 	{
 		const char *search_criteria = sep->argplus[1];
@@ -5931,11 +5991,11 @@ void command_itemsearch(Client *c, const Seperator *sep){
 			{
 				static char itemid[7];
 				sprintf(itemid, "%06d", item->ID);
-				c->Message(0, "  %i: %c%c%s%s%c", (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
-				//c->Message(0, "%i: %s", (int) item->ID, item->Name);
+				c->Message(CC_Default, "  %i: %c%c%s%s%c", (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
+				//c->Message(CC_Default, "%i: %s", (int) item->ID, item->Name);
 			}
 			else
-				c->Message(0, "Item #%s not found", search_criteria);
+				c->Message(CC_Default, "Item #%s not found", search_criteria);
 			return;
 		}
 
@@ -5953,16 +6013,16 @@ void command_itemsearch(Client *c, const Seperator *sep){
 			if (pdest != nullptr) {
 				static char itemid[7];
 				sprintf(itemid, "%06d", item->ID);
-				c->Message(0, "  %i: %c%c%s%s%c", (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
+				c->Message(CC_Default, "  %i: %c%c%s%s%c", (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
 				count++;
 			}
 			if (count == 50)
 				break;
 		}
 		if (count == 50)
-			c->Message(0, "50 items shown...too many results.");
+			c->Message(CC_Default, "50 items shown...too many results.");
 		else
-			c->Message(0, "%i items found", count);
+			c->Message(CC_Default, "%i items found", count);
 
 	}
 }
@@ -5977,7 +6037,7 @@ void command_setaaxp(Client *c, const Seperator *sep){
 		t->SetEXP(t->GetEXP(), atoi(sep->arg[1]), false);
 	}
 	else
-		c->Message(0, "Usage: #setaaxp <new AA XP value> (<new Group AA XP value> <new Raid XP value>)");
+		c->Message(CC_Default, "Usage: #setaaxp <new AA XP value> (<new Group AA XP value> <new Raid XP value>)");
 }
 
 void command_setaapts(Client *c, const Seperator *sep){
@@ -5986,12 +6046,12 @@ void command_setaapts(Client *c, const Seperator *sep){
 	if (c->GetTarget() && c->GetTarget()->IsClient())
 		t = c->GetTarget()->CastToClient();
 
-	if (sep->arg[1][0] == '\0' || sep->arg[2][0] == '\0')
-		c->Message(0, "Usage: #setaapts <AA|group|raid> <new AA points value>");
-	else if (atoi(sep->arg[2]) <= 0 || atoi(sep->arg[2]) > 200)
-		c->Message(0, "You must have a number greater than 0 for points and no more than 200.");
+	if (sep->arg[1][0] == '\0')
+		c->Message(CC_Default, "Usage: #setaapts <new AA points value>");
+	else if (atoi(sep->arg[1]) <= 0 || atoi(sep->arg[1]) > 170)
+		c->Message(CC_Default, "You must have a number greater than 0 for points and no more than 170.");
 	else {
-		t->SetEXP(t->GetEXP(), t->GetMaxAAXP()*atoi(sep->arg[2]), false);
+		t->SetEXP(t->GetEXP(), t->GetEXPForLevel(t->GetLevel(), true)*atoi(sep->arg[1]), false);
 		t->SendAAStats();
 		t->SendAATable();
 	}
@@ -6012,13 +6072,13 @@ void command_stun(Client *c, const Seperator *sep){
 			t->CastToNPC()->Stun(duration, c);
 	}
 	else
-		c->Message(0, "Usage: #stun [duration]");
+		c->Message(CC_Default, "Usage: #stun [duration]");
 }
 
 void command_ban(Client *c, const Seperator *sep)
 {
 	if (sep->arg[1][0] == 0 || sep->arg[2][0] == 0) {
-		c->Message(0, "Usage: #ban <charname> <message>");
+		c->Message(CC_Default, "Usage: #ban <charname> <message>");
 		return;
 	}
 
@@ -6040,7 +6100,7 @@ void command_ban(Client *c, const Seperator *sep)
 	}
 
 	if (message.length() == 0) {
-		c->Message(0, "Usage: #ban <charname> <message>");
+		c->Message(CC_Default, "Usage: #ban <charname> <message>");
 		return;
 	}
 
@@ -6078,7 +6138,7 @@ void command_ban(Client *c, const Seperator *sep)
 void command_suspend(Client *c, const Seperator *sep)
 {
 	if ((sep->arg[1][0] == 0) || (sep->arg[2][0] == 0)) {
-		c->Message(0, "Usage: #suspend <charname> <days> (Specify 0 days to lift the suspension immediately) <message>");
+		c->Message(CC_Default, "Usage: #suspend <charname> <days> (Specify 0 days to lift the suspension immediately) <message>");
 		return;
 	}
 
@@ -6105,7 +6165,7 @@ void command_suspend(Client *c, const Seperator *sep)
 		}
 
 		if (message.length() == 0) {
-			c->Message(0, "Usage: #suspend <charname> <days>(Specify 0 days to lift the suspension immediately) <message>");
+			c->Message(CC_Default, "Usage: #suspend <charname> <days>(Specify 0 days to lift the suspension immediately) <message>");
 			return;
 		}
 	}
@@ -6152,14 +6212,14 @@ void command_suspend(Client *c, const Seperator *sep)
 void command_ipban(Client *c, const Seperator *sep){
 	if (sep->arg[1] == 0)
 	{
-		c->Message(0, "Usage: #ipban [xxx.xxx.xxx.xxx]");
+		c->Message(CC_Default, "Usage: #ipban [xxx.xxx.xxx.xxx]");
 	}
 	else {
 		if (database.AddBannedIP(sep->arg[1], c->GetName())) {
-			c->Message(0, "%s has been successfully added to the Banned_IPs table by %s", sep->arg[1], c->GetName());
+			c->Message(CC_Default, "%s has been successfully added to the Banned_IPs table by %s", sep->arg[1], c->GetName());
 		}
 		else {
-			c->Message(0, "IPBan Failed (IP address is possibly already in the table?)");
+			c->Message(CC_Default, "IPBan Failed (IP address is possibly already in the table?)");
 		}
 	}
 }
@@ -6167,7 +6227,7 @@ void command_ipban(Client *c, const Seperator *sep){
 void command_revoke(Client *c, const Seperator *sep)
 {
 	if (sep->arg[1][0] == 0 || sep->arg[2][0] == 0) {
-		c->Message(0, "Usage: #revoke [charname] [1/0]");
+		c->Message(CC_Default, "Usage: #revoke [charname] [1/0]");
 		return;
 	}
 
@@ -6185,12 +6245,12 @@ void command_revoke(Client *c, const Seperator *sep)
 
 	Client* revokee = entity_list.GetClientByAccID(characterID);
 	if (revokee) {
-		c->Message(0, "Found %s in this zone.", revokee->GetName());
+		c->Message(CC_Default, "Found %s in this zone.", revokee->GetName());
 		revokee->SetRevoked(flag);
 		return;
 	}
 
-	c->Message(13, "#revoke: Couldn't find %s in this zone, passing request to worldserver.", sep->arg[1]);
+	c->Message(CC_Red, "#revoke: Couldn't find %s in this zone, passing request to worldserver.", sep->arg[1]);
 
 	ServerPacket * outapp = new ServerPacket(ServerOP_Revoke, sizeof(RevokeStruct));
 	RevokeStruct* revoke = (RevokeStruct*)outapp->pBuffer;
@@ -6203,7 +6263,7 @@ void command_revoke(Client *c, const Seperator *sep)
 
 void command_oocmute(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0 || !(sep->arg[1][0] == '1' || sep->arg[1][0] == '0'))
-		c->Message(0, "Usage: #oocmute [1/0]");
+		c->Message(CC_Default, "Usage: #oocmute [1/0]");
 	else {
 		ServerPacket * outapp = new ServerPacket(ServerOP_OOCMute, 1);
 		*(outapp->pBuffer) = atoi(sep->arg[1]);
@@ -6217,23 +6277,23 @@ void command_checklos(Client *c, const Seperator *sep){
 	{
 		//		if(c->CheckLos(c->GetTarget()))
 		if (c->CheckLosFN(c->GetTarget()))
-			c->Message(0, "You have LOS to %s", c->GetTarget()->GetName());
+			c->Message(CC_Default, "You have LOS to %s", c->GetTarget()->GetName());
 		else
-			c->Message(0, "You do not have LOS to %s", c->GetTarget()->GetName());
+			c->Message(CC_Default, "You do not have LOS to %s", c->GetTarget()->GetName());
 		if (c->CheckRegion(c->GetTarget(), false))
-			c->Message(0, "You are in the same region as %s", c->GetTarget()->GetName());
+			c->Message(CC_Default, "You are in the same region as %s", c->GetTarget()->GetName());
 		else
 		{
-			c->Message(0, "You are in a different region than %s", c->GetTarget()->GetName());
+			c->Message(CC_Default, "You are in a different region than %s", c->GetTarget()->GetName());
 			auto position = glm::vec3(c->GetX(), c->GetY(), c->GetZ());
 			auto other_position = glm::vec3(c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ());
-			c->Message(0,"Your region: %d Target region: %d", zone->watermap->ReturnRegionType(position), zone->watermap->ReturnRegionType(other_position));
+			c->Message(CC_Default,"Your region: %d Target region: %d", zone->watermap->ReturnRegionType(position), zone->watermap->ReturnRegionType(other_position));
 		}
 			
 	}
 	else
 	{
-		c->Message(0, "ERROR: Target required");
+		c->Message(CC_Default, "ERROR: Target required");
 	}
 }
 
@@ -6244,7 +6304,7 @@ void command_npcsay(Client *c, const Seperator *sep){
 	}
 	else
 	{
-		c->Message(0, "Usage: #npcsay message (requires NPC target");
+		c->Message(CC_Default, "Usage: #npcsay message (requires NPC target");
 	}
 }
 
@@ -6255,13 +6315,13 @@ void command_npcshout(Client *c, const Seperator *sep){
 	}
 	else
 	{
-		c->Message(0, "Usage: #npcshout message (requires NPC target");
+		c->Message(CC_Default, "Usage: #npcshout message (requires NPC target");
 	}
 }
 
 void command_timers(Client *c, const Seperator *sep){
 	if (!c->GetTarget() || !c->GetTarget()->IsClient()) {
-		c->Message(0, "Need a player target for timers.");
+		c->Message(CC_Default, "Need a player target for timers.");
 		return;
 	}
 	Client *them = c->GetTarget()->CastToClient();
@@ -6269,12 +6329,12 @@ void command_timers(Client *c, const Seperator *sep){
 	std::vector< std::pair<pTimerType, PersistentTimer *> > res;
 	them->GetPTimers().ToVector(res);
 
-	c->Message(0, "Timers for target:");
+	c->Message(CC_Default, "Timers for target:");
 
 	int r;
 	int l = res.size();
 	for (r = 0; r < l; r++) {
-		c->Message(0, "Timer %d: %d seconds remain.", res[r].first, res[r].second->GetRemainingTime());
+		c->Message(CC_Default, "Timer %d: %d seconds remain.", res[r].first, res[r].second->GetRemainingTime());
 	}
 }
 
@@ -6285,85 +6345,90 @@ void command_npcemote(Client *c, const Seperator *sep){
 	}
 	else
 	{
-		c->Message(0, "Usage: #npcemote message (requires NPC target");
+		c->Message(CC_Default, "Usage: #npcemote message (requires NPC target");
 	}
 }
 
 void command_npcedit(Client *c, const Seperator *sep){
 	if (!c->GetTarget() || !c->GetTarget()->IsNPC())
 	{
-		c->Message(0, "Error: Must have NPC targeted");
+		c->Message(CC_Default, "Error: Must have NPC targeted");
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "help") == 0) {
 
-		c->Message(0, "Help File for #npcedit. Syntax for commands are:");
-		c->Message(0, "#npcedit Name - Sets an NPC's name");
-		c->Message(0, "#npcedit Lastname - Sets an NPC's lastname");
-		c->Message(0, "#npcedit Level - Sets an NPC's level");
-		c->Message(0, "#npcedit Maxlevel - Sets an NPC's maximum level");
-		c->Message(0, "#npcedit Race - Sets an NPC's race");
-		c->Message(0, "#npcedit Class - Sets an NPC's class");
-		c->Message(0, "#npcedit Bodytype - Sets an NPC's bodytype");
-		c->Message(0, "#npcedit HP - Sets an NPC's hitpoints");
-		c->Message(0, "#npcedit Gender - Sets an NPC's gender");
-		c->Message(0, "#npcedit Texture - Sets an NPC's texture");
-		c->Message(0, "#npcedit Helmtexture - Sets an NPC's helmtexture");
-		c->Message(0, "#npcedit Size - Sets an NPC's size");
-		c->Message(0, "#npcedit Hpregen - Sets an NPC's hitpoint regen rate per tick");
-		c->Message(0, "#npcedit Manaregen - Sets an NPC's mana regen rate per tick");
-		c->Message(0, "#npcedit Loottable - Sets the loottable ID for an NPC ");
-		c->Message(0, "#npcedit Merchantid - Sets the merchant ID for an NPC");
-		c->Message(0, "#npcedit npc_spells_effects_id - Sets the NPC Spell Effects ID");
-		c->Message(0, "#npcedit trap_template - Sets the NPC's Trap Template ID");
-		c->Message(0, "#npcedit special_abilities - Sets the NPC's Special Abilities");
-		c->Message(0, "#npcedit Spell - Sets the npc spells list ID for an NPC");
-		c->Message(0, "#npcedit Faction - Sets the NPC's faction id");
-		c->Message(0, "#npcedit Mindmg - Sets an NPC's minimum damage");
-		c->Message(0, "#npcedit Maxdmg - Sets an NPC's maximum damage");
-		c->Message(0, "#npcedit Aggroradius - Sets an NPC's aggro radius");
-		c->Message(0, "#npcedit Assistradius - Sets an NPC's assist radius");
-		c->Message(0, "#npcedit Social - Set to 1 if an NPC should assist others on its faction");
-		c->Message(0, "#npcedit Runspeed - Sets an NPC's run speed");
-		c->Message(0, "#npcedit AGI - Sets an NPC's Agility");
-		c->Message(0, "#npcedit CHA - Sets an NPC's Charisma");
-		c->Message(0, "#npcedit DEX - Sets an NPC's Dexterity");
-		c->Message(0, "#npcedit INT - Sets an NPC's Intelligence");
-		c->Message(0, "#npcedit STA - Sets an NPC's Stamina");
-		c->Message(0, "#npcedit STR - Sets an NPC's Strength");
-		c->Message(0, "#npcedit WIS - Sets an NPC's Wisdom");
-		c->Message(0, "#npcedit MR - Sets an NPC's Magic Resistance");
-		c->Message(0, "#npcedit PR - Sets an NPC's Poison Resistance");
-		c->Message(0, "#npcedit DR - Sets an NPC's Disease Resistance");
-		c->Message(0, "#npcedit FR - Sets an NPC's Fire Resistance");
-		c->Message(0, "#npcedit CR - Sets an NPC's cold resistance");
-		c->Message(0, "#npcedit Corrup - Sets an NPC's Corruption Resistance");
-		c->Message(0, "#npcedit PhR - Sets and NPC's Physical Resistance");
-		c->Message(0, "#npcedit Seeinvis - Sets an NPC's ability to see invis");
-		c->Message(0, "#npcedit Seeinvisundead - Sets an NPC's ability to see through invis vs. undead");
-		c->Message(0, "#npcedit Seehide - Sets an NPC's ability to see through hide");
-		c->Message(0, "#npcedit Seeimprovedhide - Sets an NPC's ability to see through improved hide");
-		c->Message(0, "#npcedit AC - Sets an NPC's Armor Class");
-		c->Message(0, "#npcedit ATK - Sets an NPC's Attack");
-		c->Message(0, "#npcedit Accuracy - Sets an NPC's Accuracy");
-		c->Message(0, "#npcedit npcaggro - Sets an NPC's npc_aggro flag");
-		c->Message(0, "#npcedit qglobal - Sets an NPC's quest global flag");
-		c->Message(0, "#npcedit limit - Sets an NPC's spawn limit counter");
-		c->Message(0, "#npcedit Attackspeed - Sets an NPC's attack speed modifier");
-		c->Message(0, "#npcedit Attackdelay - Sets an NPC's attack delay");
-		c->Message(0, "#npcedit findable - Sets an NPC's findable flag");
-		c->Message(0, "#npcedit wep1 - Sets an NPC's primary weapon model");
-		c->Message(0, "#npcedit wep2 - Sets an NPC's secondary weapon model");
-		c->Message(0, "#npcedit featuresave - Saves all current facial features to the database");
-		c->Message(0, "#npcedit color - Sets an NPC's red, green, and blue armor tint");
-		c->Message(0, "#npcedit armortint_id - Set an NPC's Armor tint ID");
-		c->Message(0, "#npcedit setanimation - Set an NPC's animation on spawn (Stored in spawn2 table)");
-		c->Message(0, "#npcedit scalerate - Set an NPC's scaling rate");
-		c->Message(0, "#npcedit healscale - Set an NPC's heal scaling rate");
-		c->Message(0, "#npcedit spellscale - Set an NPC's spell scaling rate");
-		c->Message(0, "#npcedit no_target - Set an NPC's ability to be targeted with the target hotkey");
-		c->Message(0, "#npcedit version - Set an NPC's version");
+		c->Message(CC_Default, "Help File for #npcedit. Syntax for commands are:");
+		c->Message(CC_Default, "#npcedit Name - Sets an NPC's name");
+		c->Message(CC_Default, "#npcedit Lastname - Sets an NPC's lastname");
+		c->Message(CC_Default, "#npcedit Level - Sets an NPC's level");
+		c->Message(CC_Default, "#npcedit Maxlevel - Sets an NPC's maximum level");
+		c->Message(CC_Default, "#npcedit Race - Sets an NPC's race");
+		c->Message(CC_Default, "#npcedit Class - Sets an NPC's class");
+		c->Message(CC_Default, "#npcedit Bodytype - Sets an NPC's bodytype");
+		c->Message(CC_Default, "#npcedit HP - Sets an NPC's hitpoints");
+		c->Message(CC_Default, "#npcedit Gender - Sets an NPC's gender");
+		c->Message(CC_Default, "#npcedit Texture - Sets an NPC's texture");
+		c->Message(CC_Default, "#npcedit Helmtexture - Sets an NPC's helmtexture");
+		c->Message(CC_Default, "#npcedit Armtexture - Sets an NPC's arm texture");
+		c->Message(CC_Default, "#npcedit Bracertexture - Sets an NPC's bracer texture");
+		c->Message(CC_Default, "#npcedit Handtexture - Sets an NPC's hand texture");
+		c->Message(CC_Default, "#npcedit Legtexture - Sets an NPC's leg texture");
+		c->Message(CC_Default, "#npcedit Feettexture - Sets an NPC's feettexture");
+		c->Message(CC_Default, "#npcedit Size - Sets an NPC's size");
+		c->Message(CC_Default, "#npcedit Hpregen - Sets an NPC's hitpoint regen rate per tick");
+		c->Message(CC_Default, "#npcedit Manaregen - Sets an NPC's mana regen rate per tick");
+		c->Message(CC_Default, "#npcedit Loottable - Sets the loottable ID for an NPC ");
+		c->Message(CC_Default, "#npcedit Merchantid - Sets the merchant ID for an NPC");
+		c->Message(CC_Default, "#npcedit npc_spells_effects_id - Sets the NPC Spell Effects ID");
+		c->Message(CC_Default, "#npcedit trap_template - Sets the NPC's Trap Template ID");
+		c->Message(CC_Default, "#npcedit special_abilities - Sets the NPC's Special Abilities");
+		c->Message(CC_Default, "#npcedit Spell - Sets the npc spells list ID for an NPC");
+		c->Message(CC_Default, "#npcedit Faction - Sets the NPC's faction id");
+		c->Message(CC_Default, "#npcedit Mindmg - Sets an NPC's minimum damage");
+		c->Message(CC_Default, "#npcedit Maxdmg - Sets an NPC's maximum damage");
+		c->Message(CC_Default, "#npcedit Aggroradius - Sets an NPC's aggro radius");
+		c->Message(CC_Default, "#npcedit Assistradius - Sets an NPC's assist radius");
+		c->Message(CC_Default, "#npcedit Social - Set to 1 if an NPC should assist others on its faction");
+		c->Message(CC_Default, "#npcedit Runspeed - Sets an NPC's run speed");
+		c->Message(CC_Default, "#npcedit AGI - Sets an NPC's Agility");
+		c->Message(CC_Default, "#npcedit CHA - Sets an NPC's Charisma");
+		c->Message(CC_Default, "#npcedit DEX - Sets an NPC's Dexterity");
+		c->Message(CC_Default, "#npcedit INT - Sets an NPC's Intelligence");
+		c->Message(CC_Default, "#npcedit STA - Sets an NPC's Stamina");
+		c->Message(CC_Default, "#npcedit STR - Sets an NPC's Strength");
+		c->Message(CC_Default, "#npcedit WIS - Sets an NPC's Wisdom");
+		c->Message(CC_Default, "#npcedit MR - Sets an NPC's Magic Resistance");
+		c->Message(CC_Default, "#npcedit PR - Sets an NPC's Poison Resistance");
+		c->Message(CC_Default, "#npcedit DR - Sets an NPC's Disease Resistance");
+		c->Message(CC_Default, "#npcedit FR - Sets an NPC's Fire Resistance");
+		c->Message(CC_Default, "#npcedit CR - Sets an NPC's cold resistance");
+		c->Message(CC_Default, "#npcedit Corrup - Sets an NPC's Corruption Resistance");
+		c->Message(CC_Default, "#npcedit PhR - Sets and NPC's Physical Resistance");
+		c->Message(CC_Default, "#npcedit Seeinvis - Sets an NPC's ability to see invis");
+		c->Message(CC_Default, "#npcedit Seeinvisundead - Sets an NPC's ability to see through invis vs. undead");
+		c->Message(CC_Default, "#npcedit Seehide - Sets an NPC's ability to see through hide");
+		c->Message(CC_Default, "#npcedit Seeimprovedhide - Sets an NPC's ability to see through improved hide");
+		c->Message(CC_Default, "#npcedit AC - Sets an NPC's Armor Class");
+		c->Message(CC_Default, "#npcedit ATK - Sets an NPC's Attack");
+		c->Message(CC_Default, "#npcedit Accuracy - Sets an NPC's Accuracy");
+		c->Message(CC_Default, "#npcedit npcaggro - Sets an NPC's npc_aggro flag");
+		c->Message(CC_Default, "#npcedit qglobal - Sets an NPC's quest global flag");
+		c->Message(CC_Default, "#npcedit limit - Sets an NPC's spawn limit counter");
+		c->Message(CC_Default, "#npcedit Attackspeed - Sets an NPC's attack speed modifier");
+		c->Message(CC_Default, "#npcedit Attackdelay - Sets an NPC's attack delay");
+		c->Message(CC_Default, "#npcedit findable - Sets an NPC's findable flag");
+		c->Message(CC_Default, "#npcedit wep1 - Sets an NPC's primary weapon model");
+		c->Message(CC_Default, "#npcedit wep2 - Sets an NPC's secondary weapon model");
+		c->Message(CC_Default, "#npcedit featuresave - Saves all current facial features to the database");
+		c->Message(CC_Default, "#npcedit color - Sets an NPC's red, green, and blue armor tint");
+		c->Message(CC_Default, "#npcedit armortint_id - Set an NPC's Armor tint ID");
+		c->Message(CC_Default, "#npcedit setanimation - Set an NPC's animation on spawn (Stored in spawn2 table)");
+		c->Message(CC_Default, "#npcedit scalerate - Set an NPC's scaling rate");
+		c->Message(CC_Default, "#npcedit healscale - Set an NPC's heal scaling rate");
+		c->Message(CC_Default, "#npcedit spellscale - Set an NPC's spell scaling rate");
+		c->Message(CC_Default, "#npcedit no_target - Set an NPC's ability to be targeted with the target hotkey");
+		c->Message(CC_Default, "#npcedit version - Set an NPC's version");
 
 	}
 
@@ -6446,6 +6511,41 @@ void command_npcedit(Client *c, const Seperator *sep){
 
 		std::string query = StringFormat("UPDATE npc_types SET helmtexture = %i WHERE id = %i",
 			atoi(sep->argplus[2]), npcTypeID);
+		database.QueryDatabase(query);
+		return;
+	}
+
+	if (strcasecmp(sep->arg[1], "armtexture") == 0) {
+		c->Message(CC_Yellow, "NPCID %u now uses armtexture %i.", npcTypeID, atoi(sep->argplus[2]));
+		std::string query = StringFormat("UPDATE npc_types SET armtexture = %i WHERE id = %i", atoi(sep->argplus[2]), npcTypeID);
+		database.QueryDatabase(query);
+		return;
+	}
+
+	if (strcasecmp(sep->arg[1], "bracertexture") == 0) {
+		c->Message(CC_Yellow, "NPCID %u now uses bracertexture %i.", npcTypeID, atoi(sep->argplus[2]));
+		std::string query = StringFormat("UPDATE npc_types SET bracertexture = %i WHERE id = %i", atoi(sep->argplus[2]), npcTypeID);
+		database.QueryDatabase(query);
+		return;
+	}
+
+	if (strcasecmp(sep->arg[1], "handtexture") == 0) {
+		c->Message(CC_Yellow, "NPCID %u now uses handtexture %i.", npcTypeID, atoi(sep->argplus[2]));
+		std::string query = StringFormat("UPDATE npc_types SET handtexture = %i WHERE id = %i", atoi(sep->argplus[2]), npcTypeID);
+		database.QueryDatabase(query);
+		return;
+	}
+
+	if (strcasecmp(sep->arg[1], "legtexture") == 0) {
+		c->Message(CC_Yellow, "NPCID %u now uses legtexture %i.", npcTypeID, atoi(sep->argplus[2]));
+		std::string query = StringFormat("UPDATE npc_types SET legtexture = %i WHERE id = %i", atoi(sep->argplus[2]), npcTypeID);
+		database.QueryDatabase(query);
+		return;
+	}
+
+	if (strcasecmp(sep->arg[1], "feettexture") == 0) {
+		c->Message(CC_Yellow, "NPCID %u now uses feettexture %i.", npcTypeID, atoi(sep->argplus[2]));
+		std::string query = StringFormat("UPDATE npc_types SET feettexture = %i WHERE id = %i", atoi(sep->argplus[2]), npcTypeID);
 		database.QueryDatabase(query);
 		return;
 	}
@@ -6932,9 +7032,9 @@ void command_npcedit(Client *c, const Seperator *sep){
 				animation = 4; //Looting Animation
 		}
 		else {
-			c->Message(0, "You must specifiy an animation stand, sit, crouch, dead, loot (0-4)");
-			c->Message(0, "Example: #npcedit setanimation sit");
-			c->Message(0, "Example: #npcedit setanimation 0");
+			c->Message(CC_Default, "You must specifiy an animation stand, sit, crouch, dead, loot (0-4)");
+			c->Message(CC_Default, "Example: #npcedit setanimation sit");
+			c->Message(CC_Default, "Example: #npcedit setanimation 0");
 			return;
 		}
 
@@ -7000,7 +7100,7 @@ void command_npcedit(Client *c, const Seperator *sep){
 	}
 
 	if ((sep->arg[1][0] == 0 || strcasecmp(sep->arg[1], "*") == 0) || ((c->GetTarget() == 0) || (c->GetTarget()->IsClient())))
-		c->Message(0, "Type #npcedit help for more info");
+		c->Message(CC_Default, "Type #npcedit help for more info");
 
 }
 
@@ -7027,7 +7127,7 @@ void command_profilereset(Client *c, const Seperator *sep){
 void command_opcode(Client *c, const Seperator *sep){
 	if (!strcasecmp(sep->arg[1], "reload")) {
 		ReloadAllPatches();
-		c->Message(0, "Opcodes for all patches have been reloaded");
+		c->Message(CC_Default, "Opcodes for all patches have been reloaded");
 	}
 }
 
@@ -7035,7 +7135,7 @@ void command_qglobal(Client *c, const Seperator *sep)
 {
 	//In-game switch for qglobal column
 	if (sep->arg[1][0] == 0) {
-		c->Message(0, "Syntax: #qglobal [on/off/view]. Requires NPC target.");
+		c->Message(CC_Default, "Syntax: #qglobal [on/off/view]. Requires NPC target.");
 		return;
 	}
 
@@ -7090,24 +7190,37 @@ void command_path(Client *c, const Seperator *sep)
 {
 	if (sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help"))
 	{
-		c->Message(0, "Syntax: #path shownodes: Spawns a npc to represent every npc node.");
-		c->Message(0, "#path info node_id: Gives information about node info (requires shownode target).");
-		c->Message(0, "#path dump file_name: Dumps the current zone->pathing to a file of your naming.");
-		c->Message(0, "#path add [requested_id]: Adds a node at your current location will try to take the requested id if possible.");
-		c->Message(0, "#path connect connect_to_id [is_teleport] [door_id]: Connects the currently targeted node to connect_to_id's node and connects that node back (requires shownode target).");
-		c->Message(0, "#path sconnect connect_to_id [is_teleport] [door_id]: Connects the currently targeted node to connect_to_id's node (requires shownode target).");
-		c->Message(0, "#path qconnect [set]: short cut connect, connects the targeted node to the node you set with #path qconnect set (requires shownode target).");
-		c->Message(0, "#path disconnect [all]/disconnect_from_id: Disconnects the currently targeted node to disconnect from disconnect from id's node (requires shownode target), if passed all as the second argument it will disconnect this node from every other node.");
-		c->Message(0, "#path move: Moves your targeted node to your current position");
-		c->Message(0, "#path process file_name: processes the map file and tries to automatically generate a rudimentary path setup and then dumps the current zone->pathing to a file of your naming.");
-		c->Message(0, "#path resort [nodes]: resorts the connections/nodes after you've manually altered them so they'll work.");
+		c->Message(CC_Default, "Syntax: #path shownodes [around]: Spawns an npc to represent every path node.  The around option only shows within a range of 200.");
+		c->Message(CC_Default, "Syntax: #path shownodes [#]: Spawns an npc to represent every path node.  Adding a number will start at this node number."); 
+		c->Message(CC_Default, "#path info node_id: Gives information about node info (requires shownode target).");
+		c->Message(CC_Default, "#path optimize: Optimizes pathfile to v4.");
+		c->Message(CC_Default, "#path dump file_name: Dumps the current zone->pathing to a file of your naming.");
+		c->Message(CC_Default, "#path add [requested_id]: Adds a node at your current location will try to take the requested id if possible.");
+		c->Message(CC_Default, "#path connect connect_to_id [is_teleport] [door_id]: Connects the currently targeted node to connect_to_id's node and connects that node back (requires shownode target).");
+		c->Message(CC_Default, "#path sconnect connect_to_id [is_teleport] [door_id]: Connects the currently targeted node to connect_to_id's node (requires shownode target).");
+		c->Message(CC_Default, "#path qconnect [set]: short cut connect, connects the targeted node to the node you set with #path qconnect set (requires shownode target).");
+		c->Message(CC_Default, "#path setdoor neighbour_id [doorid]:  Sets the doorid for the neighbour of the targeted node.  A doorid of -1 resets doorid in neighbour.  No door id, searches for nearest door.");
+		c->Message(CC_Default, "#path teleport neighbour_id [0/1]:  Sets the teleport for the neighbour of the targeted node.");
+		c->Message(CC_Default, "#path disconnect [all]/disconnect_from_id: Disconnects the currently targeted node to disconnect from disconnect from id's node (requires shownode target), if passed all as the second argument it will disconnect this node from every other node.");
+		c->Message(CC_Default, "#path move: Moves your targeted node to your current position");
+		c->Message(CC_Default, "#path process file_name: processes the map file and tries to automatically generate a rudimentary path setup and then dumps the current zone->pathing to a file of your naming.");
+		c->Message(CC_Default, "#path resort [nodes]: resorts the connections/nodes after you've manually altered them so they'll work.");
+		c->Message(CC_Default, "#path nearest [all]: When a mob is targeted, it checks for nearby path nodes.  Using all option checks nearby nodes to all NPCs.");
+		c->Message(CC_Default, "#path meshtest [simple/complex] [startnode]: Performs a connectivity test between nodes.  For simple, it starts at node 0 by default.  The [startnode] parameter will change this.  Using a negative start number, will do the search in reverse. Complex tests all possible route combinations.");
 		return;
 	}
 	if (!strcasecmp(sep->arg[1], "shownodes"))
 	{
-		if (zone->pathing)
-			zone->pathing->SpawnPathNodes();
-
+		if (zone->pathing) {
+			if (!strcasecmp(sep->arg[2], "around"))
+				zone->pathing->SpawnPathNodes(c->GetX(), c->GetY(), c->GetZ());
+			else {
+				if (sep->IsNumber(2))
+					zone->pathing->SpawnPathNodes(0.0f, 0.0f, 0.0f, atoi(sep->arg[2]));
+				else
+					zone->pathing->SpawnPathNodes();
+			}
+		}
 		return;
 	}
 
@@ -7119,18 +7232,32 @@ void command_path(Client *c, const Seperator *sep)
 		}
 		return;
 	}
+	if (!strcasecmp(sep->arg[1], "optimize"))
+	{
+		if (zone->pathing)
+		{
+			if (zone->pathing->GetVersion() == 4) {
+				c->Message(CC_Default, "Path file is already optimized to v4.");
+				return;
+			}
+			c->Message(CC_Default, "Path file is optimizing.  You may go LD.");
+			zone->pathing->Optimize();
+			c->Message(CC_Default, "Path file optimized to v4");
+		}
+		return;
+	}
 
 	if (!strcasecmp(sep->arg[1], "dump"))
 	{
 		if (zone->pathing)
 		{
-			if (sep->arg[2][0] == '\0')
+			if (sep->arg[2][0] == '\0') {
+				c->Message(CC_Default, "You must specify a filename.  Usage: #path dump <filename.path>");
 				return;
+			}
 			
-			zone->pathing->SortNodes();
-			zone->pathing->ResortConnections();
 			zone->pathing->DumpPath(sep->arg[2]);
-			c->Message(0, "Path file saved as %s", sep->arg[2]);
+			c->Message(CC_Default, "Path file v%d saved as %s", zone->pathing->GetVersion(), sep->arg[2]);
 		}
 		return;
 	}
@@ -7156,11 +7283,11 @@ void command_path(Client *c, const Seperator *sep)
 			int32 res = zone->pathing->AddNode(px, py, pz, best_z, atoi(sep->arg[2]));
 			if (res >= 0)
 			{
-				c->Message(0, "Added Path Node: %i", res);
+				c->Message(CC_Default, "Added Path Node: %i", res);
 			}
 			else
 			{
-				c->Message(0, "Failed to add Path Node");
+				c->Message(CC_Default, "Failed to add Path Node");
 			}
 		}
 		else
@@ -7183,11 +7310,11 @@ void command_path(Client *c, const Seperator *sep)
 			int32 res = zone->pathing->AddNode(px, py, pz, best_z, atoi(sep->arg[2]));
 			if (res >= 0)
 			{
-				c->Message(0, "Added Path Node: %i", res);
+				c->Message(CC_Default, "Added Path Node: %i", res);
 			}
 			else
 			{
-				c->Message(0, "Failed to add Path Node");
+				c->Message(CC_Default, "Failed to add Path Node");
 			}
 		}
 		return;
@@ -7199,12 +7326,12 @@ void command_path(Client *c, const Seperator *sep)
 		{
 			if (zone->pathing->DeleteNode(c))
 			{
-				c->Message(0, "Removed Node.");
+				c->Message(CC_Default, "Removed Node.");
 				zone->pathing->CheckNodeErrors(c);
 			}
 			else
 			{
-				c->Message(0, "Unable to Remove Node.");
+				c->Message(CC_Default, "Unable to Remove Node.");
 			}
 		}
 		return;
@@ -7224,6 +7351,27 @@ void command_path(Client *c, const Seperator *sep)
 		if (zone->pathing)
 		{
 			zone->pathing->ConnectNode(c, atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]));
+		}
+		return;
+	}
+
+	if (!strcasecmp(sep->arg[1], "setdoor"))
+	{
+		
+		if (zone->pathing)
+		{
+			if (sep->IsNumber(2) && sep->IsNumber(3)) {
+				zone->pathing->SetDoor(c, atoi(sep->arg[2]), atoi(sep->arg[3]));
+			} else if (sep->IsNumber(2)) {
+				Doors* door = entity_list.FindNearestDoor(c);
+				if (door)
+					zone->pathing->SetDoor(c, atoi(sep->arg[2]), door->GetDoorID());
+				else
+					c->Message(CC_Default, "Unable to find a door nearby.");
+			} else {
+				c->Message(CC_Default, "Usage: #path setdoor neighbour_id [doorid].  Without a doorid value, searches for nearest door. Using a [doorid] = -1 will unset door.");
+			}
+
 		}
 		return;
 	}
@@ -7278,7 +7426,7 @@ void command_path(Client *c, const Seperator *sep)
 				return;
 
 			zone->pathing->ProcessNodesAndSave(sep->arg[2]);
-			c->Message(0, "Path processed...");
+			c->Message(CC_Default, "Path processed...");
 		}
 		return;
 	}
@@ -7290,13 +7438,15 @@ void command_path(Client *c, const Seperator *sep)
 			if (!strcasecmp(sep->arg[2], "nodes"))
 			{
 				zone->pathing->SortNodes();
-				c->Message(0, "Nodes resorted...");
+				zone->pathing->ResizePathingVectors();
+				c->Message(CC_Default, "Nodes resorted...");
 			}
 			else
 			{
 				zone->pathing->ResortConnections();
-				c->Message(0, "Connections resorted...");
-				c->Message(0, "Spawned Nodes will need respawned to display proper node id.");
+				zone->pathing->ResizePathingVectors();
+				c->Message(CC_Default, "Connections resorted...");
+				c->Message(CC_Default, "Spawned Nodes will need respawned to display proper node id.");
 				zone->pathing->CheckNodeErrors(c);
 			}
 		}
@@ -7312,11 +7462,11 @@ void command_path(Client *c, const Seperator *sep)
 				if (zone->pathing->NoHazardsAccurate(glm::vec3(c->GetX(), c->GetY(), c->GetZ()),
 					glm::vec3(c->GetTarget()->GetX(), c->GetTarget()->GetY(), c->GetTarget()->GetZ())))
 				{
-					c->Message(0, "No hazards.");
+					c->Message(CC_Default, "No hazards.");
 				}
 				else
 				{
-					c->Message(0, "Hazard Detected...");
+					c->Message(CC_Default, "Hazard Detected...");
 				}
 			}
 		}
@@ -7336,7 +7486,7 @@ void command_path(Client *c, const Seperator *sep)
 	{
 		if (!c->GetTarget())
 		{
-			c->Message(0, "First #path shownodes to spawn the pathnodes, and then target one of them.");
+			c->Message(CC_Default, "First #path shownodes to spawn the pathnodes, and then target one of them.");
 			return;
 		}
 		if (zone->pathing)
@@ -7351,17 +7501,20 @@ void command_path(Client *c, const Seperator *sep)
 		{
 			if (!strcasecmp(sep->arg[2], "simple"))
 			{
-				c->Message(0, "You may go linkdead. Results will be in the log file.");
-				zone->pathing->SimpleMeshTest(c);
+				c->Message(CC_Default, "You may go linkdead. Results will be in the log file.");
+				if (sep->IsNumber(3))
+					zone->pathing->SimpleMeshTest(c, atoi(sep->arg[3]));
+				else
+					zone->pathing->SimpleMeshTest(c);
 				return;
 			}
 			else if(!strcasecmp(sep->arg[2], "complex"))
 			{
-				c->Message(0, "You may go linkdead. Results will be in the log file.");
+				c->Message(CC_Default, "You may go linkdead. Results will be in the log file.");
 				zone->pathing->MeshTest();
 				return;
 			} else {
-				c->Message(0, "Usage: #path meshtest [simple|complex] - complex may result in linkdead/zone crash");
+				c->Message(CC_Default, "Usage: #path meshtest [simple|complex] - complex may result in linkdead/zone crash");
 				return;
 			}
 		}
@@ -7371,7 +7524,7 @@ void command_path(Client *c, const Seperator *sep)
 	{
 		if (zone->pathing)
 		{
-			c->Message(0, "You may go linkdead. Results will be in the log file.");
+			c->Message(CC_Default, "You may go linkdead. Results will be in the log file.");
 			entity_list.FindPathsToAllNPCs();
 			return;
 		}
@@ -7379,30 +7532,36 @@ void command_path(Client *c, const Seperator *sep)
 
 	if (!strcasecmp(sep->arg[1], "nearest"))
 	{
-		if (!c->GetTarget() || !c->GetTarget()->IsMob())
+		if (c->GetTarget() && !c->GetTarget()->IsMob())
 		{
-			c->Message(0, "You must target something.");
+			c->Message(CC_Default, "You must target a mob.");
 			return;
 		}
 
 		if (zone->pathing)
 		{
-			Mob *m = c->GetTarget();
+			if (c->GetTarget())
+			{
+				Mob *m = c->GetTarget();
 
-			glm::vec3 Position(m->GetX(), m->GetY(), m->GetZ());
+				glm::vec3 Position(m->GetX(), m->GetY(), m->GetZ());
 
-			int Node = zone->pathing->FindNearestPathNode(Position);
+				int Node = zone->pathing->FindNearestPathNode(Position);
 
-			if (Node == -1)
-				c->Message(0, "Unable to locate a path node within range.");
-			else
-				c->Message(0, "Nearest path node is %i", Node);
+				if (Node == -1)
+					c->Message(CC_Default, "Unable to locate a path node within range.");
+				else
+					c->Message(CC_Default, "Nearest path node is %i", Node);
+			} else if (!strcasecmp(sep->arg[2], "all")) {
+				c->Message(CC_Default, "Checking all mobs can find a path node nearby.");
+				entity_list.CheckNearbyNodes(c);
+			}
 
 			return;
 		}
 	}
 
-	c->Message(0, "Unknown path command.");
+	c->Message(CC_Default, "Unknown path command.");
 }
 
 void Client::Undye(){
@@ -7429,7 +7588,7 @@ void command_undye(Client *c, const Seperator *sep){
 	}
 	else
 	{
-		c->Message(0, "ERROR: Client target required");
+		c->Message(CC_Default, "ERROR: Client target required");
 	}
 }
 
@@ -7450,24 +7609,24 @@ void command_ginfo(Client *c, const Seperator *sep){
 
 	Group *g = t->GetGroup();
 	if (!g) {
-		c->Message(0, "This client is not in a group");
+		c->Message(CC_Default, "This client is not in a group");
 		return;
 	}
 
-	c->Message(0, "Player: %s is in Group #%lu: with %i members", t->GetName(), (unsigned long)g->GetID(), g->GroupCount());
+	c->Message(CC_Default, "Player: %s is in Group #%lu: with %i members", t->GetName(), (unsigned long)g->GetID(), g->GroupCount());
 
 	uint32 r;
 	for (r = 0; r < MAX_GROUP_MEMBERS; r++) {
 		if (g->members[r] == nullptr) {
 			if (g->membername[r][0] == '\0')
 				continue;
-			c->Message(0, "...Zoned Member: %s, Roles: %s %s %s", g->membername[r],
+			c->Message(CC_Default, "...Zoned Member: %s, Roles: %s %s %s", g->membername[r],
 				(g->MemberRoles[r] & RoleAssist) ? "Assist" : "",
 				(g->MemberRoles[r] & RoleTank) ? "Tank" : "",
 				(g->MemberRoles[r] & RolePuller) ? "Puller" : "");
 		}
 		else {
-			c->Message(0, "...In-Zone Member: %s (0x%x) Roles: %s %s %s", g->membername[r], g->members[r],
+			c->Message(CC_Default, "...In-Zone Member: %s (0x%x) Roles: %s %s %s", g->membername[r], g->members[r],
 				(g->MemberRoles[r] & RoleAssist) ? "Assist" : "",
 				(g->MemberRoles[r] & RoleTank) ? "Tank" : "",
 				(g->MemberRoles[r] & RolePuller) ? "Puller" : "");
@@ -7483,7 +7642,7 @@ void command_hp(Client *c, const Seperator *sep){
 
 void command_aggro(Client *c, const Seperator *sep){
 	if (c->GetTarget() == nullptr || !c->GetTarget()->IsNPC()) {
-		c->Message(0, "Error: you must have an NPC target.");
+		c->Message(CC_Default, "Error: you must have an NPC target.");
 		return;
 	}
 	float d = atof(sep->arg[1]);
@@ -7503,21 +7662,21 @@ void command_pf(Client *c, const Seperator *sep){
 	if (c->GetTarget())
 	{
 		Mob *who = c->GetTarget();
-		c->Message(0, "POS: (%.2f, %.2f, %.2f)", who->GetX(), who->GetY(), who->GetZ());
-		c->Message(0, "WP: %s (%d/%d)", to_string(who->GetCurrentWayPoint()).c_str(), who->IsNPC()?who->CastToNPC()->GetMaxWp():-1);
-		c->Message(0, "TAR: (%.2f, %.2f, %.2f)", who->GetTarX(), who->GetTarY(), who->GetTarZ());
-		c->Message(0, "TARV: (%.2f, %.2f, %.2f)", who->GetTarVX(), who->GetTarVY(), who->GetTarVZ());
-		c->Message(0, "|TV|=%.2f index=%d", who->GetTarVector(), who->GetTarNDX());
-		c->Message(0, "pause=%d RAspeed=%d", who->GetCWPP(), who->GetRunAnimSpeed());
+		c->Message(CC_Default, "POS: (%.2f, %.2f, %.2f)", who->GetX(), who->GetY(), who->GetZ());
+		c->Message(CC_Default, "WP: %s (%d/%d)", to_string(who->GetCurrentWayPoint()).c_str(), who->IsNPC()?who->CastToNPC()->GetMaxWp():-1);
+		c->Message(CC_Default, "TAR: (%.2f, %.2f, %.2f)", who->GetTarX(), who->GetTarY(), who->GetTarZ());
+		c->Message(CC_Default, "TARV: (%.2f, %.2f, %.2f)", who->GetTarVX(), who->GetTarVY(), who->GetTarVZ());
+		c->Message(CC_Default, "|TV|=%.2f index=%d", who->GetTarVector(), who->GetTarNDX());
+		c->Message(CC_Default, "pause=%d RAspeed=%d", who->GetCWPP(), who->GetRunAnimSpeed());
 	}
 	else {
-		c->Message(0, "ERROR: target required");
+		c->Message(CC_Default, "ERROR: target required");
 	}
 }
 
 void command_bestz(Client *c, const Seperator *sep){
 	if (zone->zonemap == nullptr) {
-		c->Message(0, "Map not loaded for this zone");
+		c->Message(CC_Default, "Map not loaded for this zone");
 	}
 	else {
 		glm::vec3 me;
@@ -7532,16 +7691,16 @@ void command_bestz(Client *c, const Seperator *sep){
 
 		if (best_z != BEST_Z_INVALID)
 		{
-			c->Message(0, "Z is %.3f at (%.3f, %.3f).", best_z, me.x, me.y);
+			c->Message(CC_Default, "Z is %.3f at (%.3f, %.3f).", best_z, me.x, me.y);
 		}
 		else
 		{
-			c->Message(0, "Found no Z.");
+			c->Message(CC_Default, "Found no Z.");
 		}
 	}
 
 	if (zone->watermap == nullptr) {
-		c->Message(0, "Water Region Map not loaded for this zone");
+		c->Message(CC_Default, "Water Region Map not loaded for this zone");
 	}
 	else {
 		WaterRegionType RegionType;
@@ -7551,28 +7710,28 @@ void command_bestz(Client *c, const Seperator *sep){
 			z = c->GetTarget()->GetZ();
 			auto position = glm::vec3(c->GetTarget()->GetX(), c->GetTarget()->GetY(), z);
 			RegionType = zone->watermap->ReturnRegionType(position);
-			c->Message(0,"InWater returns %d", zone->watermap->InWater(position));
-			c->Message(0,"InLava returns %d", zone->watermap->InLava(position));
+			c->Message(CC_Default,"InWater returns %d", zone->watermap->InWater(position));
+			c->Message(CC_Default,"InLava returns %d", zone->watermap->InLava(position));
 
 		}
 		else {
 			z = c->GetZ();
 			auto position = glm::vec3(c->GetX(), c->GetY(), z);
 			RegionType = zone->watermap->ReturnRegionType(position);
-			c->Message(0,"InWater returns %d", zone->watermap->InWater(position));
-			c->Message(0,"InLava returns %d", zone->watermap->InLava(position));
+			c->Message(CC_Default,"InWater returns %d", zone->watermap->InWater(position));
+			c->Message(CC_Default,"InLava returns %d", zone->watermap->InLava(position));
 
 		}
 
 		switch (RegionType) {
-		case RegionTypeNormal:	{ c->Message(0, "There is nothing special about the region you are in!"); break; }
-		case RegionTypeWater:	{ c->Message(0, "You/your target are in Water."); break; }
-		case RegionTypeLava:	{ c->Message(0, "You/your target are in Lava."); break; }
-		case RegionTypeVWater:	{ c->Message(0, "You/your target are in VWater (Icy Water?)."); break; }
-		case RegionTypePVP:	{ c->Message(0, "You/your target are in a pvp enabled area."); break; }
-		case RegionTypeSlime:	{ c->Message(0, "You/your target are in slime."); break; }
-		case RegionTypeIce:	{ c->Message(0, "You/your target are in ice."); break; }
-		default: c->Message(0, "You/your target are in an unknown region type.");
+		case RegionTypeNormal:	{ c->Message(CC_Default, "There is nothing special about the region you are in!"); break; }
+		case RegionTypeWater:	{ c->Message(CC_Default, "You/your target are in Water."); break; }
+		case RegionTypeLava:	{ c->Message(CC_Default, "You/your target are in Lava."); break; }
+		case RegionTypeVWater:	{ c->Message(CC_Default, "You/your target are in VWater (Icy Water?)."); break; }
+		case RegionTypePVP:	{ c->Message(CC_Default, "You/your target are in a pvp enabled area."); break; }
+		case RegionTypeSlime:	{ c->Message(CC_Default, "You/your target are in slime."); break; }
+		case RegionTypeIce:	{ c->Message(CC_Default, "You/your target are in ice."); break; }
+		default: c->Message(CC_Default, "You/your target are in an unknown region type.");
 		}
 	}
 
@@ -7580,7 +7739,7 @@ void command_bestz(Client *c, const Seperator *sep){
 }
 
 void command_reloadstatic(Client *c, const Seperator *sep){
-	c->Message(0, "Reloading zone static data...");
+	c->Message(CC_Default, "Reloading zone static data...");
 	zone->ReloadStaticData();
 }
 
@@ -7600,13 +7759,13 @@ void command_flagedit(Client *c, const Seperator *sep)
 {
 	//super-command for editing zone flags
 	if (sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
-		c->Message(0, "Syntax: #flagedit [lockzone|unlockzone|listzones|give|take].");
-		c->Message(0, "...lockzone [zone id/short] [flag name] - Set the specified flag name on the zone, locking the zone");
-		c->Message(0, "...unlockzone [zone id/short] - Removes the flag requirement from the specified zone");
-		c->Message(0, "...listzones - List all zones which require a flag, and their flag's name");
-		c->Message(0, "...give [zone id/short] - Give your target the zone flag for the specified zone.");
-		c->Message(0, "...take [zone id/short] - Take the zone flag for the specified zone away from your target");
-		c->Message(0, "...Note: use #flags to view flags on a person");
+		c->Message(CC_Default, "Syntax: #flagedit [lockzone|unlockzone|listzones|give|take].");
+		c->Message(CC_Default, "...lockzone [zone id/short] [flag name] - Set the specified flag name on the zone, locking the zone");
+		c->Message(CC_Default, "...unlockzone [zone id/short] - Removes the flag requirement from the specified zone");
+		c->Message(CC_Default, "...listzones - List all zones which require a flag, and their flag's name");
+		c->Message(CC_Default, "...give [zone id/short] - Give your target the zone flag for the specified zone.");
+		c->Message(CC_Default, "...take [zone id/short] - Take the zone flag for the specified zone away from your target");
+		c->Message(CC_Default, "...Note: use #flags to view flags on a person");
 		return;
 	}
 
@@ -7679,9 +7838,9 @@ void command_flagedit(Client *c, const Seperator *sep)
             return;
         }
 
-		c->Message(0, "Zones which require flags:");
+		c->Message(CC_Default, "Zones which require flags:");
 		for (auto row = results.begin(); row != results.end(); ++row)
-			c->Message(0, "Zone %s (%s,%s) version %s requires key %s", row[2], row[0], row[1], row[3], row[4]);
+			c->Message(CC_Default, "Zone %s (%s,%s) version %s requires key %s", row[2], row[0], row[1], row[3], row[4]);
 
 		return;
 	}
@@ -7744,7 +7903,7 @@ void command_acceptrules(Client *c, const Seperator *sep){
 	{
 		database.SetAgreementFlag(c->AccountID());
 		c->SendAppearancePacket(AT_Anim, ANIM_STAND);
-		c->Message(0, "It is recorded you have agreed to the rules.");
+		c->Message(CC_Default, "It is recorded you have agreed to the rules.");
 	}
 }
 
@@ -7755,7 +7914,7 @@ void command_guildcreate(Client *c, const Seperator *sep){
 	}
 	else
 	{
-		c->Message(0, "Guild name must be more than 4 characters and less than 16.");
+		c->Message(CC_Default, "Guild name must be more than 4 characters and less than 16.");
 	}
 }
 
@@ -7770,46 +7929,46 @@ void command_guildlist(Client *c, const Seperator *sep){
 		tmp->ApprovedMembers(c);
 	}
 	else
-		c->Message(0, "Could not find reference id.");
+		c->Message(CC_Default, "Could not find reference id.");
 }
 
 void command_hatelist(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 	if (target == nullptr) {
-		c->Message(0, "Error: you must have a target.");
+		c->Message(CC_Default, "Error: you must have a target.");
 		return;
 	}
 
-	c->Message(0, "Display hate list for %s..", target->GetName());
+	c->Message(CC_Default, "Display hate list for %s..", target->GetName());
 	target->PrintHateListToClient(c);
 }
 
 void command_rules(Client *c, const Seperator *sep){
 	//super-command for managing rules settings
 	if (sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
-		c->Message(0, "Syntax: #rules [subcommand].");
-		c->Message(0, "-- Rule Set Manipulation --");
-		c->Message(0, "...listsets - List avaliable rule sets");
-		c->Message(0, "...current - gives the name of the ruleset currently running in this zone");
-		c->Message(0, "...reload - Reload the selected ruleset in this zone");
-		c->Message(0, "...switch (ruleset name) - Change the selected ruleset and load it");
-		c->Message(0, "...load (ruleset name) - Load a ruleset in just this zone without changing the selected set");
+		c->Message(CC_Default, "Syntax: #rules [subcommand].");
+		c->Message(CC_Default, "-- Rule Set Manipulation --");
+		c->Message(CC_Default, "...listsets - List avaliable rule sets");
+		c->Message(CC_Default, "...current - gives the name of the ruleset currently running in this zone");
+		c->Message(CC_Default, "...reload - Reload the selected ruleset in this zone");
+		c->Message(CC_Default, "...switch (ruleset name) - Change the selected ruleset and load it");
+		c->Message(CC_Default, "...load (ruleset name) - Load a ruleset in just this zone without changing the selected set");
 		//too lazy to write this right now:
-		//		c->Message(0, "...wload (ruleset name) - Load a ruleset in all zones without changing the selected set");
-		c->Message(0, "...store [ruleset name] - Store the running ruleset as the specified name");
-		c->Message(0, "---------------------");
-		c->Message(0, "-- Running Rule Manipulation --");
-		c->Message(0, "...reset - Reset all rules to their default values");
-		c->Message(0, "...get [rule] - Get the specified rule's local value");
-		c->Message(0, "...set (rule) (value) - Set the specified rule to the specified value locally only");
-		c->Message(0, "...setdb (rule) (value) - Set the specified rule to the specified value locally and in the DB");
-		c->Message(0, "...list [catname] - List all rules in the specified category (or all categiries if omitted)");
-		c->Message(0, "...values [catname] - List the value of all rules in the specified category");
+		//		c->Message(CC_Default, "...wload (ruleset name) - Load a ruleset in all zones without changing the selected set");
+		c->Message(CC_Default, "...store [ruleset name] - Store the running ruleset as the specified name");
+		c->Message(CC_Default, "---------------------");
+		c->Message(CC_Default, "-- Running Rule Manipulation --");
+		c->Message(CC_Default, "...reset - Reset all rules to their default values");
+		c->Message(CC_Default, "...get [rule] - Get the specified rule's local value");
+		c->Message(CC_Default, "...set (rule) (value) - Set the specified rule to the specified value locally only");
+		c->Message(CC_Default, "...setdb (rule) (value) - Set the specified rule to the specified value locally and in the DB");
+		c->Message(CC_Default, "...list [catname] - List all rules in the specified category (or all categiries if omitted)");
+		c->Message(CC_Default, "...values [catname] - List the value of all rules in the specified category");
 		return;
 	}
 
 	if (!strcasecmp(sep->arg[1], "current")) {
-		c->Message(0, "Currently running ruleset '%s' (%d)", RuleManager::Instance()->GetActiveRuleset(),
+		c->Message(CC_Default, "Currently running ruleset '%s' (%d)", RuleManager::Instance()->GetActiveRuleset(),
 			RuleManager::Instance()->GetActiveRulesetID());
 	}
 	else if (!strcasecmp(sep->arg[1], "listsets")) {
@@ -7819,17 +7978,17 @@ void command_rules(Client *c, const Seperator *sep){
 			return;
 		}
 
-		c->Message(0, "Avaliable rule sets:");
+		c->Message(CC_Default, "Avaliable rule sets:");
 		std::map<int, std::string>::iterator cur, end;
 		cur = sets.begin();
 		end = sets.end();
 		for (; cur != end; ++cur) {
-			c->Message(0, "(%d) %s", cur->first, cur->second.c_str());
+			c->Message(CC_Default, "(%d) %s", cur->first, cur->second.c_str());
 		}
 	}
 	else if (!strcasecmp(sep->arg[1], "reload")) {
 		RuleManager::Instance()->LoadRules(&database, RuleManager::Instance()->GetActiveRuleset());
-		c->Message(0, "The active ruleset (%s (%d)) has been reloaded", RuleManager::Instance()->GetActiveRuleset(),
+		c->Message(CC_Default, "The active ruleset (%s (%d)) has been reloaded", RuleManager::Instance()->GetActiveRuleset(),
 			RuleManager::Instance()->GetActiveRulesetID());
 	}
 	else if (!strcasecmp(sep->arg[1], "switch")) {
@@ -7847,7 +8006,7 @@ void command_rules(Client *c, const Seperator *sep){
 		//TODO: we likely want to reload this ruleset everywhere...
 		RuleManager::Instance()->LoadRules(&database, sep->arg[2]);
 
-		c->Message(0, "The selected ruleset has been changed to (%s (%d)) and reloaded locally", sep->arg[2], rsid);
+		c->Message(CC_Default, "The selected ruleset has been changed to (%s (%d)) and reloaded locally", sep->arg[2], rsid);
 	}
 	else if (!strcasecmp(sep->arg[1], "load")) {
 		//make sure this is a valid rule set..
@@ -7857,13 +8016,13 @@ void command_rules(Client *c, const Seperator *sep){
 			return;
 		}
 		RuleManager::Instance()->LoadRules(&database, sep->arg[2]);
-		c->Message(0, "Loaded ruleset '%s' (%d) locally", sep->arg[2], rsid);
+		c->Message(CC_Default, "Loaded ruleset '%s' (%d) locally", sep->arg[2], rsid);
 	}
 	else if (!strcasecmp(sep->arg[1], "store")) {
 		if (sep->argnum == 1) {
 			//store current rule set.
 			RuleManager::Instance()->SaveRules(&database);
-			c->Message(0, "Rules saved");
+			c->Message(CC_Default, "Rules saved");
 		}
 		else if (sep->argnum == 2) {
 			RuleManager::Instance()->SaveRules(&database, sep->arg[2]);
@@ -7873,9 +8032,9 @@ void command_rules(Client *c, const Seperator *sep){
 				c->Message(CC_Red, "Unable to query ruleset ID after store, it most likely failed.");
 			}
 			else {
-				c->Message(0, "Stored rules as ruleset '%s' (%d)", sep->arg[2], rsid);
+				c->Message(CC_Default, "Stored rules as ruleset '%s' (%d)", sep->arg[2], rsid);
 				if (prersid != rsid) {
-					c->Message(0, "Rule set %s (%d) is now active in this zone", sep->arg[2], rsid);
+					c->Message(CC_Default, "Rule set %s (%d) is now active in this zone", sep->arg[2], rsid);
 				}
 			}
 		}
@@ -7886,7 +8045,7 @@ void command_rules(Client *c, const Seperator *sep){
 	}
 	else if (!strcasecmp(sep->arg[1], "reset")) {
 		RuleManager::Instance()->ResetRules();
-		c->Message(0, "The running ruleset has been set to defaults");
+		c->Message(CC_Default, "The running ruleset has been set to defaults");
 
 	}
 	else if (!strcasecmp(sep->arg[1], "get")) {
@@ -7898,7 +8057,7 @@ void command_rules(Client *c, const Seperator *sep){
 		if (!RuleManager::Instance()->GetRule(sep->arg[2], value))
 			c->Message(CC_Red, "Unable to find rule %s", sep->arg[2]);
 		else
-			c->Message(0, "%s - %s", sep->arg[2], value.c_str());
+			c->Message(CC_Default, "%s - %s", sep->arg[2], value.c_str());
 
 	}
 	else if (!strcasecmp(sep->arg[1], "set")) {
@@ -7910,7 +8069,7 @@ void command_rules(Client *c, const Seperator *sep){
 			c->Message(CC_Red, "Failed to modify rule");
 		}
 		else {
-			c->Message(0, "Rule modified locally.");
+			c->Message(CC_Default, "Rule modified locally.");
 		}
 	}
 	else if (!strcasecmp(sep->arg[1], "setdb")) {
@@ -7922,7 +8081,7 @@ void command_rules(Client *c, const Seperator *sep){
 			c->Message(CC_Red, "Failed to modify rule");
 		}
 		else {
-			c->Message(0, "Rule modified locally and in the database.");
+			c->Message(CC_Default, "Rule modified locally and in the database.");
 		}
 	}
 	else if (!strcasecmp(sep->arg[1], "list")) {
@@ -7932,12 +8091,12 @@ void command_rules(Client *c, const Seperator *sep){
 				c->Message(CC_Red, "Failed to list categories!");
 				return;
 			}
-			c->Message(0, "Rule Categories:");
+			c->Message(CC_Default, "Rule Categories:");
 			std::vector<const char *>::iterator cur, end;
 			cur = rule_list.begin();
 			end = rule_list.end();
 			for (; cur != end; ++cur) {
-				c->Message(0, " %s", *cur);
+				c->Message(CC_Default, " %s", *cur);
 			}
 		}
 		else if (sep->argnum == 2) {
@@ -7949,12 +8108,12 @@ void command_rules(Client *c, const Seperator *sep){
 				c->Message(CC_Red, "Failed to list rules!");
 				return;
 			}
-			c->Message(0, "Rules in category %s:", sep->arg[2]);
+			c->Message(CC_Default, "Rules in category %s:", sep->arg[2]);
 			std::vector<const char *>::iterator cur, end;
 			cur = rule_list.begin();
 			end = rule_list.end();
 			for (; cur != end; ++cur) {
-				c->Message(0, " %s", *cur);
+				c->Message(CC_Default, " %s", *cur);
 			}
 		}
 		else {
@@ -7975,13 +8134,13 @@ void command_rules(Client *c, const Seperator *sep){
 				c->Message(CC_Red, "Failed to list rules!");
 				return;
 			}
-			c->Message(0, "Rules & values in category %s:", sep->arg[2]);
+			c->Message(CC_Default, "Rules & values in category %s:", sep->arg[2]);
 			std::vector<const char *>::iterator cur, end;
 			cur = rule_list.begin();
 			end = rule_list.end();
 			for (std::string tmp_value; cur != end; ++cur) {
 				if (RuleManager::Instance()->GetRule(*cur, tmp_value))
-					c->Message(0, " %s - %s", *cur, tmp_value.c_str());
+					c->Message(CC_Default, " %s - %s", *cur, tmp_value.c_str());
 			}
 		}
 
@@ -8049,83 +8208,6 @@ void command_altactivate(Client *c, const Seperator *sep){
 	}
 }
 
-void command_traindisc(Client *c, const Seperator *sep){
-	uint8 max_level, min_level;
-	uint16 curspell, count;
-	Client *t = c;
-
-	if (c->GetTarget() && c->GetTarget()->IsClient() && c->GetGM())
-		t = c->GetTarget()->CastToClient();
-
-	if (!sep->arg[1][0])
-	{
-		c->Message(0, "FORMAT: #traindisc <max level> <min level>");
-		return;
-	}
-
-	max_level = (uint8)atoi(sep->arg[1]);
-	if (!c->GetGM() && max_level > RuleI(Character, MaxLevel))
-		max_level = RuleI(Character, MaxLevel);	//default to Character:MaxLevel if we're not a GM & it's higher than the max level
-	min_level = sep->arg[2][0] ? (uint8)atoi(sep->arg[2]) : 1;	//default to 1 if there isn't a 2nd argument
-	if (!c->GetGM() && min_level > RuleI(Character, MaxLevel))
-		min_level = RuleI(Character, MaxLevel);	//default to Character:MaxLevel if we're not a GM & it's higher than the max level
-
-	if (max_level < 1 || min_level < 1)
-	{
-		c->Message(0, "ERROR: Level must be greater than 1.");
-		return;
-	}
-	if (min_level > max_level) {
-		c->Message(0, "Error: Min Level must be less than or equal to Max Level.");
-		return;
-	}
-
-	t->Message(0, "Training disciplines");
-	if (t != c)
-		c->Message(0, "Training disciplines for %s.", t->GetName());
-	Log.Out(Logs::General, Logs::Normal, "Train disciplines request for %s from %s, levels: %u -> %u", t->GetName(), c->GetName(), min_level, max_level);
-
-	for (curspell = 0, count = 0; curspell < SPDAT_RECORDS; curspell++)
-	{
-		if
-			(
-			spells[curspell].classes[WARRIOR] != 0 && // check if spell exists
-			spells[curspell].classes[t->GetPP().class_ - 1] <= max_level &&	//maximum level
-			spells[curspell].classes[t->GetPP().class_ - 1] >= min_level &&	//minimum level
-			spells[curspell].skill != 52
-			)
-		{
-			if (IsDiscipline(curspell)){
-				//we may want to come up with a function like Client::GetNextAvailableSpellBookSlot() to help speed this up a little
-				for (int r = 0; r < MAX_PP_DISCIPLINES; r++) {
-					if (t->GetPP().disciplines.values[r] == curspell) {
-						t->Message(CC_Red, "You already know this discipline.");
-						break;	//continue the 1st loop
-					}
-					else if (t->GetPP().disciplines.values[r] == 0) {
-						t->GetPP().disciplines.values[r] = curspell;
-						t->SendDisciplineUpdate();
-						t->Message(0, "You have learned a new discipline!");
-						count++;	//success counter
-						break;	//continue the 1st loop
-					}	//if we get to this point, there's already a discipline in this slot, so we continue onto the next slot
-				}
-			}
-		}
-	}
-
-	if (count > 0) {
-		t->Message(0, "Successfully trained %u disciplines.", count);
-		if (t != c)
-			c->Message(0, "Successfully trained %u disciplines for %s.", count, t->GetName());
-	}
-	else {
-		t->Message(0, "No disciplines trained.");
-		if (t != c)
-			c->Message(0, "No disciplines trained for %s.", t->GetName());
-	}
-}
-
 void command_setgraveyard(Client *c, const Seperator *sep){
 	uint32 zoneid = 0;
 	uint32 graveyard_id = 0;
@@ -8135,7 +8217,7 @@ void command_setgraveyard(Client *c, const Seperator *sep){
 		t = c->GetTarget()->CastToClient();
 
 	if (!sep->arg[1][0]) {
-		c->Message(0, "Usage: #setgraveyard [zonename]");
+		c->Message(CC_Default, "Usage: #setgraveyard [zonename]");
 		return;
 	}
 
@@ -8145,21 +8227,21 @@ void command_setgraveyard(Client *c, const Seperator *sep){
 		graveyard_id = database.CreateGraveyardRecord(zoneid, t->GetPosition());
 
 		if (graveyard_id > 0) {
-			c->Message(0, "Successfuly added a new record for this graveyard!");
+			c->Message(CC_Default, "Successfuly added a new record for this graveyard!");
 			if (database.AddGraveyardIDToZone(zoneid, graveyard_id) > 0) {
-				c->Message(0, "Successfuly added this new graveyard for the zone %s.", sep->arg[1]);
+				c->Message(CC_Default, "Successfuly added this new graveyard for the zone %s.", sep->arg[1]);
 				// TODO: Set graveyard data to the running zone process.
-				c->Message(0, "Done!");
+				c->Message(CC_Default, "Done!");
 			}
 			else
-				c->Message(0, "Unable to add this new graveyard to the zone %s.", sep->arg[1]);
+				c->Message(CC_Default, "Unable to add this new graveyard to the zone %s.", sep->arg[1]);
 		}
 		else {
-			c->Message(0, "Unable to create a new graveyard record in the database.");
+			c->Message(CC_Default, "Unable to create a new graveyard record in the database.");
 		}
 	}
 	else {
-		c->Message(0, "Unable to retrieve a ZoneID for the zone: %s", sep->arg[1]);
+		c->Message(CC_Default, "Unable to retrieve a ZoneID for the zone: %s", sep->arg[1]);
 	}
 
 	return;
@@ -8170,7 +8252,7 @@ void command_deletegraveyard(Client *c, const Seperator *sep){
 	uint32 graveyard_id = 0;
 
 	if (!sep->arg[1][0]) {
-		c->Message(0, "Usage: #deletegraveyard [zonename]");
+		c->Message(CC_Default, "Usage: #deletegraveyard [zonename]");
 		return;
 	}
 
@@ -8179,15 +8261,15 @@ void command_deletegraveyard(Client *c, const Seperator *sep){
 
 	if (zoneid > 0 && graveyard_id > 0) {
 		if (database.DeleteGraveyard(zoneid, graveyard_id))
-			c->Message(0, "Successfuly deleted graveyard %u for zone %s.", graveyard_id, sep->arg[1]);
+			c->Message(CC_Default, "Successfuly deleted graveyard %u for zone %s.", graveyard_id, sep->arg[1]);
 		else
-			c->Message(0, "Unable to delete graveyard %u for zone %s.", graveyard_id, sep->arg[1]);
+			c->Message(CC_Default, "Unable to delete graveyard %u for zone %s.", graveyard_id, sep->arg[1]);
 	}
 	else {
 		if (zoneid <= 0)
-			c->Message(0, "Unable to retrieve a ZoneID for the zone: %s", sep->arg[1]);
+			c->Message(CC_Default, "Unable to retrieve a ZoneID for the zone: %s", sep->arg[1]);
 		else if (graveyard_id <= 0)
-			c->Message(0, "Unable to retrieve a valid GraveyardID for the zone: %s", sep->arg[1]);
+			c->Message(CC_Default, "Unable to retrieve a valid GraveyardID for the zone: %s", sep->arg[1]);
 	}
 
 	return;
@@ -8212,7 +8294,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "maketype") == 0) {
 		if (!target || !target->IsNPC()) {
-			c->Message(0, "Target Required!");
+			c->Message(CC_Default, "Target Required!");
 			return;
 		}
 
@@ -8222,7 +8304,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "makegroup") == 0) {
 		if (!sep->arg[2]) {
-			c->Message(0, "Format: #advnpdspawn makegroup <name> [spawn limit] [dist] [max x] [min x] [max y] [min y] [delay]");
+			c->Message(CC_Default, "Format: #advnpdspawn makegroup <name> [spawn limit] [dist] [max x] [min x] [max y] [min y] [delay]");
 			return;
 		}
 
@@ -8239,18 +8321,18 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			(sep->arg[9] ? atoi(sep->arg[9]) : 0));
 		auto results = database.QueryDatabase(query);
 		if (!results.Success()) {
-			c->Message(0, "Invalid Arguments -- MySQL gave the following error:");
+			c->Message(CC_Default, "Invalid Arguments -- MySQL gave the following error:");
 			c->Message(CC_Red, results.ErrorMessage().c_str());
 			return;
 		}
 
-        c->Message(0, "Group ID %i created successfully!", results.LastInsertedID());
+        c->Message(CC_Default, "Group ID %i created successfully!", results.LastInsertedID());
         return;
     }
 
 	if (strcasecmp(sep->arg[1], "addgroupentry") == 0) {
 		if (!atoi(sep->arg[2]) || !atoi(sep->arg[3]) || !atoi(sep->arg[4])) {
-			c->Message(0, "Format: #advnpdspawn addgroupentry <spawnggroupID> <npcID> <chance>");
+			c->Message(CC_Default, "Format: #advnpdspawn addgroupentry <spawnggroupID> <npcID> <chance>");
 			return;
 		}
 
@@ -8259,19 +8341,19 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			atoi(sep->arg[2]), atoi(sep->arg[3]), atoi(sep->arg[4]));
 		auto results = database.QueryDatabase(query);
 		if (!results.Success()) {
-			c->Message(0, "Invalid Arguments -- MySQL gave the following error:");
+			c->Message(CC_Default, "Invalid Arguments -- MySQL gave the following error:");
 			c->Message(CC_Red, results.ErrorMessage().c_str());
 			return;
 		}
 
-        c->Message(0, "NPC %i added to group %i with %i chance!", atoi(sep->arg[3]), atoi(sep->arg[2]), atoi(sep->arg[4]) );
+        c->Message(CC_Default, "NPC %i added to group %i with %i chance!", atoi(sep->arg[3]), atoi(sep->arg[2]), atoi(sep->arg[4]) );
 
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "editgroupbox") == 0) {
 		if (!atof(sep->arg[2]) || !atof(sep->arg[3]) || !atof(sep->arg[4]) || !atof(sep->arg[5]) || !atof(sep->arg[6]) || !atof(sep->arg[7]) || !atof(sep->arg[8])) {
-			c->Message(0, "Format: #advnpdspawn editgroupbox <spawngroupID> <dist> <max x> <min x> <max y> <min y> <delay>");
+			c->Message(CC_Default, "Format: #advnpdspawn editgroupbox <spawngroupID> <dist> <max x> <min x> <max y> <min y> <delay>");
 			return;
 		}
 
@@ -8282,19 +8364,19 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			atoi(sep->arg[2]));
 		auto results = database.QueryDatabase(query);
 		if (!results.Success()) {
-			c->Message(0, "Invalid Arguments -- MySQL gave the following error:");
+			c->Message(CC_Default, "Invalid Arguments -- MySQL gave the following error:");
 			c->Message(CC_Red, results.ErrorMessage().c_str());
 			return;
 		}
 
-        c->Message(0, "Group ID %i created successfully!", results.LastInsertedID());
+        c->Message(CC_Default, "Group ID %i created successfully!", results.LastInsertedID());
 
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "cleargroupbox") == 0) {
 		if (!atoi(sep->arg[2])) {
-			c->Message(0, "Format: #advnpdspawn cleargroupbox <spawngroupID>");
+			c->Message(CC_Default, "Format: #advnpdspawn cleargroupbox <spawngroupID>");
 			return;
 		}
 
@@ -8304,32 +8386,32 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			"WHERE id = '%i' ", atoi(sep->arg[2]));
 		auto results = database.QueryDatabase(query);
 		if (!results.Success()) {
-			c->Message(0, "Invalid Arguments -- MySQL gave the following error:");
+			c->Message(CC_Default, "Invalid Arguments -- MySQL gave the following error:");
 			c->Message(CC_Red, results.ErrorMessage().c_str());
 			return;
 		}
 
-        c->Message(0, "Group ID %i created successfully!", results.LastInsertedID());
+        c->Message(CC_Default, "Group ID %i created successfully!", results.LastInsertedID());
 
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "addgroupspawn") == 0 && atoi(sep->arg[2]) != 0) {
 		database.NPCSpawnDB(5, zone->GetShortName(), zone->GetInstanceVersion(), c, 0, atoi(sep->arg[2]));
-		c->Message(0, "Mob of group %i added successfully!", atoi(sep->arg[2]));
+		c->Message(CC_Default, "Mob of group %i added successfully!", atoi(sep->arg[2]));
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "removegroupspawn") == 0) {
 		if (!target || !target->IsNPC()) {
-			c->Message(0, "Error: Need an NPC target.");
+			c->Message(CC_Default, "Error: Need an NPC target.");
 			return;
 		}
 
 		Spawn2* s2 = target->CastToNPC()->respawn2;
 
 		if (!s2) {
-			c->Message(0, "removegroupspawn FAILED -- cannot determine which spawn entry in the database this mob came from.");
+			c->Message(CC_Default, "removegroupspawn FAILED -- cannot determine which spawn entry in the database this mob came from.");
 			return;
 		}
 
@@ -8341,7 +8423,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			return;
 		}
 
-        c->Message(0, "Spawnpoint Removed successfully.");
+        c->Message(CC_Default, "Spawnpoint Removed successfully.");
         target->Depop(false);
 
 		return;
@@ -8349,14 +8431,14 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "movespawn") == 0) {
 		if (!target || !target->IsNPC()) {
-			c->Message(0, "Error: Need an NPC target.");
+			c->Message(CC_Default, "Error: Need an NPC target.");
 			return;
 		}
 
 		Spawn2* s2 = target->CastToNPC()->respawn2;
 
 		if (!s2) {
-			c->Message(0, "movespawn FAILED -- cannot determine which spawn entry in the database this mob came from.");
+			c->Message(CC_Default, "movespawn FAILED -- cannot determine which spawn entry in the database this mob came from.");
 			return;
 		}
 
@@ -8370,7 +8452,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			return;
 		}
 
-        c->Message(0, "Updating coordinates successful.");
+        c->Message(CC_Default, "Updating coordinates successful.");
         target->CastToNPC()->GMMove(c->GetX(), c->GetY(), c->GetZ(), c->GetHeading());
         target->CastToNPC()->SaveGuardSpot(true);
         target->SendPosition();
@@ -8380,7 +8462,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "editrespawn") == 0) {
 		if (!target || !target->IsNPC()) {
-			c->Message(0, "Error: Need an NPC target.");
+			c->Message(CC_Default, "Error: Need an NPC target.");
 			return;
 		}
 
@@ -8389,7 +8471,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 		uint32 new_rs = 0;
 		uint32 new_var = s2->GetVariance();
 		if (!sep->IsNumber(2)) {
-			c->Message(0, "editrespawn FAILED -- cannot set respawn to be 0");
+			c->Message(CC_Default, "editrespawn FAILED -- cannot set respawn to be 0");
 			return;
 		}
 
@@ -8399,7 +8481,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			new_var = atoi(sep->arg[3]);
 
 		if (!s2) {
-			c->Message(0, "editrespawn FAILED -- cannot determine which spawn entry in the database this mob came from.");
+			c->Message(CC_Default, "editrespawn FAILED -- cannot determine which spawn entry in the database this mob came from.");
 			return;
 		}
 
@@ -8412,7 +8494,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			return;
 		}
 
-        c->Message(0, "Updating respawn timer successful.");
+        c->Message(CC_Default, "Updating respawn timer successful.");
         s2->SetRespawnTimer(new_rs);
         s2->SetVariance(new_var);
 
@@ -8421,12 +8503,12 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "setversion") == 0) {
 		if (!target || !target->IsNPC()) {
-			c->Message(0, "Error: Need an NPC target.");
+			c->Message(CC_Default, "Error: Need an NPC target.");
 			return;
 		}
 
 		if (!sep->IsNumber(2)) {
-			c->Message(0, "setversion FAILED -- You must set a version number");
+			c->Message(CC_Default, "setversion FAILED -- You must set a version number");
 			return;
 		}
 
@@ -8441,7 +8523,7 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 			return;
 		}
 
-        c->Message(0, "Version change to %i was successful from SpawnGroupID %i", version, c->GetTarget()->CastToNPC()->GetSp2());
+        c->Message(CC_Default, "Version change to %i was successful from SpawnGroupID %i", version, c->GetTarget()->CastToNPC()->GetSp2());
         c->GetTarget()->Depop(false);
 
 		return;
@@ -8449,27 +8531,33 @@ void command_advnpcspawn(Client *c, const Seperator *sep)
 
 	if (strcasecmp(sep->arg[1], "testload") == 0 && atoi(sep->arg[2]) != 0) {
 		database.LoadSpawnGroupsByID(atoi(sep->arg[2]), &zone->spawn_group_list);
-		c->Message(0, "Group %i loaded successfully!", atoi(sep->arg[2]));
+		c->Message(CC_Default, "Group %i loaded successfully!", atoi(sep->arg[2]));
 		return;
 	}
 
-	c->Message(0, "Error: #advnpcspawn: Invalid command.");
-	c->Message(0, "Usage: #advnpcspawn [maketype|makegroup|addgroupentry|addgroupspawn|setversion]");
-	c->Message(0, "Usage: #advnpcspawn [removegroupspawn|movespawn|editrespawn|editgroupbox|cleargroupbox]");
+	c->Message(CC_Default, "Error: #advnpcspawn: Invalid command.");
+	c->Message(CC_Default, "Usage: #advnpcspawn [maketype|makegroup|addgroupentry|addgroupspawn|setversion]");
+	c->Message(CC_Default, "Usage: #advnpcspawn [removegroupspawn|movespawn|editrespawn|editgroupbox|cleargroupbox]");
 }
 
 void command_aggrozone(Client *c, const Seperator *sep){
 	if (!c)
 		return;
 
-	Mob *m = c->CastToMob();
+	Mob *m = c->GetTarget() ? c->GetTarget() : c->CastToMob();
 
 	if (!m)
 		return;
 
 	int hate = atoi(sep->arg[1]); //should default to 0 if we don't enter anything
-	entity_list.AggroZone(m, hate);
-	c->Message(0, "Train to you! Last chance to go invulnerable...");
+	bool use_ignore_dist = false;
+	if(sep->IsNumber(2))
+		use_ignore_dist = atoi(sep->arg[2]);
+	entity_list.AggroZone(m, hate, use_ignore_dist);
+	if (!c->GetTarget())
+		c->Message(CC_Default, "Train to you! Last chance to go invulnerable...");
+	else
+		c->Message(CC_Default, "Train to %s! Watch them die!!!", c->GetTarget()->GetCleanName());
 }
 
 void command_modifynpcstat(Client *c, const Seperator *sep){
@@ -8478,8 +8566,8 @@ void command_modifynpcstat(Client *c, const Seperator *sep){
 
 	if (sep->arg[1][0] == '\0')
 	{
-		c->Message(0, "usage #modifynpcstat arg value");
-		c->Message(0, "Args: ac, str, sta, agi, dex, wis, _int, cha, max_hp, mr, fr, cr, pr, dr, runspeed, special_attacks, "
+		c->Message(CC_Default, "usage #modifynpcstat arg value");
+		c->Message(CC_Default, "Args: ac, str, sta, agi, dex, wis, _int, cha, max_hp, mr, fr, cr, pr, dr, runspeed, special_attacks, "
 			"atk, accuracy, trackable, min_hit, max_hit, see_invis_undead, see_hide, see_improved_hide, "
 			"hp_regen, mana_regen, aggro, assist, slow_mitigation, loottable_id, healscale, spellscale");
 		return;
@@ -8508,22 +8596,22 @@ void command_instance(Client *c, const Seperator *sep){
 
 	if (strcasecmp(sep->arg[1], "help") == 0)
 	{
-		c->Message(0, "#instance usage:");
-		c->Message(0, "#instance create zone_id version duration - Creates an instance of version 'version' in the "
+		c->Message(CC_Default, "#instance usage:");
+		c->Message(CC_Default, "#instance create zone_id version duration - Creates an instance of version 'version' in the "
 			"zone with id matching zone_id, will last for duration seconds.");
-		c->Message(0, "#instance destroy instance_id - Destroys the instance with id matching instance_id.");
-		c->Message(0, "#instance add instance_id player_name - adds the player 'player_name' to the instance "
+		c->Message(CC_Default, "#instance destroy instance_id - Destroys the instance with id matching instance_id.");
+		c->Message(CC_Default, "#instance add instance_id player_name - adds the player 'player_name' to the instance "
 			"with id matching instance_id.");
-		c->Message(0, "#instance remove instance_id player_name - removes the player 'player_name' from the "
+		c->Message(CC_Default, "#instance remove instance_id player_name - removes the player 'player_name' from the "
 			"instance with id matching instance_id.");
-		c->Message(0, "#instance list player_name - lists all the instances 'player_name' is apart of.");
+		c->Message(CC_Default, "#instance list player_name - lists all the instances 'player_name' is apart of.");
 		return;
 	}
 	else if (strcasecmp(sep->arg[1], "create") == 0)
 	{
 		if (!sep->IsNumber(3) || !sep->IsNumber(4))
 		{
-			c->Message(0, "#instance create zone_id version duration - Creates an instance of version 'version' in the "
+			c->Message(CC_Default, "#instance create zone_id version duration - Creates an instance of version 'version' in the "
 				"zone with id matching zone_id, will last for duration seconds.");
 			return;
 		}
@@ -8546,42 +8634,42 @@ void command_instance(Client *c, const Seperator *sep){
 
 		if (!zn)
 		{
-			c->Message(0, "Zone with id %lu was not found by the server.", (unsigned long)zone_id);
+			c->Message(CC_Default, "Zone with id %lu was not found by the server.", (unsigned long)zone_id);
 			return;
 		}
 
 		uint16 id = 0;
 		if (!database.GetUnusedInstanceID(id))
 		{
-			c->Message(0, "Server was unable to find a free instance id.");
+			c->Message(CC_Default, "Server was unable to find a free instance id.");
 			return;
 		}
 
 		if (!database.CreateInstance(id, zone_id, version, duration))
 		{
-			c->Message(0, "Server was unable to create a new instance.");
+			c->Message(CC_Default, "Server was unable to create a new instance.");
 			return;
 		}
 
-		c->Message(0, "New instance %s was created with id %lu.", zn, (unsigned long)id);
+		c->Message(CC_Default, "New instance %s was created with id %lu.", zn, (unsigned long)id);
 	}
 	else if (strcasecmp(sep->arg[1], "destroy") == 0)
 	{
 		if (!sep->IsNumber(2))
 		{
-			c->Message(0, "#instance destroy instance_id - Destroys the instance with id matching instance_id.");
+			c->Message(CC_Default, "#instance destroy instance_id - Destroys the instance with id matching instance_id.");
 			return;
 		}
 
 		uint16 id = atoi(sep->arg[2]);
 		database.DeleteInstance(id);
-		c->Message(0, "Destroyed instance with id %lu.", (unsigned long)id);
+		c->Message(CC_Default, "Destroyed instance with id %lu.", (unsigned long)id);
 	}
 	else if (strcasecmp(sep->arg[1], "add") == 0)
 	{
 		if (!sep->IsNumber(2))
 		{
-			c->Message(0, "#instance add instance_id player_name - adds the player 'player_name' to the instance "
+			c->Message(CC_Default, "#instance add instance_id player_name - adds the player 'player_name' to the instance "
 				"with id matching instance_id.");
 			return;
 		}
@@ -8591,13 +8679,13 @@ void command_instance(Client *c, const Seperator *sep){
 
 		if (id <= 0 || charid <= 0)
 		{
-			c->Message(0, "Must enter a valid instance id and player name.");
+			c->Message(CC_Default, "Must enter a valid instance id and player name.");
 			return;
 		}
 
 		if (!database.CheckInstanceExists(id))
 		{
-			c->Message(0, "Instance does not exist.");
+			c->Message(CC_Default, "Instance does not exist.");
 			return;
 		}
 
@@ -8608,23 +8696,23 @@ void command_instance(Client *c, const Seperator *sep){
 		{
 			if (database.AddClientToInstance(id, charid))
 			{
-				c->Message(0, "Added client to instance.");
+				c->Message(CC_Default, "Added client to instance.");
 			}
 			else
 			{
-				c->Message(0, "Failed to add client to instance.");
+				c->Message(CC_Default, "Failed to add client to instance.");
 			}
 		}
 		else
 		{
-			c->Message(0, "Client was already saved to %u which has uses the same zone and version as that instance.", cur_id);
+			c->Message(CC_Default, "Client was already saved to %u which has uses the same zone and version as that instance.", cur_id);
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "remove") == 0)
 	{
 		if (!sep->IsNumber(2))
 		{
-			c->Message(0, "#instance remove instance_id player_name - removes the player 'player_name' from the "
+			c->Message(CC_Default, "#instance remove instance_id player_name - removes the player 'player_name' from the "
 				"instance with id matching instance_id.");
 			return;
 		}
@@ -8634,16 +8722,16 @@ void command_instance(Client *c, const Seperator *sep){
 
 		if (id <= 0 || charid <= 0)
 		{
-			c->Message(0, "Must enter a valid instance id and player name.");
+			c->Message(CC_Default, "Must enter a valid instance id and player name.");
 		}
 
 		if (database.RemoveClientFromInstance(id, charid))
 		{
-			c->Message(0, "Removed client from instance.");
+			c->Message(CC_Default, "Removed client from instance.");
 		}
 		else
 		{
-			c->Message(0, "Failed to remove client from instance.");
+			c->Message(CC_Default, "Failed to remove client from instance.");
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "list") == 0)
@@ -8653,7 +8741,7 @@ void command_instance(Client *c, const Seperator *sep){
 		{
 			if (c->GetTarget() == nullptr || (c->GetTarget() && !c->GetTarget()->IsClient()))
 			{
-				c->Message(0, "Character not found.");
+				c->Message(CC_Default, "Character not found.");
 				return;
 			}
 			else
@@ -8664,16 +8752,16 @@ void command_instance(Client *c, const Seperator *sep){
 	}
 	else
 	{
-		c->Message(0, "Invalid Argument.");
-		c->Message(0, "#instance usage:");
-		c->Message(0, "#instance create zone_id version duration - Creates an instance of version 'version' in the "
+		c->Message(CC_Default, "Invalid Argument.");
+		c->Message(CC_Default, "#instance usage:");
+		c->Message(CC_Default, "#instance create zone_id version duration - Creates an instance of version 'version' in the "
 			"zone with id matching zone_id, will last for duration seconds.");
-		c->Message(0, "#instance destroy instance_id - Destroys the instance with id matching instance_id.");
-		c->Message(0, "#instance add instance_id player_name - adds the player 'player_name' to the instance "
+		c->Message(CC_Default, "#instance destroy instance_id - Destroys the instance with id matching instance_id.");
+		c->Message(CC_Default, "#instance add instance_id player_name - adds the player 'player_name' to the instance "
 			"with id matching instance_id.");
-		c->Message(0, "#instance remove instance_id player_name - removes the player 'player_name' from the "
+		c->Message(CC_Default, "#instance remove instance_id player_name - removes the player 'player_name' from the "
 			"instance with id matching instance_id.");
-		c->Message(0, "#instance list player_name - lists all the instances 'player_name' is apart of.");
+		c->Message(CC_Default, "#instance list player_name - lists all the instances 'player_name' is apart of.");
 		return;
 	}
 }
@@ -8683,20 +8771,20 @@ void command_netstats(Client *c, const Seperator *sep){
 	{
 		if (c->GetTarget() && c->GetTarget()->IsClient())
 		{
-			c->Message(0, "Sent:");
-			c->Message(0, "Total: %u, per second: %u", c->GetTarget()->CastToClient()->Connection()->GetBytesSent(),
+			c->Message(CC_Default, "Sent:");
+			c->Message(CC_Default, "Total: %u, per second: %u", c->GetTarget()->CastToClient()->Connection()->GetBytesSent(),
 				c->GetTarget()->CastToClient()->Connection()->GetBytesSentPerSecond());
-			c->Message(0, "Recieved:");
-			c->Message(0, "Total: %u, per second: %u", c->GetTarget()->CastToClient()->Connection()->GetBytesRecieved(),
+			c->Message(CC_Default, "Recieved:");
+			c->Message(CC_Default, "Total: %u, per second: %u", c->GetTarget()->CastToClient()->Connection()->GetBytesRecieved(),
 				c->GetTarget()->CastToClient()->Connection()->GetBytesRecvPerSecond());
 
 		}
 		else
 		{
-			c->Message(0, "Sent:");
-			c->Message(0, "Total: %u, per second: %u", c->Connection()->GetBytesSent(), c->Connection()->GetBytesSentPerSecond());
-			c->Message(0, "Recieved:");
-			c->Message(0, "Total: %u, per second: %u", c->Connection()->GetBytesRecieved(), c->Connection()->GetBytesRecvPerSecond());
+			c->Message(CC_Default, "Sent:");
+			c->Message(CC_Default, "Total: %u, per second: %u", c->Connection()->GetBytesSent(), c->Connection()->GetBytesSentPerSecond());
+			c->Message(CC_Default, "Recieved:");
+			c->Message(CC_Default, "Total: %u, per second: %u", c->Connection()->GetBytesRecieved(), c->Connection()->GetBytesRecvPerSecond());
 		}
 	}
 }
@@ -8710,7 +8798,7 @@ void command_object(Client *c, const Seperator *sep)
 	const char* usage_string = "Usage: #object List|Add|Edit|Move|Rotate|Save|Copy|Delete|Undo";
 
 	if ((!sep) || (sep->argnum == 0)) {
-		c->Message(0, usage_string);
+		c->Message(CC_Default, usage_string);
 		return;
 	}
 
@@ -8742,7 +8830,7 @@ void command_object(Client *c, const Seperator *sep)
 	if (strcasecmp(sep->arg[1], "list") == 0) {
 		// Insufficient or invalid args
 		if ((sep->argnum < 2) || (sep->arg[2][0] < '0') || ((sep->arg[2][0] > '9') && ((sep->arg[2][0] & 0xDF) != 'A'))) {
-			c->Message(0, "Usage: #object List All|(radius)");
+			c->Message(CC_Default, "Usage: #object List All|(radius)");
 			return;
 		}
 
@@ -8752,9 +8840,9 @@ void command_object(Client *c, const Seperator *sep)
 			radius = 500; // Invalid radius. Default to 500 units.
 
 		if (radius == 0)
-			c->Message(0, "Objects within this zone:");
+			c->Message(CC_Default, "Objects within this zone:");
 		else
-			c->Message(0, "Objects within %u units of your current location:", radius);
+			c->Message(CC_Default, "Objects within %u units of your current location:", radius);
 
 		std::string query;
 		if (radius)
@@ -8781,7 +8869,7 @@ void command_object(Client *c, const Seperator *sep)
 
 		auto results = database.QueryDatabase(query);
 		if (!results.Success()) {
-			c->Message(0, "Error in objects query");
+			c->Message(CC_Default, "Error in objects query");
 			return;
 		}
 
@@ -8808,29 +8896,29 @@ void command_object(Client *c, const Seperator *sep)
 				if (od.unknown008 == 0) // Unknown08 field is optional Size parameter for static objects
 					od.unknown008 = 100;	// Static object default Size is 100%
 
-				c->Message(0, "- STATIC Object (%s): id %u, x %.1f, y %.1f, z %.1f, h %.1f, model %s, size %u, solidtype %u, incline %u", (od.object_type == 0) ? "locked" : "unlocked", id, od.x, od.y, od.z, od.heading, od.object_name, od.unknown008, od.unknown010, od.unknown020);
+				c->Message(CC_Default, "- STATIC Object (%s): id %u, x %.1f, y %.1f, z %.1f, h %.1f, model %s, size %u, solidtype %u, incline %u", (od.object_type == 0) ? "locked" : "unlocked", id, od.x, od.y, od.z, od.heading, od.object_name, od.unknown008, od.unknown010, od.unknown020);
 				break;
 
 			case OT_DROPPEDITEM: // Ground Spawn
-				c->Message(0, "- TEMPORARY Object: id %u, x %.1f, y %.1f, z %.1f, h %.1f, itemid %u, model %s, icon %u", id, od.x, od.y, od.z, od.heading, itemid, od.object_name, icon);
+				c->Message(CC_Default, "- TEMPORARY Object: id %u, x %.1f, y %.1f, z %.1f, h %.1f, itemid %u, model %s, icon %u", id, od.x, od.y, od.z, od.heading, itemid, od.object_name, icon);
 				break;
 
 			default: // All others == Tradeskill Objects
-				c->Message(0, "- TRADESKILL Object: id %u, x %.1f, y %.1f, z %.1f, h %.1f, model %s, type %u, icon %u", id, od.x, od.y, od.z, od.heading, od.object_name, od.object_type, icon);
+				c->Message(CC_Default, "- TRADESKILL Object: id %u, x %.1f, y %.1f, z %.1f, h %.1f, model %s, type %u, icon %u", id, od.x, od.y, od.z, od.heading, od.object_name, od.object_type, icon);
 				break;
 			}
 		}
 
-		c->Message(0, "%u object%s found", results.RowCount(), (results.RowCount() == 1) ? "" : "s");
+		c->Message(CC_Default, "%u object%s found", results.RowCount(), (results.RowCount() == 1) ? "" : "s");
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "add") == 0) {
 		// Insufficient or invalid arguments
 		if ((sep->argnum < 3) || ((sep->arg[3][0] == '\0') && (sep->arg[4][0] < '0') && (sep->arg[4][0] > '9'))) {
-			c->Message(0, "Usage: (Static Object): #object Add [ObjectID] 0 Model [SizePercent] [SolidType] [Incline]");
-			c->Message(0, "Usage: (Tradeskill Object): #object Add [ObjectID] TypeNum Model Icon");
-			c->Message(0, "- Notes: Model must start with a letter, max length 16. SolidTypes = 0 (Solid), 1 (Sometimes Non-Solid)");
+			c->Message(CC_Default, "Usage: (Static Object): #object Add [ObjectID] 0 Model [SizePercent] [SolidType] [Incline]");
+			c->Message(CC_Default, "Usage: (Tradeskill Object): #object Add [ObjectID] TypeNum Model Icon");
+			c->Message(CC_Default, "- Notes: Model must start with a letter, max length 16. SolidTypes = 0 (Solid), 1 (Sometimes Non-Solid)");
 			return;
 		}
 
@@ -8873,14 +8961,14 @@ void command_object(Client *c, const Seperator *sep)
 			break;
 
 		case 1: // Ground Spawn
-			c->Message(0, "ERROR: Object Type 1 is used for temporarily spawned ground spawns and dropped items, which are not supported with #object. See the 'ground_spawns' table in the database.");
+			c->Message(CC_Default, "ERROR: Object Type 1 is used for temporarily spawned ground spawns and dropped items, which are not supported with #object. See the 'ground_spawns' table in the database.");
 			return;
 
 		default: // Everything else == Tradeskill Object
 			icon = ((sep->argnum - col) > 3) ? atoi(sep->arg[4 + col]) : 0;
 
 			if (icon == 0) {
-				c->Message(0, "ERROR: Required property 'Icon' not specified for Tradeskill Object");
+				c->Message(CC_Default, "ERROR: Required property 'Icon' not specified for Tradeskill Object");
 				return;
 			}
 
@@ -8909,7 +8997,7 @@ void command_object(Client *c, const Seperator *sep)
 				id = 0;
 
 			if (id == 0) {
-				c->Message(0, "ERROR: An object already exists with the id %u", atoi(sep->arg[2]));
+				c->Message(CC_Default, "ERROR: An object already exists with the id %u", atoi(sep->arg[2]));
 				return;
 			}
 		}
@@ -8936,7 +9024,7 @@ void command_object(Client *c, const Seperator *sep)
 			objectsFound = 1;
 
 		if (objectsFound) {
-			c->Message(0, "ERROR: Object already at this location.");
+			c->Message(CC_Default, "ERROR: Object already at this location.");
 			return;
 		}
 
@@ -8957,7 +9045,7 @@ void command_object(Client *c, const Seperator *sep)
 		strupr(od.object_name);	// Model names are always upper-case.
 
 		if ((od.object_name[0] < 'A') || (od.object_name[0] > 'Z')) {
-			c->Message(0, "ERROR: Model name must start with a letter.");
+			c->Message(CC_Default, "ERROR: Model name must start with a letter.");
 			return;
 		}
 
@@ -8998,11 +9086,11 @@ void command_object(Client *c, const Seperator *sep)
 		y2 = 10.0f * cos(c->GetHeading() * 2.0f / 256.0f * 3.14159265f);
 		c->MovePC(c->GetX() - x2, c->GetY() - y2, c->GetZ(), c->GetHeading() * 2);
 
-		c->Message(0, "Spawning object with tentative id %u at location (%.1f, %.1f, %.1f heading %.1f). Use '#object Save' to save to database when satisfied with placement.", id, od.x, od.y, od.z, od.heading);
+		c->Message(CC_Default, "Spawning object with tentative id %u at location (%.1f, %.1f, %.1f heading %.1f). Use '#object Save' to save to database when satisfied with placement.", id, od.x, od.y, od.z, od.heading);
 
 		// Temporary Static Object
 		if (od.object_type == staticType)
-			c->Message(0, "- Note: Static Object will act like a tradeskill container and will not reflect size, solidtype, or incline values until you commit with '#object Save', after which it will be unchangeable until you use '#object Edit' and zone back in.");
+			c->Message(CC_Default, "- Note: Static Object will act like a tradeskill container and will not reflect size, solidtype, or incline values until you commit with '#object Save', after which it will be unchangeable until you use '#object Edit' and zone back in.");
 
 		return;
 	}
@@ -9010,9 +9098,9 @@ void command_object(Client *c, const Seperator *sep)
 	if (strcasecmp(sep->arg[1], "edit") == 0) {
 
 		if ((sep->argnum < 2) || ((id = atoi(sep->arg[2])) < 1)) {
-			c->Message(0, "Usage: #object Edit (ObjectID) [PropertyName] [NewValue]");
-			c->Message(0, "- Static Object (Type 0) Properties: model, type, size, solidtype, incline");
-			c->Message(0, "- Tradeskill Object (Type 2+) Properties: model, type, icon");
+			c->Message(CC_Default, "Usage: #object Edit (ObjectID) [PropertyName] [NewValue]");
+			c->Message(CC_Default, "- Static Object (Type 0) Properties: model, type, size, solidtype, incline");
+			c->Message(CC_Default, "- Tradeskill Object (Type 2+) Properties: model, type, icon");
 
 			return;
 		}
@@ -9024,7 +9112,7 @@ void command_object(Client *c, const Seperator *sep)
 			// Yep, looks like we can make real-time changes.
 			if (sep->argnum < 4) {
 				// Or not. '#object Edit (ObjectID)' called without PropertyName and NewValue
-				c->Message(0, "Note: Object %u already unlocked and ready for changes", id);
+				c->Message(CC_Default, "Note: Object %u already unlocked and ready for changes", id);
 				return;
 			}
 		}
@@ -9033,7 +9121,7 @@ void command_object(Client *c, const Seperator *sep)
 			std::string query = StringFormat("SELECT zoneid, version, type FROM object WHERE id = %u", id);
 			auto results = database.QueryDatabase(query);
 			if (!results.Success() || results.RowCount() == 0) {
-				c->Message(0, "ERROR: Object %u not found", id);
+				c->Message(CC_Default, "ERROR: Object %u not found", id);
 				return;
 			}
 
@@ -9045,13 +9133,13 @@ void command_object(Client *c, const Seperator *sep)
 
 			// Object not in this zone?
 			if (od.zone_id != zone->GetZoneID()) {
-				c->Message(0, "ERROR: Object %u not in this zone.", id);
+				c->Message(CC_Default, "ERROR: Object %u not in this zone.", id);
 				return;
 			}
 
 			// Object not in this instance?
 			if (od.zone_instance != zone->GetInstanceVersion()) {
-				c->Message(0, "ERROR: Object %u not part of this instance version.", id);
+				c->Message(CC_Default, "ERROR: Object %u not part of this instance version.", id);
 				return;
 			}
 
@@ -9063,22 +9151,22 @@ void command_object(Client *c, const Seperator *sep)
 
 				database.QueryDatabase(query);
 
-				c->Message(0, "Static Object %u unlocked for editing. You must zone out and back in to make your changes, then commit them with '#object Save'.", id);
+				c->Message(CC_Default, "Static Object %u unlocked for editing. You must zone out and back in to make your changes, then commit them with '#object Save'.", id);
 				if (sep->argnum >= 4)
-					c->Message(0, "NOTE: The change you specified has not been applied, since the static object had not been unlocked for editing yet.");
+					c->Message(CC_Default, "NOTE: The change you specified has not been applied, since the static object had not been unlocked for editing yet.");
 				return;
 
 			case OT_DROPPEDITEM:
-				c->Message(0, "ERROR: Object %u is a temporarily spawned ground spawn or dropped item, which cannot be manipulated with #object. See the 'ground_spawns' table in the database.", id);
+				c->Message(CC_Default, "ERROR: Object %u is a temporarily spawned ground spawn or dropped item, which cannot be manipulated with #object. See the 'ground_spawns' table in the database.", id);
 				return;
 
 			case staticType:
-				c->Message(0, "ERROR: Object %u has been unlocked for editing, but you must zone out and back in for your client to refresh its object table before you can make changes to it.", id);
+				c->Message(CC_Default, "ERROR: Object %u has been unlocked for editing, but you must zone out and back in for your client to refresh its object table before you can make changes to it.", id);
 				return;
 
 			default:
 				// Unknown error preventing us from seeing the object in the zone.
-				c->Message(0, "ERROR: Unknown problem attempting to manipulate object %u", id);
+				c->Message(CC_Default, "ERROR: Unknown problem attempting to manipulate object %u", id);
 				return;
 			}
 		}
@@ -9095,7 +9183,7 @@ void command_object(Client *c, const Seperator *sep)
 		if (strcmp(sep->arg[3], "model") == 0) {
 
 			if ((sep->arg[4][0] < 'A') || (sep->arg[4][0] > 'Z')) {
-				c->Message(0, "ERROR: Model names must begin with a letter.");
+				c->Message(CC_Default, "ERROR: Model names must begin with a letter.");
 				return;
 			}
 
@@ -9103,11 +9191,11 @@ void command_object(Client *c, const Seperator *sep)
 
 			o->SetObjectData(&od);
 
-			c->Message(0, "Object %u now being rendered with model '%s'", id, od.object_name);
+			c->Message(CC_Default, "Object %u now being rendered with model '%s'", id, od.object_name);
 		}
 		else if (strcmp(sep->arg[3], "type") == 0) {
 			if ((sep->arg[4][0] < '0') || (sep->arg[4][0] > '9')) {
-				c->Message(0, "ERROR: Invalid type number");
+				c->Message(CC_Default, "ERROR: Invalid type number");
 				return;
 			}
 
@@ -9117,15 +9205,15 @@ void command_object(Client *c, const Seperator *sep)
 			case 0:
 				// Convert Static Object to temporary changeable type
 				od.object_type = staticType;
-				c->Message(0, "Note: Static Object will still act like tradeskill object and will not reflect size, solidtype, or incline settings until committed to the database with '#object Save', after which it will be unchangeable until it is unlocked again with '#object Edit'.");
+				c->Message(CC_Default, "Note: Static Object will still act like tradeskill object and will not reflect size, solidtype, or incline settings until committed to the database with '#object Save', after which it will be unchangeable until it is unlocked again with '#object Edit'.");
 				break;
 
 			case OT_DROPPEDITEM:
-				c->Message(0, "ERROR: Object Type 1 is used for temporarily spawned ground spawns and dropped items, which are not supported with #object. See the 'ground_spawns' table in the database.");
+				c->Message(CC_Default, "ERROR: Object Type 1 is used for temporarily spawned ground spawns and dropped items, which are not supported with #object. See the 'ground_spawns' table in the database.");
 				return;
 
 			default:
-				c->Message(0, "Object %u changed to Tradeskill Object Type %u", id, od.object_type);
+				c->Message(CC_Default, "Object %u changed to Tradeskill Object Type %u", id, od.object_type);
 				break;
 			}
 
@@ -9133,12 +9221,12 @@ void command_object(Client *c, const Seperator *sep)
 		}
 		else if (strcmp(sep->arg[3], "size") == 0) {
 			if (od.object_type != staticType) {
-				c->Message(0, "ERROR: Object %u is not a Static Object and does not support the Size property", id);
+				c->Message(CC_Default, "ERROR: Object %u is not a Static Object and does not support the Size property", id);
 				return;
 			}
 
 			if ((sep->arg[4][0] < '0') || (sep->arg[4][0] > '9')) {
-				c->Message(0, "ERROR: Invalid size specified. Please enter a number.");
+				c->Message(CC_Default, "ERROR: Invalid size specified. Please enter a number.");
 				return;
 			}
 
@@ -9148,58 +9236,58 @@ void command_object(Client *c, const Seperator *sep)
 			if (od.unknown008 == 0) // 0 == unspecified == 100%
 				od.unknown008 = 100;
 
-			c->Message(0, "Static Object %u set to %u%% size. Size will take effect when you commit to the database with '#object Save', after which the object will be unchangeable until you unlock it again with '#object Edit' and zone out and back in.", id, od.unknown008);
+			c->Message(CC_Default, "Static Object %u set to %u%% size. Size will take effect when you commit to the database with '#object Save', after which the object will be unchangeable until you unlock it again with '#object Edit' and zone out and back in.", id, od.unknown008);
 		}
 		else if (strcmp(sep->arg[3], "solidtype") == 0)	{
 
 			if (od.object_type != staticType) {
-				c->Message(0, "ERROR: Object %u is not a Static Object and does not support the SolidType property", id);
+				c->Message(CC_Default, "ERROR: Object %u is not a Static Object and does not support the SolidType property", id);
 				return;
 			}
 
 			if ((sep->arg[4][0] < '0') || (sep->arg[4][0] > '9')) {
-				c->Message(0, "ERROR: Invalid solidtype specified. Please enter a number.");
+				c->Message(CC_Default, "ERROR: Invalid solidtype specified. Please enter a number.");
 				return;
 			}
 
 			od.unknown010 = atoi(sep->arg[4]);
 			o->SetObjectData(&od);
 
-			c->Message(0, "Static Object %u set to SolidType %u. Change will take effect when you commit to the database with '#object Save'. Support for this property is on a per-model basis, mostly seen in smaller objects such as chests and tables.", id, od.unknown010);
+			c->Message(CC_Default, "Static Object %u set to SolidType %u. Change will take effect when you commit to the database with '#object Save'. Support for this property is on a per-model basis, mostly seen in smaller objects such as chests and tables.", id, od.unknown010);
 		}
 		else if (strcmp(sep->arg[3], "icon") == 0) {
 
 			if ((od.object_type < 2) || (od.object_type == staticType)) {
-				c->Message(0, "ERROR: Object %u is not a Tradeskill Object and does not support the Icon property", id);
+				c->Message(CC_Default, "ERROR: Object %u is not a Tradeskill Object and does not support the Icon property", id);
 				return;
 			}
 
 			if ((icon = atoi(sep->arg[4])) == 0) {
-				c->Message(0, "ERROR: Invalid Icon specified. Please enter an icon number.");
+				c->Message(CC_Default, "ERROR: Invalid Icon specified. Please enter an icon number.");
 				return;
 			}
 
 			o->SetIcon(icon);
-			c->Message(0, "Tradeskill Object %u icon set to %u", id, icon);
+			c->Message(CC_Default, "Tradeskill Object %u icon set to %u", id, icon);
 		}
 		else if (strcmp(sep->arg[3], "incline") == 0) {
 			if (od.object_type != staticType) {
-				c->Message(0, "ERROR: Object %u is not a Static Object and does not support the Incline property", id);
+				c->Message(CC_Default, "ERROR: Object %u is not a Static Object and does not support the Incline property", id);
 				return;
 			}
 
 			if ((sep->arg[4][0] < '0') || (sep->arg[4][0] > '9')) {
-				c->Message(0, "ERROR: Invalid Incline specified. Please enter a number. Normal range is 0-512.");
+				c->Message(CC_Default, "ERROR: Invalid Incline specified. Please enter a number. Normal range is 0-512.");
 				return;
 			}
 
 			od.unknown020 = atoi(sep->arg[4]);
 			o->SetObjectData(&od);
 
-			c->Message(0, "Static Object %u set to %u incline. Incline will take effect when you commit to the database with '#object Save', after which the object will be unchangeable until you unlock it again with '#object Edit' and zone out and back in.", id, od.unknown020);
+			c->Message(CC_Default, "Static Object %u set to %u incline. Incline will take effect when you commit to the database with '#object Save', after which the object will be unchangeable until you unlock it again with '#object Edit' and zone out and back in.", id, od.unknown020);
 		}
 		else {
-			c->Message(0, "ERROR: Unrecognized property name: %s", sep->arg[3]);
+			c->Message(CC_Default, "ERROR: Unrecognized property name: %s", sep->arg[3]);
 			return;
 		}
 
@@ -9223,7 +9311,7 @@ void command_object(Client *c, const Seperator *sep)
 			(((sep->arg[3][0] < '0') || (sep->arg[3][0] > '9')) &&
 			((sep->arg[3][0] & 0xDF) != 'T') &&
 			(sep->arg[3][0] != '-') && (sep->arg[3][0] != '.'))) { // Location argument not specified correctly
-			c->Message(0, "Usage: #object Move (ObjectID) ToMe|(x y z [h])");
+			c->Message(CC_Default, "Usage: #object Move (ObjectID) ToMe|(x y z [h])");
 			return;
 		}
 
@@ -9231,7 +9319,7 @@ void command_object(Client *c, const Seperator *sep)
 			std::string query = StringFormat("SELECT zoneid, version, type FROM object WHERE id = %u", id);
 			auto results = database.QueryDatabase(query);
 			if (!results.Success() || results.RowCount() == 0) {
-				c->Message(0, "ERROR: Object %u not found", id);
+				c->Message(CC_Default, "ERROR: Object %u not found", id);
 				return;
 			}
 
@@ -9242,30 +9330,30 @@ void command_object(Client *c, const Seperator *sep)
 
 
 			if (od.zone_id != zone->GetZoneID()) {
-				c->Message(0, "ERROR: Object %u is not in this zone", id);
+				c->Message(CC_Default, "ERROR: Object %u is not in this zone", id);
 				return;
 			}
 
 			if (od.zone_instance != zone->GetInstanceVersion()) {
-				c->Message(0, "ERROR: Object %u is not in this instance version", id);
+				c->Message(CC_Default, "ERROR: Object %u is not in this instance version", id);
 				return;
 			}
 
 			switch (od.object_type) {
 			case 0:
-				c->Message(0, "ERROR: Object %u is not yet unlocked for editing. Use '#object Edit' then zone out and back in to move it.", id);
+				c->Message(CC_Default, "ERROR: Object %u is not yet unlocked for editing. Use '#object Edit' then zone out and back in to move it.", id);
 				return;
 
 			case staticType:
-				c->Message(0, "ERROR: Object %u has been unlocked for editing, but you must zone out and back in before your client sees the change and will allow you to move it.", id);
+				c->Message(CC_Default, "ERROR: Object %u has been unlocked for editing, but you must zone out and back in before your client sees the change and will allow you to move it.", id);
 				return;
 
 			case 1:
-				c->Message(0, "ERROR: Object %u is a temporary spawned object and cannot be manipulated with #object. See the 'ground_spawns' table in the database.", id);
+				c->Message(CC_Default, "ERROR: Object %u is a temporary spawned object and cannot be manipulated with #object. See the 'ground_spawns' table in the database.", id);
 				return;
 
 			default:
-				c->Message(0, "ERROR: Object %u not located in zone.", id);
+				c->Message(CC_Default, "ERROR: Object %u not located in zone.", id);
 				return;
 			}
 		}
@@ -9319,12 +9407,12 @@ void command_object(Client *c, const Seperator *sep)
 	if (strcasecmp(sep->arg[1], "rotate") == 0) {
 		// Insufficient or invalid arguments
 		if ((sep->argnum < 3) || ((id = atoi(sep->arg[2])) == 0)) {
-			c->Message(0, "Usage: #object Rotate (ObjectID) (Heading, 0-512)");
+			c->Message(CC_Default, "Usage: #object Rotate (ObjectID) (Heading, 0-512)");
 			return;
 		}
 
 		if ((o = entity_list.FindObject(id)) == nullptr) {
-			c->Message(0, "ERROR: Object %u not found in zone, or is a static object not yet unlocked with '#object Edit' for editing.", id);
+			c->Message(CC_Default, "ERROR: Object %u not found in zone, or is a static object not yet unlocked with '#object Edit' for editing.", id);
 			return;
 		}
 
@@ -9346,7 +9434,7 @@ void command_object(Client *c, const Seperator *sep)
 	if (strcasecmp(sep->arg[1], "save") == 0) {
 		// Insufficient or invalid arguments
 		if ((sep->argnum < 2) || ((id = atoi(sep->arg[2])) == 0)) {
-			c->Message(0, "Usage: #object Save (ObjectID)");
+			c->Message(CC_Default, "Usage: #object Save (ObjectID)");
 			return;
 		}
 
@@ -9374,31 +9462,31 @@ void command_object(Client *c, const Seperator *sep)
 			// Object not found in zone. Can't save an object we can't see.
 
 			if (bNewObject) {
-				c->Message(0, "ERROR: Object %u not found", id);
+				c->Message(CC_Default, "ERROR: Object %u not found", id);
 				return;
 			}
 
 			if (od.zone_id != zone->GetZoneID()) {
-				c->Message(0, "ERROR: Wrong Object ID. %u is not part of this zone.", id);
+				c->Message(CC_Default, "ERROR: Wrong Object ID. %u is not part of this zone.", id);
 				return;
 			}
 
 			if (od.zone_instance != zone->GetInstanceVersion()) {
-				c->Message(0, "ERROR: Wrong Object ID. %u is not part of this instance version.", id);
+				c->Message(CC_Default, "ERROR: Wrong Object ID. %u is not part of this instance version.", id);
 				return;
 			}
 
 			if (od.object_type == 0) {
-				c->Message(0, "ERROR: Static Object %u has already been committed. Use '#object Edit %u' and zone out and back in to make changes.", id, id);
+				c->Message(CC_Default, "ERROR: Static Object %u has already been committed. Use '#object Edit %u' and zone out and back in to make changes.", id, id);
 				return;
 			}
 
 			if (od.object_type == 1) {
-				c->Message(0, "ERROR: Object %u is a temporarily spawned ground spawn or dropped item, which is not supported with #object. See the 'ground_spawns' table in the database.", id);
+				c->Message(CC_Default, "ERROR: Object %u is a temporarily spawned ground spawn or dropped item, which is not supported with #object. See the 'ground_spawns' table in the database.", id);
 				return;
 			}
 
-			c->Message(0, "ERROR: Object %u not found.", id);
+			c->Message(CC_Default, "ERROR: Object %u not found.", id);
 			return;
 		}
 
@@ -9454,28 +9542,28 @@ void command_object(Client *c, const Seperator *sep)
 
 		results = database.QueryDatabase(query);
 		if (!results.Success()) {
-			c->Message(0, "Database Error: %s", results.ErrorMessage().c_str());
+			c->Message(CC_Default, "Database Error: %s", results.ErrorMessage().c_str());
 			return;
 		}
 
 		if (results.RowsAffected() == 0) {
 			// No change made, but no error message given
-			c->Message(0, "Database Error: Could not save change to Object %u", id);
+			c->Message(CC_Default, "Database Error: Could not save change to Object %u", id);
 			return;
 		}
 
 		if (bNewObject) {
 			if (newid == results.LastInsertedID()) {
-				c->Message(0, "Saved new Object %u to database", id);
+				c->Message(CC_Default, "Saved new Object %u to database", id);
 				return;
 			}
 
-			c->Message(0, "Saved Object. NOTE: Database returned a new ID number for object: %u", newid);
+			c->Message(CC_Default, "Saved Object. NOTE: Database returned a new ID number for object: %u", newid);
 			id = newid;
 			return;
 		}
 
-		c->Message(0, "Saved changes to Object %u", id);
+		c->Message(CC_Default, "Saved changes to Object %u", id);
 		newid = id;
 
 		if (od.object_type == 0) {
@@ -9548,7 +9636,7 @@ void command_object(Client *c, const Seperator *sep)
 			entity_list.QueueClients(0, app);
 			safe_delete(app);
 
-			c->Message(0, "NOTE: Object %u is now a static object, and is unchangeable. To make future changes, use '#object Edit' to convert it to a changeable form, then zone out and back in.", id);
+			c->Message(CC_Default, "NOTE: Object %u is now a static object, and is unchangeable. To make future changes, use '#object Edit' to convert it to a changeable form, then zone out and back in.", id);
 		}
 		return;
 	}
@@ -9556,15 +9644,15 @@ void command_object(Client *c, const Seperator *sep)
 	if (strcasecmp(sep->arg[1], "copy") == 0) {
 		// Insufficient or invalid arguments
 		if ((sep->argnum < 3) || (((sep->arg[2][0] & 0xDF) != 'A') && ((sep->arg[2][0] < '0') || (sep->arg[2][0] > '9')))) {
-			c->Message(0, "Usage: #object Copy All|(ObjectID) (InstanceVersion)");
-			c->Message(0, "- Note: Only objects saved in the database can be copied to another instance.");
+			c->Message(CC_Default, "Usage: #object Copy All|(ObjectID) (InstanceVersion)");
+			c->Message(CC_Default, "- Note: Only objects saved in the database can be copied to another instance.");
 			return;
 		}
 
 		od.zone_instance = atoi(sep->arg[3]);
 
 		if (od.zone_instance == zone->GetInstanceVersion()) {
-			c->Message(0, "ERROR: Source and destination instance versions are the same.");
+			c->Message(CC_Default, "ERROR: Source and destination instance versions are the same.");
 			return;
 		}
 
@@ -9580,11 +9668,11 @@ void command_object(Client *c, const Seperator *sep)
 				od.zone_instance, zone->GetZoneID(), zone->GetInstanceVersion());
 			auto results = database.QueryDatabase(query);
 			if (!results.Success()) {
-				c->Message(0, "Database Error: %s", results.ErrorMessage().c_str());
+				c->Message(CC_Default, "Database Error: %s", results.ErrorMessage().c_str());
 				return;
 			}
 
-			c->Message(0, "Copied %u object%s into instance version %u", results.RowCount(), (results.RowCount() == 1) ? "" : "s", od.zone_instance);
+			c->Message(CC_Default, "Copied %u object%s into instance version %u", results.RowCount(), (results.RowCount() == 1) ? "" : "s", od.zone_instance);
 			return;
 		}
 
@@ -9599,14 +9687,14 @@ void command_object(Client *c, const Seperator *sep)
 			od.zone_instance, id, zone->GetZoneID(), zone->GetInstanceVersion());
 		auto results = database.QueryDatabase(query);
 		if (results.Success() && results.RowsAffected() > 0) {
-			c->Message(0, "Copied Object %u into instance version %u", id, od.zone_instance);
+			c->Message(CC_Default, "Copied Object %u into instance version %u", id, od.zone_instance);
 			return;
 		}
 
 		// Couldn't copy the object.
 
 		if (results.ErrorMessage().c_str() != '\0') {
-			c->Message(0, "Database Error: %s", results.ErrorMessage().c_str());
+			c->Message(CC_Default, "Database Error: %s", results.ErrorMessage().c_str());
 			return;
 		}
 
@@ -9618,32 +9706,32 @@ void command_object(Client *c, const Seperator *sep)
 			return;
 
 		if (results.RowCount() == 0) {
-			c->Message(0, "ERROR: Object %u not found", id);
+			c->Message(CC_Default, "ERROR: Object %u not found", id);
 			return;
 		}
 
 		auto row = results.begin();
 		// Wrong ZoneID?
 		if (atoi(row[0]) != zone->GetZoneID()) {
-			c->Message(0, "ERROR: Object %u is not part of this zone.", id);
+			c->Message(CC_Default, "ERROR: Object %u is not part of this zone.", id);
 			return;
 		}
 
 		// Wrong Instance Version?
 		if (atoi(row[1]) != zone->GetInstanceVersion()) {
-			c->Message(0, "ERROR: Object %u is not part of this instance version.", id);
+			c->Message(CC_Default, "ERROR: Object %u is not part of this instance version.", id);
 			return;
 		}
 
 		// Well, NO clue at this point. Just let 'em know something screwed up.
-		c->Message(0, "ERROR: Unknown database error copying Object %u to instance version %u", id, od.zone_instance);
+		c->Message(CC_Default, "ERROR: Unknown database error copying Object %u to instance version %u", id, od.zone_instance);
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "delete") == 0) {
 
 		if ((sep->argnum < 2) || ((id = atoi(sep->arg[2])) <= 0)) {
-			c->Message(0, "Usage: #object Delete (ObjectID) -- NOTE: Object deletions are permanent and cannot be undone!");
+			c->Message(CC_Default, "Usage: #object Delete (ObjectID) -- NOTE: Object deletions are permanent and cannot be undone!");
 			return;
 		}
 
@@ -9666,7 +9754,7 @@ void command_object(Client *c, const Seperator *sep)
 				id, zone->GetZoneID(), zone->GetInstanceVersion());
 			auto results = database.QueryDatabase(query);
 
-			c->Message(0, "Object %u deleted", id);
+			c->Message(CC_Default, "Object %u deleted", id);
 			return;
 		}
 
@@ -9681,7 +9769,7 @@ void command_object(Client *c, const Seperator *sep)
 			return;
 
 		if (results.RowCount() == 0) {
-			c->Message(0, "ERROR: Object %u not found in this zone or instance!", id);
+			c->Message(CC_Default, "ERROR: Object %u not found in this zone or instance!", id);
 			return;
 		}
 
@@ -9694,11 +9782,11 @@ void command_object(Client *c, const Seperator *sep)
 				id, zone->GetZoneID(), zone->GetInstanceVersion());
 			results = database.QueryDatabase(query);
 
-			c->Message(0, "Object %u deleted. NOTE: This static object will remain for anyone currently in the zone until they next zone out and in.", id);
+			c->Message(CC_Default, "Object %u deleted. NOTE: This static object will remain for anyone currently in the zone until they next zone out and in.", id);
 			return;
 
 		case 1: // Temporary Spawn
-			c->Message(0, "ERROR: Object %u is a temporarily spawned ground spawn or dropped item, which is not supported with #object. See the 'ground_spawns' table in the database.", id);
+			c->Message(CC_Default, "ERROR: Object %u is a temporarily spawned ground spawn or dropped item, which is not supported with #object. See the 'ground_spawns' table in the database.", id);
 			return;
 
 		}
@@ -9709,19 +9797,19 @@ void command_object(Client *c, const Seperator *sep)
 	if (strcasecmp(sep->arg[1], "undo") == 0) {
 		// Insufficient or invalid arguments
 		if ((sep->argnum < 2) || ((id = atoi(sep->arg[2])) == 0)) {
-			c->Message(0, "Usage: #object Undo (ObjectID) -- Reload object from database, undoing any changes you have made");
+			c->Message(CC_Default, "Usage: #object Undo (ObjectID) -- Reload object from database, undoing any changes you have made");
 			return;
 		}
 
 		o = entity_list.FindObject(id);
 
 		if (!o) {
-			c->Message(0, "ERROR: Object %u not found in zone in a manipulable form. No changes to undo.", id);
+			c->Message(CC_Default, "ERROR: Object %u not found in zone in a manipulable form. No changes to undo.", id);
 			return;
 		}
 
 		if (o->GetType() == OT_DROPPEDITEM) {
-			c->Message(0, "ERROR: Object %u is a temporary spawned item and cannot be manipulated with #object. See the 'ground_spawns' table in the database.", id);
+			c->Message(CC_Default, "ERROR: Object %u is a temporary spawned item and cannot be manipulated with #object. See the 'ground_spawns' table in the database.", id);
 			return;
 		}
 
@@ -9738,7 +9826,7 @@ void command_object(Client *c, const Seperator *sep)
 			"FROM object WHERE id = %u", id);
 		auto results = database.QueryDatabase(query);
 		if (!results.Success() || results.RowCount() == 0) {
-			c->Message(0, "Database Error: %s", results.ErrorMessage().c_str());
+			c->Message(CC_Default, "Database Error: %s", results.ErrorMessage().c_str());
 			return;
 		}
 
@@ -9763,23 +9851,23 @@ void command_object(Client *c, const Seperator *sep)
 		o = new Object(id, od.object_type, icon, od, nullptr);
 		entity_list.AddObject(o, true);
 
-		c->Message(0, "Object %u reloaded from database.", id);
+		c->Message(CC_Default, "Object %u reloaded from database.", id);
 		return;
 	}
 
-	c->Message(0, usage_string);
+	c->Message(CC_Default, usage_string);
 }
 
 void command_showspellslist(Client *c, const Seperator *sep){
 	Mob *target = c->GetTarget();
 
 	if (!target) {
-		c->Message(0, "Must target an NPC.");
+		c->Message(CC_Default, "Must target an NPC.");
 		return;
 	}
 
 	if (!target->IsNPC()) {
-		c->Message(0, "%s is not an NPC.", target->GetName());
+		c->Message(CC_Default, "%s is not an NPC.", target->GetName());
 		return;
 	}
 
@@ -9790,7 +9878,7 @@ void command_showspellslist(Client *c, const Seperator *sep){
 
 void command_raidloot(Client *c, const Seperator *sep){
 	if (!sep->arg[1][0]) {
-		c->Message(0, "Usage: #raidloot [LEADER/GROUPLEADER/SELECTED/ALL]");
+		c->Message(CC_Default, "Usage: #raidloot [LEADER/GROUPLEADER/SELECTED/ALL]");
 		return;
 	}
 
@@ -9803,7 +9891,7 @@ void command_raidloot(Client *c, const Seperator *sep){
 			{
 				if (r->members[x].IsRaidLeader == 0)
 				{
-					c->Message(0, "You must be the raid leader to use this command.");
+					c->Message(CC_Default, "You must be the raid leader to use this command.");
 				}
 				else
 				{
@@ -9834,19 +9922,19 @@ void command_raidloot(Client *c, const Seperator *sep){
 		}
 		else
 		{
-			c->Message(0, "Usage: #raidloot [LEADER/GROUPLEADER/SELECTED/ALL]");
+			c->Message(CC_Default, "Usage: #raidloot [LEADER/GROUPLEADER/SELECTED/ALL]");
 		}
 	}
 	else
 	{
-		c->Message(0, "You must be in a raid to use that command.");
+		c->Message(CC_Default, "You must be in a raid to use that command.");
 	}
 }
 
 void command_emoteview(Client *c, const Seperator *sep){
 	if (!c->GetTarget() || !c->GetTarget()->IsNPC())
 	{
-		c->Message(0, "You must target a NPC to view their emotes.");
+		c->Message(CC_Default, "You must target a NPC to view their emotes.");
 		return;
 	}
 
@@ -9862,21 +9950,21 @@ void command_emoteview(Client *c, const Seperator *sep){
 			NPC_Emote_Struct* nes = iterator.GetData();
 			if (emoteid == nes->emoteid)
 			{
-				c->Message(0, "EmoteID: %i Event: %i Type: %i Text: %s", nes->emoteid, nes->event_, nes->type, nes->text);
+				c->Message(CC_Default, "EmoteID: %i Event: %i Type: %i Text: %s", nes->emoteid, nes->event_, nes->type, nes->text);
 				count++;
 			}
 			iterator.Advance();
 		}
 		if (count == 0)
-			c->Message(0, "No emotes found.");
+			c->Message(CC_Default, "No emotes found.");
 		else
-			c->Message(0, "%i emote(s) found", count);
+			c->Message(CC_Default, "%i emote(s) found", count);
 	}
 }
 
 void command_emotesearch(Client *c, const Seperator *sep){
 	if (sep->arg[1][0] == 0)
-		c->Message(0, "Usage: #emotesearch [search string or emoteid]");
+		c->Message(CC_Default, "Usage: #emotesearch [search string or emoteid]");
 	else
 	{
 		const char *search_criteria = sep->argplus[1];
@@ -9892,15 +9980,15 @@ void command_emotesearch(Client *c, const Seperator *sep){
 				NPC_Emote_Struct* nes = iterator.GetData();
 				if (emoteid == nes->emoteid)
 				{
-					c->Message(0, "EmoteID: %i Event: %i Type: %i Text: %s", nes->emoteid, nes->event_, nes->type, nes->text);
+					c->Message(CC_Default, "EmoteID: %i Event: %i Type: %i Text: %s", nes->emoteid, nes->event_, nes->type, nes->text);
 					count++;
 				}
 				iterator.Advance();
 			}
 			if (count == 0)
-				c->Message(0, "No emotes found.");
+				c->Message(CC_Default, "No emotes found.");
 			else
-				c->Message(0, "%i emote(s) found", count);
+				c->Message(CC_Default, "%i emote(s) found", count);
 		}
 		else
 		{
@@ -9920,7 +10008,7 @@ void command_emotesearch(Client *c, const Seperator *sep){
 				pdest = strstr(sText, sCriteria);
 				if (pdest != nullptr)
 				{
-					c->Message(0, "EmoteID: %i Event: %i Type: %i Text: %s", nes->emoteid, nes->event_, nes->type, nes->text);
+					c->Message(CC_Default, "EmoteID: %i Event: %i Type: %i Text: %s", nes->emoteid, nes->event_, nes->type, nes->text);
 					count++;
 				}
 				if (count == 50)
@@ -9929,9 +10017,9 @@ void command_emotesearch(Client *c, const Seperator *sep){
 				iterator.Advance();
 			}
 			if (count == 50)
-				c->Message(0, "50 emotes shown...too many results.");
+				c->Message(CC_Default, "50 emotes shown...too many results.");
 			else
-				c->Message(0, "%i emote(s) found", count);
+				c->Message(CC_Default, "%i emote(s) found", count);
 		}
 	}
 }
@@ -9939,7 +10027,7 @@ void command_emotesearch(Client *c, const Seperator *sep){
 void command_reloademote(Client *c, const Seperator *sep){
 	zone->NPCEmoteList.Clear();
 	zone->LoadNPCEmotes(&zone->NPCEmoteList);
-	c->Message(0, "NPC emotes reloaded.");
+	c->Message(CC_Default, "NPC emotes reloaded.");
 }
 
 void command_globalview(Client *c, const Seperator *sep){
@@ -9982,14 +10070,14 @@ void command_globalview(Client *c, const Seperator *sep){
 		std::list<QGlobal>::iterator iter = globalMap.begin();
 		uint32 gcount = 0;
 
-		c->Message(0, "Name, Value");
+		c->Message(CC_Default, "Name, Value");
 		while (iter != globalMap.end())
 		{
-			c->Message(0, "%s %s", (*iter).name.c_str(), (*iter).value.c_str());
+			c->Message(CC_Default, "%s %s", (*iter).name.c_str(), (*iter).value.c_str());
 			++iter;
 			++gcount;
 		}
-		c->Message(0, "%u globals loaded.", gcount);
+		c->Message(CC_Default, "%u globals loaded.", gcount);
 	}
 	else
 	{
@@ -10015,14 +10103,14 @@ void command_globalview(Client *c, const Seperator *sep){
 		std::list<QGlobal>::iterator iter = globalMap.begin();
 		uint32 gcount = 0;
 
-		c->Message(0, "Name, Value");
+		c->Message(CC_Default, "Name, Value");
 		while (iter != globalMap.end())
 		{
-			c->Message(0, "%s %s", (*iter).name.c_str(), (*iter).value.c_str());
+			c->Message(CC_Default, "%s %s", (*iter).name.c_str(), (*iter).value.c_str());
 			++iter;
 			++gcount;
 		}
-		c->Message(0, "%u globals loaded.", gcount);
+		c->Message(CC_Default, "%u globals loaded.", gcount);
 	}
 }
 
@@ -10030,13 +10118,13 @@ void command_distance(Client *c, const Seperator *sep){
 	if (c && c->GetTarget()) {
 		Mob* target = c->GetTarget();
 
-		c->Message(0, "Your target, %s, is %1.1f units from you.", c->GetTarget()->GetName(), Distance(c->GetPosition(), target->GetPosition()));
+		c->Message(CC_Default, "Your target, %s, is %1.1f units from you.", c->GetTarget()->GetName(), Distance(c->GetPosition(), target->GetPosition()));
 	}
 }
 
 void command_cvs(Client *c, const Seperator *sep)
 {
-	c->Message(0, "%f %d", zone->random.Real(0.0f, 1.0f), zone->random.Int(0, 100));
+	c->Message(CC_Default, "%f %d", zone->random.Real(0.0f, 1.0f), zone->random.Int(0, 100));
 	if(c)
 	{
 		ServerPacket *pack = new ServerPacket(ServerOP_ClientVersionSummary, sizeof(ServerRequestClientVersionSummary_Struct));
@@ -10072,24 +10160,24 @@ void command_max_all_skills(Client *c, const Seperator *sep){
 
 void command_showbonusstats(Client *c, const Seperator *sep){
 	if (c->GetTarget() == 0)
-		c->Message(0, "ERROR: No target!");
+		c->Message(CC_Default, "ERROR: No target!");
 	else if (!c->GetTarget()->IsMob() && !c->GetTarget()->IsClient())
-		c->Message(0, "ERROR: Target is not a Mob or Player!");
+		c->Message(CC_Default, "ERROR: Target is not a Mob or Player!");
 	else {
 		bool bAll = false;
 		if (sep->arg[1][0] == '\0' || strcasecmp(sep->arg[1], "all") == 0)
 			bAll = true;
 		if (bAll || (strcasecmp(sep->arg[1], "item") == 0)) {
-			c->Message(0, "Target Item Bonuses:");
-			c->Message(0, "  Accuracy: %i%%   Divine Save: %i%%", c->GetTarget()->GetItemBonuses().Accuracy, c->GetTarget()->GetItemBonuses().DivineSaveChance);
-			c->Message(0, "  Flurry: %i%%     HitChance: %i%%", c->GetTarget()->GetItemBonuses().FlurryChance, c->GetTarget()->GetItemBonuses().HitChance / 15);
+			c->Message(CC_Default, "Target Item Bonuses:");
+			c->Message(CC_Default, "  Accuracy: %i%%   Divine Save: %i%%", c->GetTarget()->GetItemBonuses().Accuracy, c->GetTarget()->GetItemBonuses().DivineSaveChance);
+			c->Message(CC_Default, "  Flurry: %i%%     HitChance: %i%%", c->GetTarget()->GetItemBonuses().FlurryChance, c->GetTarget()->GetItemBonuses().HitChance / 15);
 		}
 		if (bAll || (strcasecmp(sep->arg[1], "spell") == 0)) {
-			c->Message(0, "  Target Spell Bonuses:");
-			c->Message(0, "  Accuracy: %i%%   Divine Save: %i%%", c->GetTarget()->GetSpellBonuses().Accuracy, c->GetTarget()->GetSpellBonuses().DivineSaveChance);
-			c->Message(0, "  Flurry: %i%%     HitChance: %i%% ", c->GetTarget()->GetSpellBonuses().FlurryChance, c->GetTarget()->GetSpellBonuses().HitChance / 15);
+			c->Message(CC_Default, "  Target Spell Bonuses:");
+			c->Message(CC_Default, "  Accuracy: %i%%   Divine Save: %i%%", c->GetTarget()->GetSpellBonuses().Accuracy, c->GetTarget()->GetSpellBonuses().DivineSaveChance);
+			c->Message(CC_Default, "  Flurry: %i%%     HitChance: %i%% ", c->GetTarget()->GetSpellBonuses().FlurryChance, c->GetTarget()->GetSpellBonuses().HitChance / 15);
 		}
-		c->Message(0, "  Effective Casting Level: %i", c->GetTarget()->GetCasterLevel(0));
+		c->Message(CC_Default, "  Effective Casting Level: %i", c->GetTarget()->GetCasterLevel(0));
 	}
 }
 
@@ -10138,17 +10226,17 @@ void command_qtest(Client *c, const Seperator *sep){
 void command_mysql(Client *c, const Seperator *sep)
 {
 	if (!sep->arg[1][0] || !sep->arg[2][0]) {
-		c->Message(0, "Usage: #mysql query \"Query here\"");
+		c->Message(CC_Default, "Usage: #mysql query \"Query here\"");
 		return;
 	}
 
 	if (strcasecmp(sep->arg[1], "help") == 0) {
-		c->Message(0, "MYSQL In-Game CLI Interface:");
-		c->Message(0, "Example: #mysql query \"Query goes here quoted\" -s -h");
-		c->Message(0, "To use 'like \"%%something%%\" replace the %% with #");
-		c->Message(0, "Example: #mysql query \"select * from table where name like \"#something#\"");
-		c->Message(0, "-s - Spaces select entries apart");
-		c->Message(0, "-h - Colors every other select result");
+		c->Message(CC_Default, "MYSQL In-Game CLI Interface:");
+		c->Message(CC_Default, "Example: #mysql query \"Query goes here quoted\" -s -h");
+		c->Message(CC_Default, "To use 'like \"%%something%%\" replace the %% with #");
+		c->Message(CC_Default, "Example: #mysql query \"select * from table where name like \"#something#\"");
+		c->Message(CC_Default, "-s - Spaces select entries apart");
+		c->Message(CC_Default, "-h - Colors every other select result");
 		return;
 	}
 
@@ -10204,7 +10292,7 @@ void command_mysql(Client *c, const Seperator *sep)
 			lineVec.push_back(lineText.str());
 
 			if (optionS) //This provides spacing for the space switch
-				c->Message(0, " ");
+				c->Message(CC_Default, " ");
 			if (optionH) //This option will highlight every other row
 				highlightTextIndex = 1 - highlightTextIndex;
 
@@ -10219,11 +10307,11 @@ void command_zopp(Client *c, const Seperator *sep){
 	if (!c)
 		return;
 	else if (sep->argnum < 3 || sep->argnum > 4)
-		c->Message(0, "Usage: #zopp [trade/summon] [slot id] [item id] [*charges]");
+		c->Message(CC_Default, "Usage: #zopp [trade/summon] [slot id] [item id] [*charges]");
 	else if (!strcasecmp(sep->arg[1], "trade") == 0 && !strcasecmp(sep->arg[1], "t") == 0 && !strcasecmp(sep->arg[1], "summon") == 0 && !strcasecmp(sep->arg[1], "s") == 0)
-		c->Message(0, "Usage: #zopp [trade/summon] [slot id] [item id] [*charges]");
+		c->Message(CC_Default, "Usage: #zopp [trade/summon] [slot id] [item id] [*charges]");
 	else if (!sep->IsNumber(2) || !sep->IsNumber(3) || (sep->argnum == 4 && !sep->IsNumber(4)))
-		c->Message(0, "Usage: #zopp [trade/summon] [slot id] [item id] [*charges]");
+		c->Message(CC_Default, "Usage: #zopp [trade/summon] [slot id] [item id] [*charges]");
 	else {
 		ItemPacketType packettype;
 
@@ -10257,12 +10345,12 @@ void command_zopp(Client *c, const Seperator *sep){
 
 		if (charges < 0 || charges > FakeItem->StackSize) {
 			c->Message(CC_Red, "Warning: The specified charge count does not meet expected criteria!");
-			c->Message(0, "Processing request..results may cause unpredictable behavior.");
+			c->Message(CC_Default, "Processing request..results may cause unpredictable behavior.");
 		}
 
 		ItemInst* FakeItemInst = database.CreateItem(FakeItem, charges);
 		c->SendItemPacket(slotid, FakeItemInst, packettype);
-		c->Message(0, "Sending zephyr op packet to client - [%s] %s (%u) with %i %s to slot %i.", packettype == ItemPacketTrade ? "Trade" : "Summon", FakeItem->Name, itemid, charges, abs(charges == 1) ? "charge" : "charges", slotid);
+		c->Message(CC_Default, "Sending zephyr op packet to client - [%s] %s (%u) with %i %s to slot %i.", packettype == ItemPacketTrade ? "Trade" : "Summon", FakeItem->Name, itemid, charges, abs(charges == 1) ? "charge" : "charges", slotid);
 		safe_delete(FakeItemInst);
 	}
 }
@@ -10271,18 +10359,18 @@ void command_questerrors(Client *c, const Seperator *sep)
 {
 	std::list<std::string> err;
 	parse->GetErrors(err);
-	c->Message(0, "Current Quest Errors:");
+	c->Message(CC_Default, "Current Quest Errors:");
 
 	auto iter = err.begin();
 	int i = 0;
 	while (iter != err.end())
 	{
 		if (i >= 30) {
-			c->Message(0, "Maximum of 30 Errors shown...");
+			c->Message(CC_Default, "Maximum of 30 Errors shown...");
 			break;
 		}
 
-		c->Message(0, iter->c_str());
+		c->Message(CC_Default, iter->c_str());
 		++i;
 		++iter;
 	}
@@ -10305,7 +10393,7 @@ void command_update(Client *c, const Seperator *sep)
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 	else if (strcasecmp(sep->arg[1], "quests") == 0)
@@ -10318,7 +10406,7 @@ void command_update(Client *c, const Seperator *sep)
 		while (fgets(buf, 1024, fp))
 		{
 			const char * output = (const char *)buf;
-			c->Message(0, "%s", output);
+			c->Message(CC_Default, "%s", output);
 		}
 		fclose(fp);
 #else
@@ -10330,12 +10418,12 @@ void command_update(Client *c, const Seperator *sep)
 		while (getline(&buf, &len, fp) != -1)
 		{
 			const char * output = (const char *)buf;
-			c->Message(0, "%s", output);
+			c->Message(CC_Default, "%s", output);
 		}
 		free(buf);
 		fflush(fp);
 #endif
-		c->Message(0, "Quests are updated.");
+		c->Message(CC_Default, "Quests are updated.");
 	}
 	else if (strcasecmp(sep->arg[1], "source") == 0)
 	{
@@ -10343,14 +10431,14 @@ void command_update(Client *c, const Seperator *sep)
 		{
 #ifdef _WINDOWS
 			// TODO: Add same functionality for windows from the following command.
-			c->Message(0, "Not yet implemented for windows.");
+			c->Message(CC_Default, "Not yet implemented for windows.");
 #else
-			c->Message(0, "Server will be going down and building, 10 min warning issued.");
-			system("./tak_checkout");
+			c->Message(CC_Default, "Server will be going down and building, 10 min warning issued.");
+			system("./EQServer.sh update");
 #endif
 		}
 		else
-			c->Message(0, "Your access level is not high enough to use this command.");
+			c->Message(CC_Default, "Your access level is not high enough to use this command.");
 	}
 	else if (strcasecmp(sep->arg[1], "reboot") == 0)
 	{
@@ -10358,14 +10446,14 @@ void command_update(Client *c, const Seperator *sep)
 		{
 #ifdef _WINDOWS
 			// TODO: Add same functionality for windows from the following command.
-			c->Message(0, "Not yet implemented for windows.");
+			c->Message(CC_Default, "Not yet implemented for windows.");
 #else
-			c->Message(0, "Server will be going down for reboot, 10 min warning issued.");
-			system("./tak_reboot");
+			c->Message(CC_Default, "Server will be going down for reboot, 10 min warning issued.");
+			system("./EQServer.sh reboot");
 #endif
 		}
 		else
-			c->Message(0, "Your access level is not high enough to use this command.");
+			c->Message(CC_Default, "Your access level is not high enough to use this command.");
 	}
 	else if (strcasecmp(sep->arg[1], "rebootNOW") == 0)
 	{
@@ -10373,21 +10461,21 @@ void command_update(Client *c, const Seperator *sep)
 		{
 #ifdef _WINDOWS
 			// TODO: Add same functionality for windows from the following command.
-			c->Message(0, "Not yet implemented for windows.");
+			c->Message(CC_Default, "Not yet implemented for windows.");
 #else
-			c->Message(0, "Server will be going down for reboot.");
-			system("./tak_rebootNOW");
+			c->Message(CC_Default, "Server will be going down for reboot.");
+			system("./EQServer.sh rebootNOW");
 #endif
 		}
 		else
-			c->Message(0, "Your access level is not high enough to use this command.");
+			c->Message(CC_Default, "Your access level is not high enough to use this command.");
 	}
 	else
 	{
 		int size = sizeof(help) / sizeof(std::string);
 		for (int i = 0; i < size; i++)
 		{
-			c->Message(0, help[i].c_str());
+			c->Message(CC_Default, help[i].c_str());
 		}
 	}
 }
@@ -10397,10 +10485,10 @@ void command_coredump(Client *c, const Seperator *sep)
 #ifdef _WINDOWS
 	// TODO: Add same functionality for windows from the following command.
 	// Maybe have a batch file spit logs to a web folder?
-	c->Message(0, "Not yet implemented for windows.");
+	c->Message(CC_Default, "Not yet implemented for windows.");
 #else
 	system("./dump");
-	c->Message(0, "core dumped.");
+	c->Message(CC_Default, "core dumped.");
 #endif
 }
 
@@ -10412,20 +10500,20 @@ void command_enablerecipe(Client *c, const Seperator *sep){
 			recipe_id = atoi(sep->arg[1]);
 		}
 		else {
-			c->Message(0, "Invalid number of arguments.\nUsage: #enablerecipe recipe_id");
+			c->Message(CC_Default, "Invalid number of arguments.\nUsage: #enablerecipe recipe_id");
 			return;
 		}
 		if (recipe_id > 0) {
 			success = database.EnableRecipe(recipe_id);
 			if (success) {
-				c->Message(0, "Recipe enabled.");
+				c->Message(CC_Default, "Recipe enabled.");
 			}
 			else {
-				c->Message(0, "Recipe not enabled.");
+				c->Message(CC_Default, "Recipe not enabled.");
 			}
 		}
 		else {
-			c->Message(0, "Invalid recipe id.\nUsage: #enablerecipe recipe_id");
+			c->Message(CC_Default, "Invalid recipe id.\nUsage: #enablerecipe recipe_id");
 		}
 	}
 }
@@ -10438,20 +10526,20 @@ void command_disablerecipe(Client *c, const Seperator *sep){
 			recipe_id = atoi(sep->arg[1]);
 		}
 		else {
-			c->Message(0, "Invalid number of arguments.\nUsage: #disablerecipe recipe_id");
+			c->Message(CC_Default, "Invalid number of arguments.\nUsage: #disablerecipe recipe_id");
 			return;
 		}
 		if (recipe_id > 0) {
 			success = database.DisableRecipe(recipe_id);
 			if (success) {
-				c->Message(0, "Recipe disabled.");
+				c->Message(CC_Default, "Recipe disabled.");
 			}
 			else {
-				c->Message(0, "Recipe not disabled.");
+				c->Message(CC_Default, "Recipe not disabled.");
 			}
 		}
 		else {
-			c->Message(0, "Invalid recipe id.\nUsage: #disablerecipe recipe_id");
+			c->Message(CC_Default, "Invalid recipe id.\nUsage: #disablerecipe recipe_id");
 		}
 	}
 }
@@ -10460,13 +10548,13 @@ void command_npctype_cache(Client *c, const Seperator *sep){
 	if (sep->argnum > 0) {
 		for (int i = 0; i < sep->argnum; ++i) {
 			if (strcasecmp(sep->arg[i + 1], "all") == 0) {
-				c->Message(0, "Clearing all npc types from the cache.");
+				c->Message(CC_Default, "Clearing all npc types from the cache.");
 				zone->ClearNPCTypeCache(-1);
 			}
 			else {
 				int id = atoi(sep->arg[i + 1]);
 				if (id > 0) {
-					c->Message(0, "Clearing npc type %d from the cache.", id);
+					c->Message(CC_Default, "Clearing npc type %d from the cache.", id);
 					zone->ClearNPCTypeCache(id);
 					return;
 				}
@@ -10474,9 +10562,9 @@ void command_npctype_cache(Client *c, const Seperator *sep){
 		}
 	}
 	else {
-		c->Message(0, "Usage:");
-		c->Message(0, "#npctype_cache [npctype_id] ...");
-		c->Message(0, "#npctype_cache all");
+		c->Message(CC_Default, "Usage:");
+		c->Message(CC_Default, "#npctype_cache [npctype_id] ...");
+		c->Message(CC_Default, "#npctype_cache all");
 	}
 }
 
@@ -10489,15 +10577,15 @@ void command_starve(Client *c, const Seperator *sep){
 	else
 		t = c;
 
-	t->Starve();
-	c->Message(0, "Target starved.");
+	t->SetConsumption(0,0);
+	c->Message(CC_Default, "Target starved.");
 
 }
 
 void command_merchantopenshop(Client *c, const Seperator *sep){
 	Mob *merchant = c->GetTarget();
 	if (!merchant || merchant->GetClass() != MERCHANT) {
-		c->Message(0, "You must target a merchant to open their shop.");
+		c->Message(CC_Default, "You must target a merchant to open their shop.");
 		return;
 	}
 
@@ -10507,7 +10595,7 @@ void command_merchantopenshop(Client *c, const Seperator *sep){
 void command_merchantcloseshop(Client *c, const Seperator *sep){
 	Mob *merchant = c->GetTarget();
 	if (!merchant || merchant->GetClass() != MERCHANT) {
-		c->Message(0, "You must target a merchant to close their shop.");
+		c->Message(CC_Default, "You must target a merchant to close their shop.");
 		return;
 	}
 
@@ -10520,14 +10608,14 @@ void command_falltest(Client *c, const Seperator *sep)
 	if(c)
 	{
 		if (!sep->IsNumber(1)) {
-			c->Message(0, "Invalid number of arguments.\nUsage: #falltest [+z]");
+			c->Message(CC_Default, "Invalid number of arguments.\nUsage: #falltest [+z]");
 			return;
 		}
 		else
 		{
 			zmod = c->GetZ() + atof(sep->arg[1]);
 			c->MovePC(zone->GetZoneID(), zone->GetInstanceID(), c->GetX(), c->GetY(), zmod, c->GetHeading());
-			c->Message(0, "Moving to X: %0.2f Y: %0.2f Z: %0.2f", c->GetX(), c->GetY(), zmod);
+			c->Message(CC_Default, "Moving to X: %0.2f Y: %0.2f Z: %0.2f", c->GetX(), c->GetY(), zmod);
 		}
 	}
 }
@@ -10537,17 +10625,17 @@ void command_push(Client *c, const Seperator *sep){
 	Mob* t;
 	if (!c->GetTarget())
 	{
-		c->Message(0, "You need a target to push.");
+		c->Message(CC_Default, "You need a target to push.");
 		return;
 	}
 	else if(!c->GetTarget()->IsNPC() && !c->GetTarget()->IsClient())
 	{
-		c->Message(0, "That's an invalid target, nerd.");
+		c->Message(CC_Default, "That's an invalid target, nerd.");
 		return;
 	}
 	else if(!sep->IsNumber(1))
 	{
-		c->Message(0, "Invalid number of arguments.\nUsage: #push [pushback] [pushup]");
+		c->Message(CC_Default, "Invalid number of arguments.\nUsage: #push [pushback] [pushup]");
 		return;
 	}
 	else
@@ -10583,12 +10671,12 @@ void command_push(Client *c, const Seperator *sep){
 
 		if(success)
 		{
-			c->Message(0, "%s was pushed for %0.1f!", t->GetCleanName(), pushback);
+			c->Message(CC_Default, "%s was pushed for %0.1f!", t->GetCleanName(), pushback);
 			return;
 		}
 		else
 		{
-			c->Message(0, "Pushed failed on %s. Coord check likely failed.", t->GetCleanName());
+			c->Message(CC_Default, "Pushed failed on %s. Coord check likely failed.", t->GetCleanName());
 			return;
 		}
 	}
@@ -10643,215 +10731,6 @@ void command_chattest(Client *c, const Seperator *sep)
 	}
 }
 
-void command_tune(Client *c, const Seperator *sep)
-{
-	//Work in progress - Kayen
-
-	if(sep->arg[1][0] == '\0' || !strcasecmp(sep->arg[1], "help")) {
-		c->Message(0, "Syntax: #tune [subcommand].");
-		c->Message(0, "-- Tune System Commands --");
-		c->Message(0, "-- Usage: Returning recommended combat statistical values based on a desired outcome.");
-		c->Message(0, "-- Note: If targeted mob does not have a target (ie not engaged in combat), YOU will be considered the target.");
-		c->Message(0, "-- Warning: The calculations done in this process are intense and can potentially cause zone crashes depending on parameters set, use with caution!");
-		c->Message(0, "-- Below are OPTIONAL parameters.");
-		c->Message(0, "-- Note: [interval] Determines how fast the stat being checked increases/decreases till it finds the best result. Default [ATK/AC 50][Acc/Avoid 10] ");
-		c->Message(0, "-- Note: [loop_max] Determines how many iterations are done to increases/decreases the stat till it finds the best result. Default [ATK/AC 100][Acc/Avoid 1000]");
-		c->Message(0, "-- Note: [Stat Override] Will override that stat on mob being checkd with the specified value. Default=0");
-		c->Message(0, "-- Note: [Info Level] How much statistical detail is displayed[0 - 3]. Default=0 ");
-		c->Message(0, "-- Note: Results are only approximations usually accurate to +/- 2 intervals.");
-
-		c->Message(0, "... ");
-		c->Message(0, "...### Category A ### Target = ATTACKER ### YOU or Target's Target = DEFENDER ###");
-		c->Message(0, "...### Category B ### Target = DEFENDER ### YOU or Target's Target = ATTACKER ###");
-		c->Message(0, "... ");
-		c->Message(0, "...#Returns recommended ATK adjustment +/- on ATTACKER that will result in an average mitigation pct on DEFENDER. ");
-		c->Message(0, "...tune FindATK [A/B] [pct mitigation] [interval][loop_max][AC Overwride][Info Level]");
-		c->Message(0, "... ");
-		c->Message(0, "...#Returns recommended AC adjustment +/- on DEFENDER for an average mitigation pct from ATTACKER. ");
-		c->Message(0, "...tune FindAC [A/B] [pct mitigation] [interval][loop_max][ATK Overwride][Info Level] ");
-		c->Message(0, "... ");
-		c->Message(0, "...#Returns recommended Accuracy adjustment +/- on ATTACKER that will result in a hit chance pct on DEFENDER. ");
-		c->Message(0, "...tune FindAccuracy [A/B] [hit chance] [interval][loop_max][Avoidance Overwride][Info Level]");
-		c->Message(0, "... ");
-		c->Message(0, "...#Returns recommended Avoidance adjustment +/- on DEFENDER for in a hit chance pct from ATTACKER. ");
-		c->Message(0, "...tune FindAvoidance [A/B] [pct mitigation] [interval][loop_max][Accuracy Overwride][Info Level] ");
-
-		return;
-	}
-	//Default is category A for attacker/defender settings, which then are swapped under category B.
-	Mob* defender = c;
-	Mob* attacker = c->GetTarget();
-
-	if (!attacker)
-	{
-		c->Message(0, "#Tune - Error no target selected. [#Tune help]");
-		return;
-	}
-
-	Mob* ttarget = attacker->GetTarget();
-
-	if (ttarget)
-		defender = ttarget;
-
-	if(!strcasecmp(sep->arg[1], "FindATK"))
-	{
-		float pct_mitigation = atof(sep->arg[3]);
-		int interval = atoi(sep->arg[4]);
-		int max_loop = atoi(sep->arg[5]);
-		int ac_override = atoi(sep->arg[6]);
-		int info_level = atoi(sep->arg[7]);
-
-		if (!pct_mitigation)
-		{
-			c->Message(CC_Red, "#Tune - Error must enter the desired percent mitigation on defender. Ie. Defender to mitigate on average 20 pct of max damage.");
-			return;
-		}
-
-		if (!interval)
-			interval = 50;
-		if (!max_loop)
-			max_loop = 100;
-		if(!ac_override)
-			ac_override = 0;
-		if (!info_level)
-			info_level = 1;
-		
-		if(!strcasecmp(sep->arg[2], "A"))
-			c->Tune_FindATKByPctMitigation(c, attacker, pct_mitigation, interval, max_loop,ac_override,info_level);
-		else if(!strcasecmp(sep->arg[2], "B"))
-			c->Tune_FindATKByPctMitigation(attacker,c, pct_mitigation, interval, max_loop,ac_override,info_level);
-		else {
-			c->Message(0, "#Tune - Error no category selcted. [#Tune help]");
-			c->Message(0, "Usage #tune FindATK [A/B] [pct mitigation] [interval][loop_max][AC Overwride][Info Level] ");
-			c->Message(0, "Example #tune FindATK A 60");
-		}
-		return;
-	}
-
-	if(!strcasecmp(sep->arg[1], "FindAC"))
-	{
-		float pct_mitigation = atof(sep->arg[3]);
-		int interval = atoi(sep->arg[4]);
-		int max_loop = atoi(sep->arg[5]);
-		int atk_override = atoi(sep->arg[6]);
-		int info_level = atoi(sep->arg[7]);
-
-		if (!pct_mitigation)
-		{
-			c->Message(CC_Red, "#Tune - Error must enter the desired percent mitigation on defender. Ie. Defender to mitigate on average 20 pct of max damage.");
-			return;
-		}
-
-		if (!interval)
-			interval = 50;
-		if (!max_loop)
-			max_loop = 100;
-		if(!atk_override)
-			atk_override = 0;
-		if (!info_level)
-			info_level = 1;
-				
-		if(!strcasecmp(sep->arg[2], "A"))
-			c->Tune_FindACByPctMitigation(c, attacker, pct_mitigation, interval, max_loop,atk_override,info_level);
-		else if(!strcasecmp(sep->arg[2], "B"))
-			c->Tune_FindACByPctMitigation(attacker, c, pct_mitigation, interval, max_loop,atk_override,info_level);
-		else {
-			c->Message(0, "#Tune - Error no category selcted. [#Tune help]");
-			c->Message(0, "Usage #tune FindAC [A/B] [pct mitigation] [interval][loop_max][ATK Overwride][Info Level] ");
-			c->Message(0, "Example #tune FindAC A 60");
-		}
-
-		return;
-	}
-
-	if(!strcasecmp(sep->arg[1], "FindAccuracy"))
-	{
-		float hit_chance = atof(sep->arg[3]);
-		int interval = atoi(sep->arg[4]);
-		int max_loop = atoi(sep->arg[5]);
-		int avoid_override = atoi(sep->arg[6]);
-		int info_level = atoi(sep->arg[7]);
-
-		if (!hit_chance)
-		{
-			c->Message(CC_Default, "#Tune - Error must enter the desired percent mitigation on defender. Ie. Defender to mitigate on average 20 pct of max damage.");
-			return;
-		}
-
-		if (!interval)
-			interval = 10;
-		if (!max_loop)
-			max_loop = 1000;
-		if(!avoid_override)
-			avoid_override = 0;
-		if (!info_level)
-			info_level = 1;
-
-		if (hit_chance > RuleR(Combat,MaxChancetoHit) || hit_chance < RuleR(Combat,MinChancetoHit))
-		{
-			c->Message(CC_Default, "#Tune - Error hit chance out of bounds. [Max %.2f Min .2f]", RuleR(Combat,MaxChancetoHit),RuleR(Combat,MinChancetoHit));
-			return;
-		}
-		
-		if(!strcasecmp(sep->arg[2], "A"))
-			c->Tune_FindAccuaryByHitChance(c, attacker, hit_chance, interval, max_loop,avoid_override,info_level);
-		else if(!strcasecmp(sep->arg[2], "B"))
-			c->Tune_FindAccuaryByHitChance(attacker, c, hit_chance, interval, max_loop,avoid_override,info_level);
-		else {
-			c->Message(0, "#Tune - Error no category selcted. [#Tune help]");
-			c->Message(0, "Usage #tune FindAcccuracy [A/B] [hit chance] [interval][loop_max][Avoidance Overwride][Info Level]");
-			c->Message(0, "Exampled #tune FindAccuracy B 30");
-		}
-
-		return;
-	}
-
-	if(!strcasecmp(sep->arg[1], "FindAvoidance"))
-	{
-		float hit_chance = atof(sep->arg[3]);
-		int interval = atoi(sep->arg[4]);
-		int max_loop = atoi(sep->arg[5]);
-		int acc_override = atoi(sep->arg[6]);
-		int info_level = atoi(sep->arg[7]);
-
-		if (!hit_chance)
-		{
-			c->Message(0, "#Tune - Error must enter the desired hit chance on defender. Ie. Defender to have hit chance of 40 pct.");
-			return;
-		}
-
-		if (!interval)
-			interval = 10;
-		if (!max_loop)
-			max_loop = 1000;
-		if(!acc_override)
-			acc_override = 0;
-		if (!info_level)
-			info_level = 1;
-
-		if (hit_chance > RuleR(Combat,MaxChancetoHit) || hit_chance < RuleR(Combat,MinChancetoHit))
-		{
-			c->Message(CC_Default, "#Tune - Error hit chance out of bounds. [Max %.2f Min .2f]", RuleR(Combat,MaxChancetoHit),RuleR(Combat,MinChancetoHit));
-			return;
-		}
-		
-		if(!strcasecmp(sep->arg[2], "A"))
-			c->Tune_FindAvoidanceByHitChance(c, attacker, hit_chance, interval, max_loop,acc_override, info_level);
-		else if(!strcasecmp(sep->arg[2], "B"))
-			c->Tune_FindAvoidanceByHitChance(attacker, c, hit_chance, interval, max_loop,acc_override, info_level);
-		else {
-			c->Message(0, "#Tune - Error no category selcted. [#Tune help]");
-			c->Message(0, "Usage #tune FindAvoidance [A/B] [hit chance] [interval][loop_max][Accuracy Overwride][Info Level]");
-			c->Message(0, "Exampled #tune FindAvoidance B 30");
-		}
-
-		return;
-	}
-
-
-	return;
-}
-
 void command_logtest(Client *c, const Seperator *sep){
 	clock_t t = std::clock(); /* Function timer start */
 	if (sep->IsNumber(1)){
@@ -10865,7 +10744,7 @@ void command_logtest(Client *c, const Seperator *sep){
 
 void command_crashtest(Client *c, const Seperator *sep)
 {
-	c->Message(0, "Alright, now we get an GPF ;) ");
+	c->Message(CC_Default, "Alright, now we get an GPF ;) ");
 	char* gpf = 0;
 	memcpy(gpf, "Ready to crash", 30);
 }
@@ -10877,19 +10756,19 @@ void command_logs(Client *c, const Seperator *sep){
 		if (strcasecmp(sep->arg[1], "reload_all") == 0){
 			ServerPacket *pack = new ServerPacket(ServerOP_ReloadLogs, 0);
 			worldserver.SendPacket(pack);
-			c->Message(13, "Successfully sent the packet to world to reload log settings from the database for all zones");
+			c->Message(CC_Red, "Successfully sent the packet to world to reload log settings from the database for all zones");
 			safe_delete(pack);
 		}
 		/* #logs list_settings */
 		if (strcasecmp(sep->arg[1], "list_settings") == 0 || (strcasecmp(sep->arg[1], "set") == 0 && strcasecmp(sep->arg[3], "") == 0)){
-			c->Message(0, "[Category ID | console | file | gmsay | Category Description]");
+			c->Message(CC_Default, "[Category ID | console | file | gmsay | Category Description]");
 			int redisplay_columns = 0;
 			for (int i = 0; i < Logs::LogCategory::MaxCategoryID; i++){
 				if (redisplay_columns == 10){
-					c->Message(0, "[Category ID | console | file | gmsay | Category Description]");
+					c->Message(CC_Default, "[Category ID | console | file | gmsay | Category Description]");
 					redisplay_columns = 0;
 				}
-				c->Message(0, StringFormat("--- %i | %u | %u | %u | %s", i, Log.log_settings[i].log_to_console, Log.log_settings[i].log_to_file, Log.log_settings[i].log_to_gmsay, Logs::LogCategoryName[i]).c_str());
+				c->Message(CC_Default, StringFormat("--- %i | %u | %u | %u | %s", i, Log.log_settings[i].log_to_console, Log.log_settings[i].log_to_file, Log.log_settings[i].log_to_gmsay, Logs::LogCategoryName[i]).c_str());
 				redisplay_columns++;
 			}
 		}
@@ -10908,12 +10787,12 @@ void command_logs(Client *c, const Seperator *sep){
 				logs_set = 1;
 			}
 			else{
-				c->Message(0, "--- #logs set [console|file|gmsay] <category_id> <debug_level (1-3)> - Sets log settings during the lifetime of the zone");
-				c->Message(0, "--- #logs set gmsay 20 1 - Would output Quest errors to gmsay");
+				c->Message(CC_Default, "--- #logs set [console|file|gmsay] <category_id> <debug_level (1-3)> - Sets log settings during the lifetime of the zone");
+				c->Message(CC_Default, "--- #logs set gmsay 20 1 - Would output Quest errors to gmsay");
 			}
 			if (logs_set == 1){
-				c->Message(15, "Your Log Settings have been applied");
-				c->Message(15, "Output Method: %s :: Debug Level: %i - Category: %s", sep->arg[2], atoi(sep->arg[4]), Logs::LogCategoryName[atoi(sep->arg[3])]);
+				c->Message(CC_Yellow, "Your Log Settings have been applied");
+				c->Message(CC_Yellow, "Output Method: %s :: Debug Level: %i - Category: %s", sep->arg[2], atoi(sep->arg[4]), Logs::LogCategoryName[atoi(sep->arg[3])]);
 			}
 			/* We use a general 'is_category_enabled' now, let's update when we update any output settings 
 				This is used in hot places of code to check if its enabled in any way before triggering logs
@@ -10925,12 +10804,23 @@ void command_logs(Client *c, const Seperator *sep){
 				Log.log_settings[atoi(sep->arg[3])].is_category_enabled = 0;
 			}
 		}
+		if (strcasecmp(sep->arg[1], "quiet") == 0)
+		{
+			for (int i = 0; i < Logs::LogCategory::MaxCategoryID; i++)
+			{
+				Log.log_settings[i].log_to_gmsay = 0;
+				logs_set = 0;
+			}
+			c->Message(CC_Yellow, "Shhh. Be vewy vewy quiet, I'm hunting wabbits.");
+		}
 	}
-	else {
-		c->Message(0, "#logs usage:");
-		c->Message(0, "--- #logs reload_all - Reload all settings in world and all zone processes with what is defined in the database");
-		c->Message(0, "--- #logs list_settings - Shows current log settings and categories loaded into the current process' memory");
-		c->Message(0, "--- #logs set [console|file|gmsay] <category_id> <debug_level (1-3)> - Sets log settings during the lifetime of the zone");
+	else 
+	{
+		c->Message(CC_Default, "#logs usage:");
+		c->Message(CC_Default, "--- #logs quiet - Turns off all gmsay logs in the current zone until the next time the zone resets.");
+		c->Message(CC_Default, "--- #logs reload_all - Reload all settings in world and all zone processes with what is defined in the database");
+		c->Message(CC_Default, "--- #logs list_settings - Shows current log settings and categories loaded into the current process' memory");
+		c->Message(CC_Default, "--- #logs set [console|file|gmsay] <category_id> <debug_level (1-3)> - Sets log settings during the lifetime of the zone");
 	}
 }
 
@@ -10946,4 +10836,272 @@ void command_mysqltest(Client *c, const Seperator *sep)
 		} 
 	}
 	Log.Out(Logs::General, Logs::Debug, "MySQL Test... Took %f seconds", ((float)(std::clock() - t)) / CLOCKS_PER_SEC); 
+}
+
+void command_boatinfo(Client *c, const Seperator *sep)
+{
+	if(!zone->IsBoatZone())
+	{
+		c->Message(CC_Default, "Zone is not a boat zone!");
+	}
+	else
+	{
+		entity_list.GetBoatInfo(c);
+	}
+}
+
+void command_undeletechar(Client *c, const Seperator *sep)
+{
+	if (sep->arg[1][0] != 0)
+	{
+		if(!database.UnDeleteCharacter(sep->arg[1]))
+		{
+			c->Message(CC_Red, "%s could not be undeleted. Check the spelling of their name.", sep->arg[1]);
+		}
+		else
+		{
+			c->Message(CC_Green, "%s successfully undeleted!", sep->arg[1]);
+		}
+	}
+	else
+	{
+		c->Message(CC_Default, "Usage: undeletechar [charname]");
+	}
+}
+
+void command_hotfix(Client *c, const Seperator *sep)
+{
+	char hotfix[256] = { 0 };
+	database.GetVariable("hotfix_name", hotfix, 256);
+	std::string current_hotfix = hotfix;
+
+	std::string hotfix_name;
+	if (!strcasecmp(current_hotfix.c_str(), "hotfix_"))
+	{
+		hotfix_name = "";
+	}
+	else
+	{
+		hotfix_name = "hotfix_";
+	}
+
+	c->Message(CC_Default, "Creating and applying hotfix");
+	std::thread t1([c, hotfix_name]() {
+		int sysRet = -1;
+#ifdef WIN32
+		if (hotfix_name.length() > 0)
+		{
+			sysRet = system(StringFormat("shared_memory -hotfix=%s", hotfix_name.c_str()).c_str());
+		}
+		else
+		{
+			sysRet = system(StringFormat("shared_memory").c_str());
+		}
+#else
+		if (hotfix_name.length() > 0)
+		{
+			sysRet = system(StringFormat("./shared_memory -hotfix=%s", hotfix_name.c_str()).c_str());
+		}
+		else
+		{
+			sysRet = system(StringFormat("./shared_memory").c_str());
+		}
+#endif
+		if (sysRet == -1)
+		{
+			c->Message(CC_Default, "Hotfix failed.");
+			return;
+		}
+		database.SetVariable("hotfix_name", hotfix_name.c_str());
+
+		ServerPacket pack(ServerOP_ChangeSharedMem, hotfix_name.length() + 1);
+		if (hotfix_name.length() > 0)
+		{
+			strcpy((char*)pack.pBuffer, hotfix_name.c_str());
+		}
+		worldserver.SendPacket(&pack);
+
+		c->Message(CC_Default, "Hotfix applied");
+	});
+
+	t1.detach();
+}
+
+void command_load_shared_memory(Client *c, const Seperator *sep)
+{
+	char hotfix[256] = { 0 };
+	database.GetVariable("hotfix_name", hotfix, 256);
+	std::string current_hotfix = hotfix;
+
+	std::string hotfix_name;
+	if(strcasecmp(current_hotfix.c_str(), sep->arg[1]) == 0)
+	{
+		c->Message(CC_Default, "Cannot attempt to load this shared memory segment as it is already loaded.");
+		return;
+	}
+
+	hotfix_name = sep->arg[1];
+	c->Message(CC_Default, "Loading shared memory segment %s", hotfix_name.c_str());
+	std::thread t1([c, hotfix_name]()
+	{
+		int sysRet = -1;
+#ifdef WIN32
+		if(hotfix_name.length() > 0)
+		{
+			sysRet = system(StringFormat("shared_memory -hotfix=%s", hotfix_name.c_str()).c_str());
+		}
+		else
+		{
+			sysRet = system(StringFormat("shared_memory").c_str());
+		}
+#else
+		if(hotfix_name.length() > 0)
+		{
+			sysRet = system(StringFormat("./shared_memory -hotfix=%s", hotfix_name.c_str()).c_str());
+		}
+		else
+		{
+			sysRet = system(StringFormat("./shared_memory").c_str());
+		}
+#endif
+		if (sysRet == -1)
+		{
+			c->Message(CC_Default, "Shared memory segment failed loading.");
+			return;
+		}
+		c->Message(CC_Default, "Shared memory segment finished loading.");
+	});
+
+	t1.detach();
+}
+
+void command_apply_shared_memory(Client *c, const Seperator *sep) {
+	char hotfix[256] = { 0 };
+	database.GetVariable("hotfix_name", hotfix, 256);
+	std::string hotfix_name = sep->arg[1];
+	
+	c->Message(CC_Default, "Applying shared memory segment %s", hotfix_name.c_str());
+	database.SetVariable("hotfix_name", hotfix_name.c_str());
+
+	ServerPacket pack(ServerOP_ChangeSharedMem, hotfix_name.length() + 1);
+	if(hotfix_name.length() > 0) {
+		strcpy((char*)pack.pBuffer, hotfix_name.c_str());
+	}
+	worldserver.SendPacket(&pack);
+}
+
+void command_keyring(Client *c, const Seperator *sep)
+{
+	Client *t;
+
+	if (c->GetTarget() && c->GetTarget()->IsClient())
+		t = c->GetTarget()->CastToClient();
+	else
+		t = c;
+
+	t->KeyRingList(c);
+	c->Message(CC_Default, "Zone Flag List:");
+	t->ZoneFlagList(c);
+}
+
+void command_reloadmerchants(Client *c, const Seperator *sep)
+{
+	zone->ClearMerchantLists();
+	zone->GetMerchantDataForZoneLoad();
+	zone->LoadTempMerchantData();
+	c->Message(CC_Default, "Merchant list reloaded for %s.", zone->GetShortName());
+}
+
+void command_trapinfo(Client *c, const Seperator *sep)
+{
+	entity_list.GetTrapInfo(c);
+}
+
+void command_reloadtraps(Client *c, const Seperator *sep)
+{
+	entity_list.UpdateAllTraps(true, true);
+	c->Message(CC_Default, "Traps reloaded for %s.", zone->GetShortName());
+}
+
+void command_godmode(Client *c, const Seperator *sep){
+	bool state = atobool(sep->arg[1]);
+	uint32 account = c->AccountID();
+
+	if (sep->arg[1][0] != 0)
+	{
+		c->SetInvul(state);
+		database.SetGMInvul(account, state);
+		database.SetGMSpeed(account, state ? 1 : 0);
+		c->SendAppearancePacket(AT_Levitate, state);
+		database.SetGMFlymode(account, state);
+		c->SetHideMe(state);
+		database.SetGMIgnoreTells(account, state ? 1 : 0);
+		c->Message(CC_Default, "Turning GodMode %s for %s (zone for gmspeed to take effect)", state ? "On" : "Off", c->GetName());
+	}
+	else
+		c->Message(CC_Default, "Usage: #godmode [on/off]");
+}
+
+void command_skill_difficulty(Client *c, const Seperator *sep)
+{
+	if (sep->argnum > 0) 
+	{
+		Client *t;
+
+		if (c->GetTarget() && c->GetTarget()->IsClient())
+			t = c->GetTarget()->CastToClient();
+		else
+			t = c;
+
+		if (strcasecmp(sep->arg[1], "info") == 0)
+		{
+			for (int i = 0; i < _EmuSkillCount; ++i)
+			{
+				int skillval = t->GetRawSkill(SkillUseTypes(i));
+				int maxskill = t->GetMaxSkillAfterSpecializationRules(SkillUseTypes(i), t->MaxSkill(SkillUseTypes(i)));
+				c->Message(CC_Yellow, "Skill: %s (%d) has difficulty: %0.2f", zone->skill_difficulty[i].name, i, zone->skill_difficulty[i].difficulty);
+				if(maxskill > 0)
+				{
+					c->Message(CC_Green, "%s currently has %d of %d towards this skill.", t->GetName(), skillval, maxskill);
+				}
+			}
+		}
+		else if (strcasecmp(sep->arg[1], "difficulty") == 0)
+		{
+			if(!sep->IsNumber(2) && !sep->IsNumber(3))
+			{
+				c->Message(CC_Red, "Please specify a valid skill and difficulty.");
+				return;
+			}
+			else if(atoi(sep->arg[2]) > 74 || atoi(sep->arg[2]) < 0 || atof(sep->arg[3]) > 15 || atof(sep->arg[3]) < 1)
+			{
+				c->Message(CC_Red, "Please specify a skill between 0 and 74 and a difficulty between 1 and 15.");
+				return;
+			}
+			else
+			{
+				uint16 skillid = atoi(sep->arg[2]);
+				float difficulty = atof(sep->arg[3]);
+				database.UpdateSkillDifficulty(skillid, difficulty);
+				ServerPacket *pack = new ServerPacket(ServerOP_ReloadSkills, 0);
+				worldserver.SendPacket(pack);
+				safe_delete(pack);
+				c->Message(CC_Default, "Set skill %d to difficulty %0.2f and reloaded all zones.", skillid, difficulty);
+			}
+
+		}
+		else if (strcasecmp(sep->arg[1], "reload") == 0)
+		{
+			ServerPacket *pack = new ServerPacket(ServerOP_ReloadSkills, 0);
+			worldserver.SendPacket(pack);
+			safe_delete(pack);
+			c->Message(CC_Default, "Reloaded skills in all zones.");
+		}
+	}
+	else
+	{
+		c->Message(CC_Default, "Usage: #skills info - Provides information about target.");
+		c->Message(CC_Default, "#skills difficulty [skillid] [difficulty] - Sets difficulty for selected skill.");
+		c->Message(CC_Default, "#skills reload - Reloads skill difficulty in each zone.");
+	}
 }

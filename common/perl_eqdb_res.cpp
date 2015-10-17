@@ -32,6 +32,7 @@ typedef const char Const_char;
 #include "../common/useperl.h"
 #include "eqdb_res.h"
 
+#pragma warning( disable : 4267 )
 
 XS(XS_EQDBRes_num_rows); /* prototype to pass -Wmissing-prototypes */
 XS(XS_EQDBRes_num_rows)
@@ -44,7 +45,8 @@ XS(XS_EQDBRes_num_rows)
 		unsigned long		RETVAL;
 		dXSTARG;
 
-		if (sv_derived_from(ST(0), "EQDBRes")) {
+		if (sv_derived_from(ST(0), "EQDBRes"))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -70,7 +72,8 @@ XS(XS_EQDBRes_num_fields)
 		unsigned long		RETVAL;
 		dXSTARG;
 
-		if (sv_derived_from(ST(0), "EQDBRes")) {
+		if (sv_derived_from(ST(0), "EQDBRes"))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -94,7 +97,8 @@ XS(XS_EQDBRes_DESTROY)
 	{
 		EQDBRes *		THIS;
 
-		if (SvROK(ST(0))) {
+		if (SvROK(ST(0)))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -117,7 +121,8 @@ XS(XS_EQDBRes_finish)
 	{
 		EQDBRes *		THIS;
 
-		if (sv_derived_from(ST(0), "EQDBRes")) {
+		if (sv_derived_from(ST(0), "EQDBRes"))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -141,7 +146,8 @@ XS(XS_EQDBRes_fetch_row_array)
 		EQDBRes *		THIS;
 		std::vector<std::string>		RETVAL;
 
-		if (sv_derived_from(ST(0), "EQDBRes")) {
+		if (sv_derived_from(ST(0), "EQDBRes"))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -152,9 +158,9 @@ XS(XS_EQDBRes_fetch_row_array)
 
 		RETVAL = THIS->fetch_row_array();
 		ST(0) = sv_newmortal();
-	{
+		{
 			U32 ix_RETVAL;
-			/* pop crap off the stack we dont really want */
+			/* pop crap off the stack we don't really want */
 			POPs;
 			POPs;
 			/* grow the stack to the number of elements being returned */
@@ -164,9 +170,9 @@ XS(XS_EQDBRes_fetch_row_array)
 					ST(ix_RETVAL) = sv_newmortal();
 					sv_setpvn(ST(ix_RETVAL), it.c_str(), it.length());
 			}
-			/* hackish, but im over it. The normal xsubpp return will be right below this */
+			/* hackish, but I'm over it. The normal xsubpp return will be right below this */
 			XSRETURN(RETVAL.size());
-	}
+		}
 	}
 	XSRETURN(1);
 }
@@ -181,7 +187,8 @@ XS(XS_EQDBRes_fetch_row_hash)
 		EQDBRes *		THIS;
 		std::map<std::string,std::string>		RETVAL;
 
-		if (sv_derived_from(ST(0), "EQDBRes")) {
+		if (sv_derived_from(ST(0), "EQDBRes"))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -194,42 +201,27 @@ XS(XS_EQDBRes_fetch_row_hash)
 		ST(0) = sv_newmortal();
 		if (RETVAL.begin()!=RETVAL.end())
 		{
-				//NOTE: we are leaking the original ST(0) right now
-				HV *hv = newHV();
-				sv_2mortal((SV*)hv);
-				ST(0) = newRV((SV*)hv);
+			//NOTE: we are leaking the original ST(0) right now
+			HV *hv = newHV();
+			sv_2mortal((SV*)hv);
+			ST(0) = newRV((SV*)hv);
 
-				std::map<std::string,std::string>::const_iterator cur, end;
-				cur = RETVAL.begin();
-				end = RETVAL.end();
-				for(; cur != end; cur++) {
-						/* get the element from the hash, creating if needed (will be needed) */
-						SV**ele = hv_fetch(hv, cur->first.c_str(), cur->first.length(), TRUE);
-						if(ele == nullptr) {
-								Perl_croak(aTHX_ "Unable to create a hash element for RETVAL");
-								break;
-						}
-						/* put our string in the SV associated with this element in the hash */
-						sv_setpvn(*ele, cur->second.c_str(), cur->second.length());
+			std::map<std::string,std::string>::const_iterator cur, end;
+			cur = RETVAL.begin();
+			end = RETVAL.end();
+			for(; cur != end; cur++)
+			{
+				/* get the element from the hash, creating if needed (will be needed) */
+				SV**ele = hv_fetch(hv, cur->first.c_str(), cur->first.length(), TRUE);
+				if(ele == nullptr)
+				{
+					Perl_croak(aTHX_ "Unable to create a hash element for RETVAL");
+					break;
 				}
+				/* put our string in the SV associated with this element in the hash */
+				sv_setpvn(*ele, cur->second.c_str(), cur->second.length());
+			}
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	}
 	XSRETURN(1);
 }
@@ -245,7 +237,8 @@ XS(XS_EQDBRes_fetch_lengths)
 		unsigned long *		RETVAL;
 		dXSTARG;
 
-		if (sv_derived_from(ST(0), "EQDBRes")) {
+		if (sv_derived_from(ST(0), "EQDBRes"))
+		{
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
 			THIS = INT2PTR(EQDBRes *,tmp);
 		}
@@ -277,19 +270,16 @@ XS(boot_EQDBRes)
 
 	//add the strcpy stuff to get rid of const warnings....
 
-
-
 	XS_VERSION_BOOTCHECK ;
 
-		newXSproto(strcpy(buf, "num_rows"), XS_EQDBRes_num_rows, file, "$");
-		newXSproto(strcpy(buf, "num_fields"), XS_EQDBRes_num_fields, file, "$");
-		newXSproto(strcpy(buf, "DESTROY"), XS_EQDBRes_DESTROY, file, "$");
-		newXSproto(strcpy(buf, "finish"), XS_EQDBRes_finish, file, "$");
-		newXSproto(strcpy(buf, "fetch_row_array"), XS_EQDBRes_fetch_row_array, file, "$");
-		newXSproto(strcpy(buf, "fetch_row_hash"), XS_EQDBRes_fetch_row_hash, file, "$");
-		newXSproto(strcpy(buf, "fetch_lengths"), XS_EQDBRes_fetch_lengths, file, "$");
+	newXSproto(strcpy(buf, "num_rows"), XS_EQDBRes_num_rows, file, "$");
+	newXSproto(strcpy(buf, "num_fields"), XS_EQDBRes_num_fields, file, "$");
+	newXSproto(strcpy(buf, "DESTROY"), XS_EQDBRes_DESTROY, file, "$");
+	newXSproto(strcpy(buf, "finish"), XS_EQDBRes_finish, file, "$");
+	newXSproto(strcpy(buf, "fetch_row_array"), XS_EQDBRes_fetch_row_array, file, "$");
+	newXSproto(strcpy(buf, "fetch_row_hash"), XS_EQDBRes_fetch_row_hash, file, "$");
+	newXSproto(strcpy(buf, "fetch_lengths"), XS_EQDBRes_fetch_lengths, file, "$");
 	XSRETURN_YES;
 }
 
 #endif //EMBPERL_XS_CLASSES
-

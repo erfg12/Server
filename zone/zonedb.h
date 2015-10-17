@@ -9,12 +9,12 @@
 
 class Client;
 class Corpse;
-class Merc;
 class NPC;
 class Petition;
 class Spawn2;
 class SpawnGroupList;
 class ItemInst;
+class Trap;
 struct CharacterEventLog_Struct;
 struct Door;
 struct ExtendedProfile_Struct;
@@ -188,7 +188,6 @@ public:
 	bool	LoadCharacterSpellBook(uint32 character_id, PlayerProfile_Struct* pp);
 	bool	LoadCharacterMemmedSpells(uint32 character_id, PlayerProfile_Struct* pp);
 	bool	LoadCharacterLanguages(uint32 character_id, PlayerProfile_Struct* pp);
-	bool	LoadCharacterDisciplines(uint32 character_id, PlayerProfile_Struct* pp);
 	bool	LoadCharacterSkills(uint32 character_id, PlayerProfile_Struct* pp);
 	bool	LoadCharacterData(uint32 character_id, PlayerProfile_Struct* pp, ExtendedProfile_Struct* m_epp);
 	bool	LoadCharacterCurrency(uint32 character_id, PlayerProfile_Struct* pp);
@@ -206,18 +205,19 @@ public:
 	bool	SaveCharacterMaterialColor(uint32 character_id, uint32 slot_id, uint32 color);
 	bool	SaveCharacterSkill(uint32 character_id, uint32 skill_id, uint32 value);
 	bool	SaveCharacterLanguage(uint32 character_id, uint32 lang_id, uint32 value);
-	bool	SaveCharacterDisc(uint32 character_id, uint32 slot_id, uint32 disc_id);
 	bool	SaveCharacterLeadershipAA(uint32 character_id, PlayerProfile_Struct* pp);
+	bool	SaveCharacterConsent(uint32 character_id, char name[64]);
 
 	/* Character Data Deletes   */
 	bool	DeleteCharacterSpell(uint32 character_id, uint32 spell_id, uint32 slot_id);
 	bool	DeleteCharacterMemorizedSpell(uint32 character_id, uint32 spell_id, uint32 slot_id);
-	bool	DeleteCharacterDisc(uint32 character_id, uint32 slot_id);
 	bool	DeleteCharacterAAs(uint32 character_id);
 	bool	DeleteCharacterDye(uint32 character_id);
+	bool	DeleteCharacterConsent(uint32 character_id, char name[64]);
 
 	/* Character Inventory  */
 	bool	NoRentExpired(const char* name);
+	bool	SaveSoulboundItems(Client* client, std::list<ItemInst*>::const_iterator &start, std::list<ItemInst*>::const_iterator &end);
 
 	/* Corpses  */
 	bool		DeleteItemOffCharacterCorpse(uint32 db_id, uint32 equip_slot, uint32 item_id);
@@ -257,7 +257,7 @@ public:
 
 	/* Faction   */
 	bool		GetNPCFactionList(uint32 npcfaction_id, int32* faction_id, int32* value, uint8* temp, int32* primary_faction = 0);
-	bool		GetFactionData(FactionMods* fd, uint32 class_mod, uint32 race_mod, uint32 deity_mod, int32 faction_id); //needed for factions Dec, 16 2001
+	bool		GetFactionData(FactionMods* fd, uint32 class_mod, uint32 race_mod, uint32 deity_mod, int32 faction_id, uint8 texture_mod, uint8 gender_mod); //needed for factions Dec, 16 2001
 	bool		GetFactionName(int32 faction_id, char* name, uint32 buflen); // needed for factions Dec, 16 2001
 	bool		GetFactionIdsForNPC(uint32 nfl_id, std::list<struct NPCFaction*> *faction_list, int32* primary_faction = 0); // improve faction handling
 	bool		SetCharacterFactionLevel(uint32 char_id, int32 faction_id, int32 value, uint8 temp, faction_map &val_list); // needed for factions Dec, 16 2001
@@ -270,7 +270,6 @@ public:
 	SendAA_Struct*	GetAASkillVars(uint32 skill_id);
 	uint8	GetTotalAALevels(uint32 skill_id);
 	uint32	GetMacToEmuAA(uint8 eqmacid);
-	uint32	GetSizeAA();
 	uint32	CountAAs();
 	void	LoadAAs(SendAA_Struct **load);
 	uint32 CountAAEffects();
@@ -344,7 +343,7 @@ public:
 	int		RemoveSoulMark(uint32 charid);
 
 	/* Merchants  */
-	void	SaveMerchantTemp(uint32 npcid, uint32 slot, uint32 item, uint32 charges);
+	void	SaveMerchantTemp(uint32 npcid, uint32 slot, uint32 item, uint32 charges, uint32 quantity);
 	void	DeleteMerchantTemp(uint32 npcid, uint32 slot);
 
 	/* Tradeskills  */
@@ -355,6 +354,7 @@ public:
 	void	UpdateRecipeMadecount(uint32 recipe_id, uint32 char_id, uint32 madecount);
 	bool	EnableRecipe(uint32 recipe_id);
 	bool	DisableRecipe(uint32 recipe_id);
+	bool	UpdateSkillDifficulty(uint16 skillid, float difficulty);
 
 	/*
 	* Doors
@@ -373,7 +373,7 @@ public:
 
 	/* Traps   */
 	bool	LoadTraps(const char* zonename, int16 version);
-	char*	GetTrapMessage(uint32 trap_id);
+	bool	SetTrapData(Trap* trap, bool repopnow = false);
 
 	/* Time   */
 	uint32	GetZoneTZ(uint32 zoneid, uint32 version);
@@ -407,8 +407,7 @@ public:
 	void	GetEventLogs(const char* name,char* target,uint32 account_id=0,uint8 eventid=0,char* detail=0,char* timestamp=0, CharacterEventLog_Struct* cel=0);
 	uint32	GetKarma(uint32 acct_id);
 	void	UpdateKarma(uint32 acct_id, uint32 amount);
-	/* Things which really dont belong here... */
-	//int16	CommandRequirement(const char* commandname); //Orphaned code?
+
 
 protected:
 	void ZDBInitVars();

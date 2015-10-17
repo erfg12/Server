@@ -88,6 +88,10 @@ namespace Logs{
 		Group,
 		Corpse,
 		Bazaar,
+		Discs,
+		Boats,
+		Traps,
+		PTimers,
 		MaxCategoryID	/* Don't Remove this*/
 	};
 
@@ -142,6 +146,10 @@ namespace Logs{
 		"Group",
 		"Corpse",
 		"Bazaar",
+		"Discs",
+		"Boats",
+		"Traps",
+		"PTimers",
 	};
 }
 

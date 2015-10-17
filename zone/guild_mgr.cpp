@@ -185,7 +185,7 @@ uint8 *ZoneGuildManager::MakeGuildMembers(uint32 guild_id, const char *prefix_na
 }
 
 void ZoneGuildManager::ListGuilds(Client *c) const {
-	c->Message(0, "Listing guilds on the server:");
+	c->Message(CC_Default, "Listing guilds on the server:");
 	char leadername[64];
 	std::map<uint32, GuildInfo *>::const_iterator cur, end;
 	cur = m_guilds.begin();
@@ -195,12 +195,12 @@ void ZoneGuildManager::ListGuilds(Client *c) const {
 		leadername[0] = '\0';
 		database.GetCharName(cur->second->leader_char_id, leadername);
 		if (leadername[0] == '\0')
-			c->Message(0, "  Guild #%i <%s>", cur->first, cur->second->name.c_str());
+			c->Message(CC_Default, "  Guild #%i <%s>", cur->first, cur->second->name.c_str());
 		else
-			c->Message(0, "  Guild #%i <%s> Leader: %s", cur->first, cur->second->name.c_str(), leadername);
+			c->Message(CC_Default, "  Guild #%i <%s> Leader: %s", cur->first, cur->second->name.c_str(), leadername);
 		r++;
 	}
-	c->Message(0, "%i guilds listed.", r);
+	c->Message(CC_Default, "%i guilds listed.", r);
 }
 
 
@@ -208,17 +208,17 @@ void ZoneGuildManager::DescribeGuild(Client *c, uint32 guild_id) const {
 	std::map<uint32, GuildInfo *>::const_iterator res;
 	res = m_guilds.find(guild_id);
 	if(res == m_guilds.end()) {
-		c->Message(0, "Guild %d not found.", guild_id);
+		c->Message(CC_Default, "Guild %d not found.", guild_id);
 		return;
 	}
 
 	const GuildInfo *info = res->second;
 
-	c->Message(0, "Guild info DB# %i <%s>", guild_id, info->name.c_str());
+	c->Message(CC_Default, "Guild info DB# %i <%s>", guild_id, info->name.c_str());
 
 	char leadername[64];
 	database.GetCharName(info->leader_char_id, leadername);
-	c->Message(0, "Guild Leader: %s", leadername);
+	c->Message(CC_Default, "Guild Leader: %s", leadername);
 
 	char permbuffer[256];
 	uint8 i;
@@ -228,8 +228,8 @@ void ZoneGuildManager::DescribeGuild(Client *c, uint32 guild_id) const {
 		for(r = 0; r < _MaxGuildAction; r++)
 			permptr += sprintf(permptr, "  %s: %c", GuildActionNames[r], info->ranks[i].permissions[r]?'Y':'N');
 
-		c->Message(0, "Rank %i: %s", i, info->ranks[i].name.c_str());
-		c->Message(0, "Permissions: %s", permbuffer);
+		c->Message(CC_Default, "Rank %i: %s", i, info->ranks[i].name.c_str());
+		c->Message(CC_Default, "Permissions: %s", permbuffer);
 	}
 
 }
@@ -391,14 +391,14 @@ void ZoneGuildManager::AddMemberApproval(uint32 refid,Client* name)
 	if(tmp != 0)
 	{
 		if(!tmp->AddMemberApproval(name))
-			name->Message(0,"Unable to add to list.");
+			name->Message(CC_Default,"Unable to add to list.");
 		else
 		{
-			name->Message(0,"Added to list.");
+			name->Message(CC_Default,"Added to list.");
 		}
 	}
 	else
-		name->Message(0,"Unable to find guild reference id.");
+		name->Message(CC_Default,"Unable to find guild reference id.");
 }
 
 ZoneGuildManager::~ZoneGuildManager()
@@ -451,7 +451,7 @@ bool GuildApproval::ProcessApproval()
 	if(deletion_timer->Check() || !owner)
 	{
 		if(owner)
-			owner->Message(0,"You took too long! Your guild request has been deleted.");
+			owner->Message(CC_Default,"You took too long! Your guild request has been deleted.");
 		return false;
 	}
 
@@ -467,7 +467,7 @@ GuildApproval::GuildApproval(const char* guildname, Client* owner,uint32 id)
 	this->owner = owner;
 	this->refid = id;
 	if(owner)
-		owner->Message(0,"You can now start getting your guild approved, tell your %i members to #guildapprove %i, you have 30 minutes to create your guild.",tmp,GetID());
+		owner->Message(CC_Default,"You can now start getting your guild approved, tell your %i members to #guildapprove %i, you have 30 minutes to create your guild.",tmp,GetID());
 	for(int i=0;i<tmp;i++)
 		members[i] = 0;
 }
@@ -514,7 +514,7 @@ void GuildApproval::ApprovedMembers(Client* requestee)
 	for(int i=0;i<tmp;i++)
 	{
 		if(members[i])
-			requestee->Message(0,"%i: %s",i,members[i]->GetName());
+			requestee->Message(CC_Default,"%i: %s",i,members[i]->GetName());
 	}
 }
 
@@ -534,8 +534,8 @@ void GuildApproval::GuildApproved()
 	{
 		if(members[i])
 			{
-			owner->Message(0, "%s",members[i]->GetName());
-			owner->Message(0, "%i",members[i]->CharacterID());
+			owner->Message(CC_Default, "%s",members[i]->GetName());
+			owner->Message(CC_Default, "%i",members[i]->CharacterID());
 			guild_mgr.SetGuild(members[i]->CharacterID(),tmpeq,0);
 			size_t len = MBUFFER - strlen(gmembers)+1;
 			strncat(gmembers," ",len);
@@ -571,7 +571,7 @@ void GuildApproval::GuildApproved()
 	memcpy(pack->pBuffer, &tmpeq, 4);
 	worldserver.SendPacket(pack);
 	safe_delete(pack);
-	owner->Message(0, "Your guild was created.");
+	owner->Message(CC_Default, "Your guild was created.");
 	owner = 0;
 }
 

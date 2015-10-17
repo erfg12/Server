@@ -32,6 +32,7 @@
 #define SPELL_IMP_HARM_TOUCH 2774
 #define SPELL_NPC_HARM_TOUCH 929
 #define SPELL_CAZIC_TOUCH 982
+#define SEPLL_GATE 36
 
 
 #define EFFECT_COUNT 12
@@ -512,7 +513,6 @@ typedef enum {
 //#define SE_PassiveSenseTrap			359	// *not implemented - Invulnerability (Brell's Blessing)
 #define SE_ProcOnKillShot				360	// implemented - a buff that has a base1 % to cast spell base2 when you kill a "challenging foe" base3 min level
 #define SE_SpellOnDeath					361	// implemented - casts spell on death of buffed
-//#define SE_PotionBeltSlots			362	// *not implemented[AA] 'Quick Draw' expands the potion belt by one additional available item slot per rank.
 //#define SE_BandolierSlots				363	// *not implemented[AA] 'Battle Ready' expands the bandolier by one additional save slot per rank.
 #define SE_TripleAttackChance			364	// implemented
 #define SE_ProcOnSpellKillShot			365	// implemented - chance to trigger a spell on kill when the kill is caused by a specific spell with this effect in it (10470 Venin)
@@ -624,6 +624,34 @@ typedef enum {
 //
 #define SPELL_LOAD_FIELD_COUNT 231
 
+// Disciplines
+#define disc_aggressive					1
+#define disc_precision					2
+#define disc_defensive					3
+#define disc_evasive					4
+#define disc_ashenhand					5
+#define disc_furious					6  //whirlwind, counterattack
+#define disc_stonestance				11 //protectivespirit
+#define disc_thunderkick				12
+#define disc_fortitude					13 //voiddance
+#define disc_fellstrike					14 //bestialrage, innerflame, duelist
+#define disc_hundredfist				15 //blindingspeed
+#define disc_charge						16 //deadeye
+#define disc_mightystrike				17
+#define disc_nimble						19
+#define disc_silentfist					20
+#define disc_kinesthetics				21
+#define disc_holyforge					22
+#define disc_sanctification				23
+#define disc_trueshot					24
+#define disc_weaponshield				25
+#define disc_unholyaura					26
+#define disc_leechcurse					27
+#define disc_deftdance					28
+#define disc_puretone					29
+#define disc_resistant					30
+#define disc_fearless					31
+
 struct SPDat_Spell_Struct
 {
 /* 000 */	int id;	// not used
@@ -701,7 +729,7 @@ struct SPDat_Spell_Struct
 /* 165 */	//Flag found on all LDON trap / chest related spells.
 /* 166 */	int EndurCost;
 /* 167 */	int8 EndurTimerIndex;
-/* 168 */	bool IsDisciplineBuff; //Will goto the combat window when cast
+/* 168 */	bool IsDisciplineBuff; //Is a Discipline spell
 /* 169 - 172*/ //These are zero for ALL spells
 /* 173 */	int HateAdded;
 /* 174 */	int EndurUpkeep;
@@ -771,6 +799,8 @@ bool IsSlowSpell(uint16 spell_id);
 bool IsHasteSpell(uint16 spell_id);
 bool IsHarmonySpell(uint16 spell_id);
 bool IsPacifySpell(uint16 spell_id);
+bool IsLullSpell(uint16 spell_id);
+bool IsCrowdControlSpell(uint16 spell_id);
 bool IsPercentalHealSpell(uint16 spell_id);
 bool IsGroupOnlySpell(uint16 spell_id);
 bool IsBeneficialSpell(uint16 spell_id);
@@ -784,6 +814,7 @@ bool IsSummonSkeletonSpell(uint16 spell_id);
 bool IsSummonPetSpell(uint16 spell_id);
 bool IsSummonPCSpell(uint16 spell_id);
 bool IsCharmSpell(uint16 spell_id);
+bool IsDireCharmSpell(uint16 spell_id);
 bool IsBlindSpell(uint16 spell_id);
 bool IsEffectHitpointsSpell(uint16 spell_id);
 bool IsReduceCastTimeSpell(uint16 spell_id);
@@ -827,8 +858,6 @@ int32 CalculateDiseaseCounters(uint16 spell_id);
 int32 CalculateCurseCounters(uint16 spell_id);
 int32 CalculateCorruptionCounters(uint16 spell_id);
 int32 CalculateCounters(uint16 spell_id);
-bool IsDisciplineBuff(uint16 spell_id);
-bool IsDiscipline(uint16 spell_id);
 bool IsCombatSkill(uint16 spell_id);
 bool IsResurrectionEffects(uint16 spell_id);
 bool IsRuneSpell(uint16 spell_id);
@@ -880,5 +909,8 @@ int32 GetFuriousBash(uint16 spell_id);
 bool IsShortDurationBuff(uint16 spell_id);
 bool IsSpellUsableThisZoneType(uint16 spell_id, uint8 zone_type);
 const char *GetSpellName(int16 spell_id);
+bool IsRainSpell(uint16 spell_id);
+bool IsDisc(uint16 spell_id);
+bool IsShrinkSpell(uint16 spell_id);
 
 #endif

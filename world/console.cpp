@@ -400,7 +400,7 @@ void Console::ProcessCommand(const char* command) {
 			}
 			strcpy(paccountname, command);
 			state = CONSOLE_STATE_PASSWORD;
-			SendMessage(0, "Password: ");
+			SendMessage(CC_Default, "Password: ");
 			tcpc->SetEcho(false);
 			break;
 		}
@@ -876,6 +876,6 @@ void Console::ProcessCommand(const char* command) {
 
 void Console::SendPrompt() {
 	if (tcpc->GetEcho())
-		SendMessage(0, "%s> ", paccountname);
+		SendMessage(CC_Default, "%s> ", paccountname);
 }
 

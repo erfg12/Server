@@ -44,12 +44,11 @@ void EntityList::CheckClientAggro(Client *around)
 		Mob *mob = it->second;
 		if (mob->IsClient())	//also ensures that mob != around
 			continue;
-
-		if (mob->CheckWillAggro(around)) {
-			if (mob->IsEngaged())
-				mob->AddToHateList(around);
-			else
-				mob->AddToHateList(around, mob->GetLevel());
+		if (mob->IsPet())
+			continue;
+		if (mob->CheckWillAggro(around) && !mob->CheckAggro(around))
+		{
+			mob->AddToHateList(around, 20);
 		}
 	}
 }
@@ -57,12 +56,12 @@ void EntityList::CheckClientAggro(Client *around)
 void EntityList::DescribeAggro(Client *towho, NPC *from_who, float d, bool verbose) {
 	float d2 = d*d;
 
-	towho->Message(0, "Describing aggro for %s", from_who->GetName());
+	towho->Message(CC_Default, "Describing aggro for %s", from_who->GetName());
 
 	bool engaged = from_who->IsEngaged();
 	if(engaged) {
 		Mob *top = from_who->GetHateTop();
-		towho->Message(0, ".. I am currently fighting with %s", top == nullptr?"(nullptr)":top->GetName());
+		towho->Message(CC_Default, ".. I am currently fighting with %s", top == nullptr?"(nullptr)":top->GetName());
 	}
 	bool check_npcs = from_who->WillAggroNPCs();
 
@@ -82,7 +81,7 @@ void EntityList::DescribeAggro(Client *towho, NPC *from_who, float d, bool verbo
 			if(!database.GetFactionName(my_primary, namebuf, sizeof(namebuf)))
 				strcpy(namebuf, "(Unknown)");
 		}
-		towho->Message(0, ".. I am on faction %s (%d)\n", namebuf, my_primary);
+		towho->Message(CC_Default, ".. I am on faction %s (%d)\n", namebuf, my_primary);
 	}
 
 	for (auto it = mob_list.begin(); it != mob_list.end(); ++it) {
@@ -96,11 +95,11 @@ void EntityList::DescribeAggro(Client *towho, NPC *from_who, float d, bool verbo
 		if (engaged) {
 			uint32 amm = from_who->GetHateAmount(mob);
 			if (amm == 0)
-				towho->Message(0, "... %s is not on my hate list.", mob->GetName());
+				towho->Message(CC_Default, "... %s is not on my hate list.", mob->GetName());
 			else
-				towho->Message(0, "... %s is on my hate list with value %lu", mob->GetName(), (unsigned long)amm);
+				towho->Message(CC_Default, "... %s is on my hate list with value %lu", mob->GetName(), (unsigned long)amm);
 		} else if (!check_npcs && mob->IsNPC()) {
-				towho->Message(0, "... %s is an NPC and my npc_aggro is disabled.", mob->GetName());
+				towho->Message(CC_Default, "... %s is an NPC and my npc_aggro is disabled.", mob->GetName());
 		} 
 			
 		from_who->DescribeAggro(towho, mob, verbose);
@@ -125,13 +124,13 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 	if(( t1 > iAggroRange)
 		|| ( t2 > iAggroRange)
 		|| ( t3 > iAggroRange) ) {
-		towho->Message(0, "...%s is out of range (fast). distances (%.3f,%.3f,%.3f), range %.3f", mob->GetName(),
+		towho->Message(CC_Default, "...%s is out of range (fast). distances (%.3f,%.3f,%.3f), range %.3f", mob->GetName(),
 		t1, t2, t3, iAggroRange);
 		return;
 	}
 
 	if(mob->IsInvisible(this)) {
-		towho->Message(0, "...%s is invisible to me. ", mob->GetName());
+		towho->Message(CC_Default, "...%s is invisible to me. ", mob->GetName());
 		return;
 	}
 	if((mob->IsClient() &&
@@ -142,25 +141,25 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 		)
 		))
 	{
-		towho->Message(0, "...%s a GM or is not connected. ", mob->GetName());
+		towho->Message(CC_Default, "...%s a GM or is not connected. ", mob->GetName());
 		return;
 	}
 
 
 	if(mob == GetOwner()) {
-		towho->Message(0, "...%s is my owner. ", mob->GetName());
+		towho->Message(CC_Default, "...%s is my owner. ", mob->GetName());
 		return;
 	}
 
 	if(mob->IsEngaged() && (!mob->GetSpecialAbility(PROX_AGGRO) || (mob->GetSpecialAbility(PROX_AGGRO) && !towho->CombatRange(mob))))
 	{
-		towho->Message(0, "...%s is a new client and I am already in combat. ", mob->GetName());
+		towho->Message(CC_Default, "...%s is a new client and I am already in combat. ", mob->GetName());
 		return;
 	}
 
 	if(mob->IsPet() && !mob->IsCharmed())
 	{
-		towho->Message(0, "...%s is a summoned pet. ", mob->GetName());
+		towho->Message(CC_Default, "...%s is a summoned pet. ", mob->GetName());
 		return;
 	}
 
@@ -168,7 +167,7 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 
 	float iAggroRange2 = iAggroRange*iAggroRange;
 	if( dist2 > iAggroRange2 ) {
-		towho->Message(0, "...%s is out of range. %.3f > %.3f ", mob->GetName(),
+		towho->Message(CC_Default, "...%s is out of range. %.3f > %.3f ", mob->GetName(),
 		dist2, iAggroRange2);
 		return;
 	}
@@ -178,7 +177,7 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 	{
 		if (GetLevel() < 18 && mob->GetLevelCon(GetLevel()) == CON_GREEN && GetBodyType() != 3 && !IsAggroOnPC())
 		{
-			towho->Message(0, "...%s is red to me (basically)", mob->GetName(),	dist2, iAggroRange2);
+			towho->Message(CC_Default, "...%s is red to me (basically)", mob->GetName(),	dist2, iAggroRange2);
 			return;
 		}
 	}
@@ -186,7 +185,7 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 	{
 		if (GetINT() > RuleI(Aggro, IntAggroThreshold) && mob->GetLevelCon(GetLevel()) == CON_GREEN)
 		{
-			towho->Message(0, "...%s is red to me (basically)", mob->GetName(),
+			towho->Message(CC_Default, "...%s is red to me (basically)", mob->GetName(),
 				dist2, iAggroRange2);
 			return;
 		}
@@ -203,9 +202,9 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 			mob_primary = own->GetPrimaryFaction();
 
 		if(mob_primary == 0) {
-			towho->Message(0, "...%s has no primary faction", mob->GetName());
+			towho->Message(CC_Default, "...%s has no primary faction", mob->GetName());
 		} else if(mob_primary < 0) {
-			towho->Message(0, "...%s is on special faction %d", mob->GetName(), mob_primary);
+			towho->Message(CC_Default, "...%s is on special faction %d", mob->GetName(), mob_primary);
 		} else {
 			char namebuf[256];
 			if(!database.GetFactionName(mob_primary, namebuf, sizeof(namebuf)))
@@ -218,22 +217,22 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 				struct NPCFaction* fac = *cur;
 				if ((int32)fac->factionID == mob_primary) {
 					if (fac->npc_value > 0) {
-						towho->Message(0, "...%s is on ALLY faction %s (%d) with %d", mob->GetName(), namebuf, mob_primary, fac->npc_value);
+						towho->Message(CC_Default, "...%s is on ALLY faction %s (%d) with %d", mob->GetName(), namebuf, mob_primary, fac->npc_value);
 						res = true;
 						break;
 					} else if (fac->npc_value < 0) {
-						towho->Message(0, "...%s is on ENEMY faction %s (%d) with %d", mob->GetName(), namebuf, mob_primary, fac->npc_value);
+						towho->Message(CC_Default, "...%s is on ENEMY faction %s (%d) with %d", mob->GetName(), namebuf, mob_primary, fac->npc_value);
 						res = true;
 						break;
 					} else {
-						towho->Message(0, "...%s is on NEUTRAL faction %s (%d) with 0", mob->GetName(), namebuf, mob_primary);
+						towho->Message(CC_Default, "...%s is on NEUTRAL faction %s (%d) with 0", mob->GetName(), namebuf, mob_primary);
 						res = true;
 						break;
 					}
 				}
 			}
 			if(!res) {
-				towho->Message(0, "...%s is on faction %s (%d), which I have no entry for.", mob->GetName(), namebuf, mob_primary);
+				towho->Message(CC_Default, "...%s is on faction %s (%d), which I have no entry for.", mob->GetName(), namebuf, mob_primary);
 			}
 		}
 	}
@@ -247,18 +246,18 @@ void NPC::DescribeAggro(Client *towho, Mob *mob, bool verbose) {
 			||
 			fv == FACTION_THREATENLY
 		)) {
-		towho->Message(0, "...%s faction not low enough. value='%s'", mob->GetName(), FactionValueToString(fv));
+		towho->Message(CC_Default, "...%s faction not low enough. value='%s'", mob->GetName(), FactionValueToString(fv));
 		return;
 	}
 	if(fv == FACTION_THREATENLY) {
-		towho->Message(0, "...%s threatening to me, so they only have a %d chance per check of attacking.", mob->GetName());
+		towho->Message(CC_Default, "...%s threatening to me, so they only have a %d chance per check of attacking.", mob->GetName());
 	}
 
 	if(!CheckLosFN(mob)) {
-		towho->Message(0, "...%s is out of sight.", mob->GetName());
+		towho->Message(CC_Default, "...%s is out of sight.", mob->GetName());
 	}
 
-	towho->Message(0, "...%s meets all conditions, I should be attacking them.", mob->GetName());
+	towho->Message(CC_Default, "...%s meets all conditions, I should be attacking them.", mob->GetName());
 }
 
 /*
@@ -351,9 +350,6 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	// Are they kos?
 	// Are we stupid or are they green
 	// and they don't have their gm flag on
-	int heroicCHA_mod = mob->itembonuses.HeroicCHA/25; // 800 Heroic CHA cap
-	if(heroicCHA_mod > THREATENLY_ARRGO_CHANCE)
-		heroicCHA_mod = THREATENLY_ARRGO_CHANCE;
 
 	if (RuleB(Aggro, UseLevelAggro))
 	{
@@ -376,7 +372,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 				||
 				(
 					fv == FACTION_THREATENLY
-					&& zone->random.Roll(THREATENLY_ARRGO_CHANCE - heroicCHA_mod)
+					&& zone->random.Roll(THREATENLY_ARRGO_CHANCE)
 				)
 			)
 		)
@@ -408,7 +404,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 				||
 				(
 					fv == FACTION_THREATENLY
-					&& zone->random.Roll(THREATENLY_ARRGO_CHANCE - heroicCHA_mod)
+					&& zone->random.Roll(THREATENLY_ARRGO_CHANCE)
 				)
 			)
 		)
@@ -432,6 +428,7 @@ bool Mob::CheckWillAggro(Mob *mob) {
 	return(false);
 }
 
+// This is for npc_aggro npc->npc only.
 Mob* EntityList::AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssistRange) {
 	if (!sender || !sender->IsNPC())
 		return(nullptr);
@@ -441,7 +438,6 @@ Mob* EntityList::AICheckCloseAggro(Mob* sender, float iAggroRange, float iAssist
 	auto it = npc_list.begin();
 	while (it != npc_list.end()) {
 		Mob *mob = it->second;
-
 		if (sender->CheckWillAggro(mob))
 			return mob;
 		++it;
@@ -548,11 +544,20 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 		return;
 	if (sender->GetPrimaryFaction() == 0 )
 		return; // well, if we dont have a faction set, we're gonna be indiff to everybody
+	if(!sender->GetSpecialAbility(ALWAYS_CALL_HELP) && sender->HasAssistAggro())
+		return;
 
 	for (auto it = npc_list.begin(); it != npc_list.end(); ++it) {
 		NPC *mob = it->second;
 		if (!mob)
 			continue;
+
+		if(mob->CheckAggro(attacker))
+			continue;
+
+		//Check if we are over our assist aggro cap
+		if (!sender->GetSpecialAbility(ALWAYS_CALL_HELP) && sender->NPCAssistCap() >= RuleI(Combat, NPCAssistCap))
+			break;
 
 		float r = mob->GetAssistRange();
 		r = r * r;
@@ -560,14 +565,12 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 		if (
 			mob != sender
 			&& mob != attacker
-			&& mob->GetClass() != 41
+			&& mob->GetClass() != MERCHANT
 //			&& !mob->IsCorpse()
 //			&& mob->IsAIControlled()
 			&& mob->GetPrimaryFaction() != 0
 			&& DistanceSquared(mob->GetPosition(), sender->GetPosition()) <= r
-			&& !mob->IsEngaged()
-			&& ((!mob->IsPet()) || (mob->IsPet() && mob->GetOwner() && !mob->GetOwner()->IsClient()))
-				// If we're a pet we don't react to any calls for help if our owner is a client
+			&& ((!mob->IsPet()) || (mob->IsPet() && mob->GetOwner() && !mob->GetOwner()->IsClient() && mob->GetOwner() == sender)) // If we're a pet we don't react to any calls for help if our owner is a client or if our owner was not the one calling for help.
 			)
 		{
 			//if they are in range, make sure we are not green...
@@ -594,12 +597,14 @@ void EntityList::AIYellForHelp(Mob* sender, Mob* attacker) {
 				{
 					//attacking someone on same faction, or a friend
 					//make sure we can see them.
-					if(zone->SkipLoS() || mob->CheckLosFN(sender)) {
-#if (EQDEBUG>=11)
-						Log.Out(Logs::General, Logs::None, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f",
+					if(zone->SkipLoS() || mob->CheckLosFN(sender)) 
+					{
+
+						Log.Out(Logs::Detail, Logs::Aggro, "AIYellForHelp(\"%s\",\"%s\") %s attacking %s Dist %f Z %f",
 						sender->GetName(), attacker->GetName(), mob->GetName(), attacker->GetName(), DistanceSquared(mob->GetPosition(), sender->GetPosition()), std::abs(sender->GetZ()+mob->GetZ()));
-#endif
-						mob->AddToHateList(attacker, 1, 0, false);
+
+						mob->AddToHateList(attacker, 20, 0, false);
+						sender->AddAssistCap();
 					}
 				}
 			}
@@ -643,6 +648,19 @@ bool Mob::IsAttackAllowed(Mob *target, bool isSpellAttack, int16 spellid)
 	// Pets cant attack mezed mobs
 	if(IsPet() && GetOwner()->IsClient() && target->IsMezzed()) {
 		return false;
+	}
+
+	if(IsNPC() && target->IsNPC())
+	{
+		int32 npc_faction = CastToNPC()->GetPrimaryFaction();
+		int32 target_faction = target->CastToNPC()->GetPrimaryFaction();
+		if(npc_faction == target_faction && npc_faction != 0)
+		{
+			Log.Out(Logs::General, Logs::Combat, "IsAttackAllowed failed: %s is on the same faction as %s", GetName(), target->GetName());
+			RemoveFromHateList(target);
+			return false;
+		}
+
 	}
 
 	// can't damage own pet (applies to everthing)
@@ -1103,119 +1121,136 @@ bool Mob::CheckLosFN(float posX, float posY, float posZ, float mobSize) {
 }
 
 //offensive spell aggro
-int32 Mob::CheckAggroAmount(uint16 spell_id, bool isproc)
+int32 Mob::CheckAggroAmount(uint16 spell_id, Mob* target, int32 &jolthate, bool isproc)
 {
 	int32 AggroAmount = 0;
 	int32 nonModifiedAggro = 0;
 	uint16 slevel = GetLevel();
+	int32 damage = 0;
 
-	for (int o = 0; o < EFFECT_COUNT; o++) {
-		switch (spells[spell_id].effectid[o]) {
+	// Spell hate for non-damaging spells scales by target NPC hitpoints
+	int32 thp = 10000;
+	if (target)
+	{
+		thp = target->GetMaxHP();
+		if (thp < 375)
+		{
+			thp = 375;		// force a minimum of 25 hate
+		}
+	}
+	int32 standardSpellHate = thp / 15;
+	if (standardSpellHate > 1200)
+	{
+		standardSpellHate = 1200;
+	}
+	if (isproc && standardSpellHate > 400)
+	{
+		standardSpellHate = 400;
+	}
+
+	for (int o = 0; o < EFFECT_COUNT; o++)
+	{
+		switch (spells[spell_id].effectid[o])
+		{
 			case SE_CurrentHPOnce:
-			case SE_CurrentHP: {
+			case SE_CurrentHP:
+			{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if(val < 0)
-					AggroAmount -= val;
+					damage -= val;
 				break;
 			}
-			case SE_MovementSpeed: {
+			case SE_MovementSpeed:
+			{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if (val < 0)
-					AggroAmount += (2 + ((slevel * slevel) / 8));
+					AggroAmount += standardSpellHate;
 				break;
 			}
 			case SE_AttackSpeed:
 			case SE_AttackSpeed2:
-			case SE_AttackSpeed3: {
+			case SE_AttackSpeed3:
+			{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if (val < 100)
-					AggroAmount += (5 + ((slevel * slevel) / 5));
+					AggroAmount += standardSpellHate;
 				break;
 			}
-			case SE_Stun: {
-				int val = (5 + ((slevel * slevel) / 6));
-				if (isproc && RuleI(Aggro,MaxStunProcAggro) > -1 && (val > RuleI(Aggro,MaxStunProcAggro)))
-					val = RuleI(Aggro,MaxStunProcAggro);
-				AggroAmount += val;
+			case SE_Stun:
+			case SE_Blind:
+			case SE_Mez:
+			case SE_Charm:
+			case SE_Fear:
+			{
+				AggroAmount += standardSpellHate;
 				break;
 			}
-			case SE_Blind: {
-				AggroAmount += (5 + ((slevel * slevel) / 6));
-				break;
-			}
-			case SE_Mez: {
-				AggroAmount += (5 + ((slevel * slevel) / 5));
-				break;
-			}
-			case SE_Charm: {
-				AggroAmount += (5 + ((slevel * slevel) / 5));
-				break;
-			}
-			case SE_Root: {
-				AggroAmount += (2 + ((slevel * slevel) / 8));
-				break;
-			}
-			case SE_Fear: {
-				AggroAmount += (5 + ((slevel * slevel) / 6));
-				break;
-			}
-			case SE_ATK:
 			case SE_ACv2:
-			case SE_ArmorClass: {
+			case SE_ArmorClass:
+			{
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if (val < 0)
-					AggroAmount -= val * 2;
+					AggroAmount += standardSpellHate;
+				break;
+			}
+			case SE_DiseaseCounter:
+			case SE_PoisonCounter:
+			{
+				AggroAmount += standardSpellHate / 3;		// old EQ counters had +hate.  this is a wild guess
+				break;
+			}
+			case SE_Root:
+			{
+				AggroAmount += 10;
 				break;
 			}
 			case SE_ResistMagic:
 			case SE_ResistFire:
 			case SE_ResistCold:
 			case SE_ResistPoison:
-			case SE_ResistDisease: {
-				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
-				if (val < 0)
-					AggroAmount -= val * 3;
-				break;
-			}
-			case SE_ResistAll: {
-				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
-				if (val < 0)
-					AggroAmount -= val * 6;
-				break;
-			}
+			case SE_ResistDisease:
 			case SE_STR:
 			case SE_STA:
 			case SE_DEX:
 			case SE_AGI:
 			case SE_INT:
 			case SE_WIS:
-			case SE_CHA: {
+			case SE_CHA:
+			case SE_ATK:
+			{
+				// note: the enchanter tash line has a 'hate added' component which overrides this (Sony's data)
+				// which is how it does not-trivial amounts of hate.  malo spells all do 40 hate
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if (val < 0)
-					AggroAmount -= val * 2;
+					AggroAmount += 10;
 				break;
 			}
-			case SE_AllStats: {
+			case SE_ResistAll:
+			{
+				// SE_ResistAll with negative vals are only in NPC AoEs.  does not include malo* spells
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if (val < 0)
-					AggroAmount -= val * 6;
+					AggroAmount += 50;
 				break;
 			}
-			case SE_BardAEDot: {
-				AggroAmount += slevel * 2;
+			case SE_AllStats:
+			{
+				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
+				if (val < 0)
+					AggroAmount += 70;
 				break;
 			}
-			case SE_SpinTarget: {
-				AggroAmount += (5 + ((slevel * slevel) / 5));
+			case SE_BardAEDot:
+			{
+				AggroAmount += 10;
 				break;
 			}
+			case SE_SpinTarget:
 			case SE_Amnesia:
-			case SE_Silence: {
-				AggroAmount += slevel * 2;
-				break;
-			}
-			case SE_Destroy: {
-				AggroAmount += slevel * 2;
+			case SE_Silence:
+			case SE_Destroy:
+			{
+				AggroAmount += standardSpellHate;
 				break;
 			}
 			case SE_Harmony:
@@ -1237,8 +1272,9 @@ int32 Mob::CheckAggroAmount(uint16 spell_id, bool isproc)
 			case SE_Accuracy:
 			case SE_DamageShield:
 			case SE_SpellDamageShield:
-			case SE_ReverseDS: {
-				AggroAmount += slevel * 2;
+			case SE_ReverseDS:
+			{
+				AggroAmount += slevel * 2;		// this is wrong, but don't know what to set these yet; most implemented after PoP
 				break;
 			}
 			case SE_CurrentMana:
@@ -1247,85 +1283,67 @@ int32 Mob::CheckAggroAmount(uint16 spell_id, bool isproc)
 			case SE_CurrentEndurance: {
 				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
 				if (val < 0)
-					AggroAmount -= val * 2;
+					AggroAmount -= val * 2;		// also wrong
 				break;
 			}
 			case SE_CancelMagic:
 			case SE_DispelDetrimental: {
-				AggroAmount += slevel;
+				AggroAmount += 1;
 				break;
 			}
-			case SE_ReduceHate:
+			case SE_ReduceHate: {
+				nonModifiedAggro = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
+				break;
+			}
 			case SE_InstantHate: {
 				nonModifiedAggro = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
+
+				//Jolt type spells only.
+				if((spells[spell_id].spell_category == 90 || spells[spell_id].spell_category == 99) && nonModifiedAggro < 0)
+				{
+					jolthate = nonModifiedAggro;
+					nonModifiedAggro = 0;
+					Log.Out(Logs::General, Logs::Spells, "Jolt type spell checking aggro. jolthate is %d hate is %d", jolthate, nonModifiedAggro);
+				}
 				break;
 			}
 		}
 	}
 
-	if (IsAEDurationSpell(spell_id))
-		AggroAmount /= 2;
+	if (GetClass() == BARD)
+	{
+		if (damage > 0)
+		{
+			AggroAmount = damage;
+		}
+		else if (AggroAmount > 40)
+		{
+			if (target)
+			{
+				if (target->GetLevel() >= 20)
+				{
+					AggroAmount = 40;
+				}
+			}
+			else if (slevel >= 20)
+			{
+				AggroAmount = 40;
+			}
+		}
+	}
+	else
+	{
+		AggroAmount += damage;
+	}
 
 	if (spells[spell_id].HateAdded > 0)
 		AggroAmount = spells[spell_id].HateAdded;
 
-	if (IsBardSong(spell_id))
-		AggroAmount = AggroAmount * RuleI(Aggro, SongAggroMod) / 100;
 	if (GetOwner() && IsPet())
 		AggroAmount = AggroAmount * RuleI(Aggro, PetSpellAggroMod) / 100;
 
-	if (AggroAmount > 0) {
-
-		int HateMod = RuleI(Aggro, SpellAggroMod);
-
-		if (IsClient())
-			HateMod += CastToClient()->GetFocusEffect(focusSpellHateMod, spell_id);
-
-		AggroAmount = (AggroAmount * HateMod) / 100;
-
-		//made up number probably scales a bit differently on live but it seems like it will be close enough
-		//every time you cast on live you get a certain amount of "this is a spell" aggro
-		//confirmed by EQ devs to be 100 exactly at level 85. From their wording it doesn't seem like it's affected
-		//by hate modifiers either.
-		//AggroAmount += (slevel*slevel/72);
-		// Saved so I can reimplement it;
-		// this should only be on the spell to aggro the npc not every spell
-
-	}
-
-	return AggroAmount + spells[spell_id].bonushate + nonModifiedAggro;
-}
-
-//healing and buffing aggro
-int32 Mob::CheckHealAggroAmount(uint16 spell_id, uint32 heal_possible)
-{
-	int32 AggroAmount = 0;
-
-	for (int o = 0; o < EFFECT_COUNT; o++) {
-		switch (spells[spell_id].effectid[o]) {
-			case SE_CurrentHP: {
-				AggroAmount += IsBuffSpell(spell_id) ? spells[spell_id].mana / 4 : spells[spell_id].mana;
-				break;
-			}
-			case SE_Rune: {
-				AggroAmount += CalcSpellEffectValue_formula(spells[spell_id].formula[0], spells[spell_id].base[0], spells[spell_id].max[o], GetLevel(), spell_id) * 2;
-				break;
-			}
-			case SE_HealOverTime: {
-				AggroAmount += CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], GetLevel(), spell_id);
-				break;
-			}
-			default: {
-				break;
-			}
-		}
-	}
-	if (IsBardSong(spell_id))
-		AggroAmount = AggroAmount * RuleI(Aggro, SongAggroMod) / 100;
-	if (GetOwner() && IsPet())
-		AggroAmount = AggroAmount * RuleI(Aggro, PetSpellAggroMod) / 100;
-
-	if (AggroAmount > 0) {
+	if (AggroAmount > 0)
+	{
 		int HateMod = RuleI(Aggro, SpellAggroMod);
 
 		if (IsClient())
@@ -1335,12 +1353,87 @@ int32 Mob::CheckHealAggroAmount(uint16 spell_id, uint32 heal_possible)
 		HateMod += aabonuses.hatemod + spellbonuses.hatemod + itembonuses.hatemod;
 
 		AggroAmount = (AggroAmount * HateMod) / 100;
+	}
 
-		//made up number probably scales a bit differently on live but it seems like it will be close enough
-		//every time you cast on live you get a certain amount of "this is a spell" aggro
-		//confirmed by EQ devs to be 100 exactly at level 85. From their wording it doesn't seem like it's affected
-		//by hate modifiers either.
-		//AggroAmount += (slevel*slevel/72); // Moved Below
+	return AggroAmount + spells[spell_id].bonushate + nonModifiedAggro;
+}
+
+//healing and buffing aggro
+int32 Mob::CheckHealAggroAmount(uint16 spell_id, Mob* target, uint32 heal_possible)
+{
+	int32 AggroAmount = 0;
+	uint8 slevel = GetLevel();
+	uint8 tlevel = slevel;
+	if (target)
+		tlevel = target->GetLevel();
+
+	for (int o = 0; o < EFFECT_COUNT; o++)
+	{
+		switch (spells[spell_id].effectid[o])
+		{
+			case SE_CurrentHP:
+			{
+				int val = CalcSpellEffectValue_formula(spells[spell_id].formula[o], spells[spell_id].base[o], spells[spell_id].max[o], slevel, spell_id);
+				if (val > 0)
+				{
+					if (heal_possible < val)
+						val = heal_possible;		// aggro is based on amount healed, not including crits/focii/AA multipliers
+
+					if (val > 0)
+						val = 1 + 2 * val / 3;		// heal aggro is 2/3rds amount healed
+
+					if (tlevel <= 50 && val > 800)	// heal aggro is capped.  800 was stated in a patch note
+						val = 800;
+					else if (val > 1500)			// cap after level 50 is 1500 on EQLive as of 2015
+						val = 1500;
+
+					AggroAmount += val;
+				}
+				break;
+			}
+			case SE_Rune:
+			{
+				AggroAmount += CalcSpellEffectValue_formula(spells[spell_id].formula[0], spells[spell_id].base[0], spells[spell_id].max[o], slevel, spell_id) * 2;
+				break;
+			}
+			case SE_HealOverTime:
+			{
+				AggroAmount += 10;
+				break;
+			}
+			default:
+			{
+				break;
+			}
+		}
+	}
+
+	if (AggroAmount < 9 && IsBuffSpell(spell_id))
+	{
+		if (IsBardSong(spell_id) && AggroAmount < 2)
+		{
+			AggroAmount = 2;
+		}
+		else
+		{
+			AggroAmount = 9;
+		}
+	}
+
+	if (GetOwner() && IsPet())
+		AggroAmount = AggroAmount * RuleI(Aggro, PetSpellAggroMod) / 100;
+
+	if (AggroAmount > 0)
+	{
+		int HateMod = RuleI(Aggro, SpellAggroMod);
+
+		if (IsClient())
+			HateMod += CastToClient()->GetFocusEffect(focusSpellHateMod, spell_id);
+
+		//Live AA - Spell casting subtlety
+		HateMod += aabonuses.hatemod + spellbonuses.hatemod + itembonuses.hatemod;
+
+		AggroAmount = (AggroAmount * HateMod) / 100;
 	}
 
 	if (AggroAmount < 0)

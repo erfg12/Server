@@ -52,7 +52,7 @@ public:
 	/**
 	* Sends a request to world to see if the client is banned or suspended.
 	*/
-	void SendOldUserToWorldRequest(const char* ServerIP, unsigned int client_account_id);
+	void SendOldUserToWorldRequest(const char* ServerIP, unsigned int client_account_id, uint32 ip);
 
 	/**
 	* Creates a server list packet for the client.

@@ -31,10 +31,6 @@
 	#include <sys/time.h>
 #endif
 
-#if EQDEBUG > 10
-	#define DEBUG_PTIMERS
-#endif
-
 
 /*
 Persistent timers, By Father Nitwit
@@ -107,9 +103,9 @@ PersistentTimer::PersistentTimer(uint32 char_id, pTimerType type, uint32 in_time
 	} else {
 		enabled = true;
 	}
-#ifdef DEBUG_PTIMERS
-	printf("New timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
-#endif
+
+	Log.Out(Logs::General, Logs::PTimers, "New timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
+
 }
 
 PersistentTimer::PersistentTimer(uint32 char_id, pTimerType type, uint32 in_start_time, uint32 in_timer_time, bool in_enable) {
@@ -119,18 +115,16 @@ PersistentTimer::PersistentTimer(uint32 char_id, pTimerType type, uint32 in_star
 	timer_time = in_timer_time;
 	start_time = in_start_time;
 	enabled = in_enable;
-#ifdef DEBUG_PTIMERS
-	printf("New stored timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
-#endif
+	Log.Out(Logs::General, Logs::PTimers, "New stored timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
+
 }
 
 bool PersistentTimer::Load(Database *db) {
 
-#ifdef DEBUG_PTIMERS
-	printf("Loading timer: char %lu of type %u\n", (unsigned long)_char_id, _type);
-#endif
+	Log.Out(Logs::General, Logs::PTimers, "Loading timer: char %lu of type %u\n", (unsigned long)_char_id, _type);
+
     std::string query = StringFormat("SELECT start, duration, enable "
-                                    "FROM timers WHERE char_id=%lu AND type=%u",
+                                    "FROM character_timers WHERE id=%lu AND type=%u",
                                     (unsigned long)_char_id, _type);
     auto results = db->QueryDatabase(query);
 	if (!results.Success()) {
@@ -154,15 +148,14 @@ bool PersistentTimer::Store(Database *db) {
 	if(Expired(db, false))	//dont need to store expired timers.
 		return true;
 
-	std::string query = StringFormat("REPLACE INTO timers "
-                                    " (char_id, type, start, duration, enable) "
+	std::string query = StringFormat("REPLACE INTO character_timers "
+                                    " (id, type, start, duration, enable) "
                                     " VALUES (%lu, %u, %lu, %lu, %d)",
                                     (unsigned long)_char_id, _type, (unsigned long)start_time,
                                     (unsigned long)timer_time, enabled ? 1: 0);
 
-#ifdef DEBUG_PTIMERS
-	printf("Storing timer: char %lu of type %u: '%s'\n", (unsigned long)_char_id, _type, query.c_str());
-#endif
+	Log.Out(Logs::General, Logs::PTimers, "Storing timer: char %lu of type %u: '%s'\n", (unsigned long)_char_id, _type, query.c_str());
+
     auto results = db->QueryDatabase(query);
 	if (!results.Success()) {
 #if EQDEBUG > 5
@@ -176,18 +169,16 @@ bool PersistentTimer::Store(Database *db) {
 
 bool PersistentTimer::Clear(Database *db) {
 
-    std::string query = StringFormat("DELETE FROM timers "
-                                    "WHERE char_id = %lu AND type = %u ",
+    std::string query = StringFormat("DELETE FROM character_timers "
+                                    "WHERE id = %lu AND type = %u ",
                                     (unsigned long)_char_id, _type);
-#ifdef DEBUG_PTIMERS
-	printf("Clearing timer: char %lu of type %u: '%s'\n", (unsigned long)_char_id, _type, query.c_str());
-#endif
+
+	Log.Out(Logs::General, Logs::PTimers, "Clearing timer: char %lu of type %u: '%s'\n", (unsigned long)_char_id, _type, query.c_str());
+
 
     auto results = db->QueryDatabase(query);
 	if (!results.Success()) {
-#if EQDEBUG > 5
 		Log.Out(Logs::General, Logs::Error, "Error in PersistentTimer::Clear, error: %s", results.ErrorMessage().c_str());
-#endif
 		return false;
 	}
 
@@ -221,9 +212,9 @@ void PersistentTimer::Start(uint32 set_timer_time) {
 	if (set_timer_time != 0) {
 		timer_time = set_timer_time;
 	}
-#ifdef DEBUG_PTIMERS
-	printf("Starting timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
-#endif
+
+	Log.Out(Logs::General, Logs::PTimers, "Starting timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
+
 }
 
 // This timer updates the timer without restarting it
@@ -234,9 +225,9 @@ void PersistentTimer::SetTimer(uint32 set_timer_time) {
 		start_time = get_current_time();
 		enabled = true;
 	}
-#ifdef DEBUG_PTIMERS
-	printf("Setting timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
-#endif
+
+	Log.Out(Logs::General, Logs::PTimers, "Setting timer: char %lu of type %u at %lu for %lu seconds.\n", (unsigned long)_char_id, _type, (unsigned long)start_time, (unsigned long)timer_time);
+
 }
 
 uint32 PersistentTimer::GetRemainingTime() {
@@ -281,17 +272,14 @@ bool PTimerList::Load(Database *db) {
 			delete timerIterator->second;
 	_list.clear();
 
-#ifdef DEBUG_PTIMERS
-	printf("Loading all timers for char %lu\n", (unsigned long)_char_id);
-#endif
+	Log.Out(Logs::General, Logs::PTimers, "Loading all timers for char %lu\n", (unsigned long)_char_id);
+
 	std::string query = StringFormat("SELECT type, start, duration, enable "
-                                    "FROM timers WHERE char_id = %lu",
+                                    "FROM character_timers WHERE id = %lu",
                                     (unsigned long)_char_id);
     auto results = db->QueryDatabase(query);
 	if (!results.Success()) {
-#if EQDEBUG > 5
 		Log.Out(Logs::General, Logs::Error, "Error in PersistentTimer::Load, error: %s", results.ErrorMessage().c_str());
-#endif
 		return false;
 	}
 
@@ -319,18 +307,17 @@ bool PTimerList::Load(Database *db) {
 }
 
 bool PTimerList::Store(Database *db) {
-#ifdef DEBUG_PTIMERS
-	printf("Storing all timers for char %lu\n", (unsigned long)_char_id);
-#endif
+	Log.Out(Logs::General, Logs::PTimers, "Storing all timers for char %lu\n", (unsigned long)_char_id);
+
 
 	std::map<pTimerType, PersistentTimer *>::iterator s;
 	s = _list.begin();
 	bool res = true;
 	while(s != _list.end()) {
 		if(s->second != nullptr) {
-#ifdef DEBUG_PTIMERS
-	printf("Storing timer %u for char %lu\n", s->first, (unsigned long)_char_id);
-#endif
+
+	Log.Out(Logs::General, Logs::PTimers, "Storing timer %u for char %lu\n", s->first, (unsigned long)_char_id);
+
 			if(!s->second->Store(db))
 				res = false;
 		}
@@ -342,15 +329,12 @@ bool PTimerList::Store(Database *db) {
 bool PTimerList::Clear(Database *db) {
 	_list.clear();
 
-	std::string query = StringFormat("DELETE FROM timers WHERE char_id=%lu ", (unsigned long)_char_id);
-#ifdef DEBUG_PTIMERS
-	printf("Storing all timers for char %lu: '%s'\n", (unsigned long)_char_id, query.c_str());
-#endif
+	std::string query = StringFormat("DELETE FROM character_timers WHERE id=%lu ", (unsigned long)_char_id);
+	Log.Out(Logs::General, Logs::PTimers, "Storing all timers for char %lu: '%s'\n", (unsigned long)_char_id, query.c_str());
+
     auto results = db->QueryDatabase(query);
 	if (!results.Success()) {
-#if EQDEBUG > 5
 		Log.Out(Logs::General, Logs::Error, "Error in PersistentTimer::Clear, error: %s", results.ErrorMessage().c_str());
-#endif
 		return false;
 	}
 
@@ -433,16 +417,13 @@ void PTimerList::ToVector(std::vector< std::pair<pTimerType, PersistentTimer *> 
 
 bool PTimerList::ClearOffline(Database *db, uint32 char_id, pTimerType type) {
 
-	std::string query = StringFormat("DELETE FROM timers WHERE char_id=%lu AND type=%u ",(unsigned long)char_id, type);
+	std::string query = StringFormat("DELETE FROM character_timers WHERE id=%lu AND type=%u ",(unsigned long)char_id, type);
 
-#ifdef DEBUG_PTIMERS
-	printf("Clearing timer (offline): char %lu of type %u: '%s'\n", (unsigned long)char_id, type, query.c_str());
-#endif
+	Log.Out(Logs::General, Logs::PTimers, "Clearing timer (offline): char %lu of type %u: '%s'\n", (unsigned long)char_id, type, query.c_str());
+
     auto results = db->QueryDatabase(query);
 	if (!results.Success()) {
-#if EQDEBUG > 5
 		Log.Out(Logs::General, Logs::Error, "Error in PTimerList::ClearOffline, error: %s", results.ErrorMessage().c_str());
-#endif
 		return false;
 	}
 

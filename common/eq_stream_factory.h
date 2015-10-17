@@ -45,8 +45,8 @@ class EQStreamFactory : private Timeoutable {
 		uint32 stream_timeout;
 
 	public:
-		EQStreamFactory(EQStreamType type, uint32 timeout = 135000) : Timeoutable(5000), stream_timeout(timeout) { ReaderRunning=false; WriterRunning=false; StreamType=type; sock=-1; }
-		EQStreamFactory(EQStreamType type, int port, uint32 timeout = 135000);
+		EQStreamFactory(EQStreamType type, uint32 timeout = 45000) : Timeoutable(5000), stream_timeout(timeout) { ReaderRunning=false; WriterRunning=false; StreamType=type; sock=-1; }
+		EQStreamFactory(EQStreamType type, int port, uint32 timeout = 45000);
 
 		EQStream *Pop();
 		void Push(EQStream *s);

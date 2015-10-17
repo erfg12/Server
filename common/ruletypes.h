@@ -53,28 +53,14 @@ RULE_INT ( Character, FamishedLevel, 120) // When famished reaches this value, w
 RULE_BOOL( Character, HealOnLevel, false)
 RULE_BOOL( Character, ManaOnLevel, false)
 RULE_BOOL( Character, FeignKillsPet, false)
-RULE_INT ( Character, ItemManaRegenCap, 15)
-RULE_INT ( Character, ItemHealthRegenCap, 35)
-RULE_INT ( Character, ItemDamageShieldCap, 30)
-RULE_INT ( Character, ItemAccuracyCap, 150)
-RULE_INT ( Character, ItemAvoidanceCap, 100)
-RULE_INT ( Character, ItemCombatEffectsCap, 100)
-RULE_INT ( Character, ItemShieldingCap, 35)
-RULE_INT ( Character, ItemSpellShieldingCap, 35)
-RULE_INT ( Character, ItemDoTShieldingCap, 35)
-RULE_INT ( Character, ItemStunResistCap, 35)
-RULE_INT ( Character, ItemStrikethroughCap, 35)
-RULE_INT ( Character, ItemATKCap, 250)
-RULE_INT ( Character, ItemHealAmtCap, 250)
-RULE_INT ( Character, ItemSpellDmgCap, 250)
-RULE_INT ( Character, ItemClairvoyanceCap, 250)
-RULE_INT ( Character, ItemDSMitigationCap, 50)
+RULE_INT(Character, ItemManaRegenCap, 15)
+RULE_INT(Character, ItemHealthRegenCap, 35)
+RULE_INT(Character, ItemDamageShieldCap, 30)
+RULE_INT(Character, ItemATKCap, 250)
+RULE_INT(Character, ItemHealAmtCap, 250)
 RULE_INT ( Character, ItemEnduranceRegenCap, 15)
 RULE_INT ( Character, ItemExtraDmgCap, 150) // Cap for bonuses to melee skills like Bash, Frenzy, etc
 RULE_INT ( Character, HasteCap, 100) // Haste cap for non-v3(overhaste) haste.
-RULE_INT ( Character, SkillUpModifier, 60) //skill ups are at 100%
-RULE_REAL ( Character, TradeskillSkillUpModifier, 1.0) //1.0 is stock EQEmu lower is more skillups.
-RULE_BOOL ( Character, SharedBankPlat, false) //off by default to prevent duping for now
 RULE_BOOL ( Character, BindAnywhere, false)
 RULE_INT ( Character, RestRegenPercent, 0) // Set to >0 to enable rest state bonus HP and mana regen.
 RULE_INT ( Character, RestRegenTimeToActivate, 30) // Time in seconds for rest state regen to kick in.
@@ -100,6 +86,7 @@ RULE_REAL (Character, BaseWalkSpeed, 0.46)
 RULE_REAL(Character, EnvironmentDamageMulipliter, 1)
 RULE_BOOL(Character, ForageNeedFoodorDrink, false)
 RULE_BOOL(Character, ForageCommonFoodorDrink, false)
+RULE_BOOL (Character, DisableAAs, true) // Disables server side AA support, since the client allows some AA activity through even with a pre-Luclin expansion set.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Guild )
@@ -117,6 +104,10 @@ RULE_INT ( Skills, MaxTrainTradeskills, 21 )
 RULE_BOOL ( Skills, UseLimitTradeskillSearchSkillDiff, true )
 RULE_INT ( Skills, MaxTradeskillSearchSkillDiff, 50 )
 RULE_INT ( Skills, MaxTrainSpecializations, 50 )	// Max level a GM trainer will train casting specializations
+RULE_INT ( Skills, LangSkillUpModifier, 70) //skill ups for skills with value under 100
+RULE_REAL ( Skills, TradeskillSkillUpModifier, 1.0) //1.0 is stock EQEmu lower is more skillups.
+RULE_REAL ( Skills, SkillUpModifier, 1.0)
+RULE_REAL ( Skills, HighStatSkillUpModifier, 0.75)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( Pets )
@@ -151,7 +142,6 @@ RULE_BOOL ( World, GMAccountIPList, false) // Check ip list against GM Accounts,
 RULE_INT ( World, MinGMAntiHackStatus, 1 ) //Minimum GM status to check against AntiHack list
 RULE_INT ( World, SoFStartZoneID, -1 ) //Sets the Starting Zone for SoF Clients separate from Titanium Clients (-1 is disabled)
 RULE_INT ( World, PVPSettings, 0) // Sets the PVP settings for the server, 1 = Rallos Zek RuleSet, 2 = Tallon/Vallon Zek Ruleset, 4 = Sullon Zek Ruleset, 6 = Discord Ruleset, anything above 6 is the Discord Ruleset without the no-drop restrictions removed. TODO: Edit IsAttackAllowed in Zone to accomodate for these rules.
-RULE_BOOL (World, IsGMPetitionWindowEnabled, false)
 RULE_INT (World, FVNoDropFlag, 0) // Sets the Firiona Vie settings on the client. If set to 2, the flag will be set for GMs only, allowing trading of no-drop items.
 RULE_BOOL (World, IPLimitDisconnectAll, false)
 RULE_INT (World, TellQueueSize, 20) 
@@ -189,15 +179,17 @@ RULE_INT (Zone, SpawnEventMin, 5) // When strict is set in spawn_events, specifi
 RULE_REAL ( Zone, GroupEXPRange, 500 )
 RULE_BOOL ( Zone, IdleWhenEmpty, true) // After timer is expired, if zone is empty it will idle. Boat zones are excluded, as this will break boat functionality.
 RULE_INT ( Zone, IdleTimer, 600000) // 10 minutes
+RULE_INT ( Zone, BoatDistance, 50) //In zones where boat name is not set in the PP, this is how far away from the boat the client must be to move them to the boat's current location.
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( AlKabor )
-RULE_BOOL( AlKabor, AllowPetPull, false) // Allow Green Pet Pull
-RULE_BOOL ( AlKabor, StripBuffsOnLowHP, true)
-RULE_BOOL ( AlKabor, OutOfRangeGroupXPBonus, true)
-RULE_BOOL ( AlKabor, GroupEXPBonuses, false)
-RULE_BOOL ( AlKabor, Count6thGroupMember, false)
-RULE_BOOL ( AlKabor, GreensGiveXPToGroup, true)
+RULE_BOOL( AlKabor, AllowPetPull, false) // Allow Green Pet Pull (AK behavior is true)
+RULE_BOOL( AlKabor, AllowTickSplit, false) //AK behavior is true
+RULE_BOOL ( AlKabor, StripBuffsOnLowHP, true) //AK behavior is true
+RULE_BOOL ( AlKabor, OutOfRangeGroupXPBonus, true) //AK behavior is true
+RULE_BOOL ( AlKabor, GroupEXPBonuses, false) //AK behavior is true
+RULE_BOOL ( AlKabor, Count6thGroupMember, false) //AK behavior is false
+RULE_BOOL ( AlKabor, GreensGiveXPToGroup, true) //AK behavior is true
 RULE_CATEGORY_END()
 
 
@@ -279,7 +271,6 @@ RULE_INT ( Spells, SacrificeItemID, 9963)	//Item ID of the item Sacrifice will r
 RULE_BOOL ( Spells, EnableSpellGlobals, false)	// If Enabled, spells check the spell_globals table and compare character data from the quest globals before allowing that spell to scribe with scribespells
 RULE_INT ( Spells, MaxBuffSlotsNPC, 25)
 RULE_INT ( Spells, MaxSongSlotsNPC, 10)
-RULE_INT ( Spells, MaxDiscSlotsNPC, 1)
 RULE_INT ( Spells, MaxTotalSlotsNPC, 36)
 RULE_INT ( Spells, MaxTotalSlotsPET, 15)	// do not set this higher than 25 until the player profile is removed from the blob
 RULE_INT ( Spells, ReflectType, 1) //0 = disabled, 1 = single target player spells only, 2 = all player spells, 3 = all single target spells, 4 = all spells
@@ -333,7 +324,6 @@ RULE_INT ( Combat, RogueCritThrowingChance, 25) //Rogue throwing crit bonus
 RULE_INT ( Combat, RogueDeadlyStrikeChance, 80) //Rogue chance throwing from behind crit becomes a deadly strike
 RULE_INT ( Combat, RogueDeadlyStrikeMod, 2) //Deadly strike modifier to crit damage
 RULE_INT ( Combat, ClientBaseCritChance, 0 ) //The base crit chance for all clients, this will stack with warrior's/zerker's crit chance.
-RULE_BOOL ( Combat, UseIntervalAC, true)
 RULE_INT ( Combat, PetAttackMagicLevel, 30)
 RULE_BOOL ( Combat, EnableFearPathing, true)
 RULE_INT ( Combat, FleeHPRatio, 25)	  //HP % when a NPC starts to flee.
@@ -346,17 +336,8 @@ RULE_REAL ( Combat, BaseProcChance, 0.035)
 RULE_REAL ( Combat, ProcDexDivideBy, 11000)
 RULE_BOOL ( Combat, AdjustSpecialProcPerMinute, true)  //Set PPM for special abilities like HeadShot (Live does this as of 4-14)
 RULE_REAL ( Combat, AvgSpecialProcsPerMinute, 2.0) //Unclear what best value is atm.
-RULE_REAL ( Combat, BaseHitChance, 69.0)
-RULE_REAL ( Combat, NPCBonusHitChance, 26.0)
-RULE_REAL ( Combat, HitFalloffMinor, 5.0) //hit will fall off up to 5% over the initial level range
-RULE_REAL ( Combat, HitFalloffModerate, 7.0) //hit will fall off up to 7% over the three levels after the initial level range
-RULE_REAL ( Combat, HitFalloffMajor, 50.0) //hit will fall off sharply if we're outside the minor and moderate range
-RULE_REAL ( Combat, HitBonusPerLevel, 1.2) //You gain this % of hit for every level you are above your target
 RULE_REAL ( Combat, WeaponSkillFalloff, 0.33) //For every weapon skill point that's not maxed you lose this % of hit
 RULE_REAL ( Combat, ArcheryHitPenalty, 0.25) //Archery has a hit penalty to try to help balance it with the plethora of long term +hit modifiers for it
-RULE_REAL ( Combat, AgiHitFactor, 0.01)
-RULE_REAL ( Combat, MinChancetoHit, 5.0) //Minimum % chance to hit with regular melee/ranged 
-RULE_REAL ( Combat, MaxChancetoHit, 95.0) //Maximum % chance to hit with regular melee/ranged
 RULE_INT ( Combat, MinRangedAttackDist, 25) //Minimum Distance to use Ranged Attacks
 RULE_BOOL ( Combat, ArcheryBonusRequiresStationary, true) //does the 2x archery bonus chance require a stationary npc
 RULE_REAL ( Combat, ArcheryBaseDamageBonus, 1) // % Modifier to Base Archery Damage (.5 = 50% base damage, 1 = 100%, 2 = 200%)
@@ -374,29 +355,6 @@ RULE_INT ( Combat, TigerClawBonus, 10) //% Modifier that this skill gets to str 
 RULE_INT ( Combat, RoundKickBonus, 5) //% Modifier that this skill gets to str and skill bonuses
 RULE_INT ( Combat, FrenzyBonus, 0) //% Modifier to damage
 RULE_BOOL ( Combat, ProcTargetOnly, true) //true = procs will only affect our target, false = procs will affect all of our targets
-RULE_REAL ( Combat, NPCACFactor, 2.25)
-RULE_INT ( Combat, ClothACSoftcap, 75)
-RULE_INT ( Combat, LeatherACSoftcap, 100)
-RULE_INT ( Combat, MonkACSoftcap, 120)
-RULE_INT ( Combat, ChainACSoftcap, 200)
-RULE_INT ( Combat, PlateACSoftcap, 300)
-RULE_REAL ( Combat, AAMitigationACFactor, 3.0)
-RULE_REAL ( Combat, WarriorACSoftcapReturn, 0.45)
-RULE_REAL ( Combat, KnightACSoftcapReturn, 0.33)
-RULE_REAL ( Combat, LowPlateChainACSoftcapReturn, 0.23)
-RULE_REAL ( Combat, LowChainLeatherACSoftcapReturn, 0.17)
-RULE_REAL ( Combat, CasterACSoftcapReturn, 0.06)
-RULE_REAL ( Combat, MiscACSoftcapReturn, 0.3)
-RULE_BOOL ( Combat, OldACSoftcapRules, false) // use old softcaps
-RULE_BOOL ( Combat, UseOldDamageIntervalRules, false) // use old damage formulas for everything
-RULE_REAL ( Combat, WarACSoftcapReturn, 0.3448) // new AC returns
-RULE_REAL ( Combat, ClrRngMnkBrdACSoftcapReturn, 0.3030)
-RULE_REAL ( Combat, PalShdACSoftcapReturn, 0.3226)
-RULE_REAL ( Combat, DruNecWizEncMagACSoftcapReturn, 0.2000)
-RULE_REAL ( Combat, RogShmBstBerACSoftcapReturn, 0.2500)
-RULE_REAL ( Combat, SoftcapFactor, 1.88)
-RULE_REAL ( Combat, ACthac0Factor, 0.55)
-RULE_REAL ( Combat, ACthac20Factor, 0.55)
 RULE_INT ( Combat, HitCapPre20, 40) // live has it capped at 40 for whatever dumb reason... this is mainly for custom servers
 RULE_INT ( Combat, HitCapPre10, 20) // live has it capped at 20, see above :p
 RULE_INT ( Combat, MinHastedDelay, 400) // how fast we can get with haste.
@@ -407,7 +365,6 @@ RULE_INT ( Combat, NPCFlurryChance, 20) // Chance for NPC to flurry.
 RULE_BOOL (Combat,TauntOverLevel, 1) //Allows you to taunt NPC's over warriors level.
 RULE_REAL (Combat,TauntSkillFalloff, 0.33)//For every taunt skill point that's not maxed you lose this % chance to taunt.
 RULE_BOOL (Combat,EXPFromDmgShield, false) //Determine if damage from a damage shield counts for EXP gain.
-RULE_INT ( Combat, MonkACBonusWeight, 15)
 RULE_INT ( Combat, ClientStunLevel, 55) //This is the level where client kicks and bashes can stun the target
 RULE_INT ( Combat, QuiverWRHasteDiv, 3) //Weight Reduction is divided by this to get haste contribution for quivers
 RULE_BOOL ( Combat, UseArcheryBonusRoll, false) //Make the 51+ archery bonus require an actual roll
@@ -416,7 +373,8 @@ RULE_INT ( Combat, BerserkerFrenzyStart, 35)
 RULE_INT ( Combat, BerserkerFrenzyEnd, 45)
 RULE_BOOL ( Combat, OneProcPerWeapon, true) //If enabled, One proc per weapon per round
 RULE_REAL ( Combat, PushBackAmount, 1.5)
-RULE_BOOL ( Combat, NewACCurves, true)
+RULE_INT ( Combat, NPCAssistCap, 5) // Maxiumium number of NPCs that will assist another NPC at once
+RULE_INT ( Combat, NPCAssistCapTimer, 6000) // Time in milliseconds a NPC will take to clear assist aggro cap space
 RULE_CATEGORY_END()
 
 RULE_CATEGORY( NPC )
@@ -432,7 +390,7 @@ RULE_BOOL ( NPC, EnableNPCQuestJournal, false)
 RULE_INT ( NPC, LastFightingDelayMovingMin, 10000)
 RULE_INT ( NPC, LastFightingDelayMovingMax, 20000)
 RULE_BOOL ( NPC, SmartLastFightingDelayMoving, true)
-RULE_BOOL ( NPC, ReturnNonQuestNoDropItems, false)	// Returns NO DROP items on NPCs that don't have an EVENT_TRADE sub in their script
+RULE_BOOL ( NPC, ReturnNonQuestItems, true)	// Returns items on NPCs that don't have an EVENT_TRADE sub in their script
 RULE_INT ( NPC, StartEnrageValue, 9) // % HP that an NPC will begin to enrage
 RULE_BOOL ( NPC, LiveLikeEnrage, false) // If set to true then only player controlled pets will enrage
 RULE_REAL ( NPC, SpeedMultiplier, 50.0 ) //This is used to multiply an NPCs movement rate, yeilding map units..
@@ -443,19 +401,14 @@ RULE_BOOL ( NPC, EnableMeritBasedFaction, false) // If set to true, faction will
 RULE_INT ( NPC, NPCTemplateID, 153076)
 RULE_BOOL ( NPC, BoatsRunByDefault, true) // Mainly to make it easier to adjust boats' timing on the fly.
 RULE_BOOL(NPC, CheckSoWBuff, false)
+RULE_BOOL( NPC, IgnoreQuestLoot, false)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY ( Aggro )
 RULE_BOOL ( Aggro, SmartAggroList, true )
-RULE_INT ( Aggro, SittingAggroMod, 35 ) //35%
-RULE_INT ( Aggro, MeleeRangeAggroMod, 10 ) //10%
-RULE_INT ( Aggro, CurrentTargetAggroMod, 0 ) //0% -- will prefer our current target to any other; makes it harder for our npcs to switch targets.
-RULE_INT ( Aggro, CriticallyWoundedAggroMod, 100 ) //100%
 RULE_INT ( Aggro, SpellAggroMod, 100 )
-RULE_INT ( Aggro, SongAggroMod, 33 )
 RULE_INT ( Aggro, PetSpellAggroMod, 10 )
 RULE_REAL ( Aggro, TunnelVisionAggroMod, 0.75 ) //people not currently the top hate generate this much hate on a Tunnel Vision mob
-RULE_INT ( Aggro, MaxStunProcAggro, 400 ) // Set to -1 for no limit. Maxmimum amount of aggro that a stun based proc will add.
 RULE_INT ( Aggro, IntAggroThreshold, 75 ) // Int <= this will aggro regardless of level difference.
 RULE_BOOL ( Aggro, UseLevelAggro, true) // Level 18+ and Undead will aggro regardless of level difference. (this will disabled Rule:IntAggroThreshold if set to true)
 RULE_CATEGORY_END()
@@ -493,7 +446,6 @@ RULE_BOOL ( Bazaar, EnableWarpToTrader, true)
 RULE_CATEGORY_END()
 
 RULE_CATEGORY ( Mail )
-RULE_BOOL ( Mail, EnableMailSystem, true) // If false, client won't bring up the Mail window.
 RULE_INT ( Mail, ExpireTrash, 0) // Time in seconds. 0 will delete all messages in the trash when the mailserver starts
 RULE_INT ( Mail, ExpireRead, 31536000 ) // 1 Year. Set to -1 for never
 RULE_INT ( Mail, ExpireUnread, 31536000 ) // 1 Year. Set to -1 for never
@@ -535,7 +487,7 @@ RULE_BOOL( QueryServ, PlayerLogConnectDisconnect, false) // Logs Player Connect 
 RULE_BOOL( QueryServ, PlayerLogLevels, false) // Logs Player Leveling/Deleveling
 RULE_BOOL( QueryServ, PlayerLogAARate, false) // Logs Player AA Experience Rates 
 RULE_BOOL( QueryServ, PlayerLogQGlobalUpdate, false) // Logs Player QGlobal Updates
-RULE_BOOL( QueryServ, PlayerLogTaskUpdates, false) // Logs Player Task Updates
+RULE_BOOL( QueryServ, PlayerLogKeyringAddition, false) // Log PLayer Keyring additions
 RULE_BOOL( QueryServ, PlayerLogAAPurchases, false) // Log Player AA Purchases
 RULE_BOOL( QueryServ, PlayerLogTradeSkillEvents, false) // Log Player Tradeskill Transactions
 RULE_BOOL( QueryServ, PlayerLogIssuedCommandes, false ) // Log Player Issued Commands

@@ -162,6 +162,7 @@ public:
 	const char* GetEntityVariable(const char *id);
 	void SetEntityVariable(const char *id, const char *m_var);
 	bool EntityVariableExists(const char *id);
+	bool RespawnTimerEnabled() { return respawn_timer.Enabled(); };
 
 protected:
 	void	ResetState();	// Set state back to original
@@ -186,6 +187,7 @@ protected:
 	Client *user;
 	Client *last_user;
 
+	Timer random_timer;
 	Timer respawn_timer;
 	Timer decay_timer;
 };

@@ -24,9 +24,13 @@
 #include "EQCrypto.h"
 #include "../common/sha1.h"
 
+#pragma warning(disable : 4267 4244 4996 4101 4700)
+
 extern EQCrypto eq_crypto;
 extern ErrorLog *server_log;
 extern LoginServer server;
+extern Database db;
+extern Saltme mysalt;
 
 Client::Client(EQStreamInterface *c, ClientVersion v)
 {
@@ -44,12 +48,8 @@ bool Client::Process()
 	EQApplicationPacket *app = connection->PopPacket();
 	while(app)
 	{
-		if(server.options.IsTraceOn())
-		{
-			server_log->Log(log_network, "Application packet received from client (size %u)", app->Size());
-		}
-
-		if(server.options.IsDumpInPacketsOn())
+		server_log->Trace("Application packet received from client.");
+		if (server_log->DumpIn())
 		{
 			DumpPacket(app);
 		}
@@ -58,53 +58,43 @@ bool Client::Process()
 		{
 		case OP_SessionReady:
 			{
-				if(server.options.IsTraceOn())
-				{
-					server_log->Log(log_network, "Session ready received from client.");
-				}
+				server_log->Trace("Session ready received from client.");
 				Handle_SessionReady((const char*)app->pBuffer, app->Size());
 				break;
 			}
-		case OP_SessionLogin:
+		case OP_LoginOSX:
 			{
-				if(server.options.IsTraceOn())
-				{
-					server_log->Log(log_network, "Session login received from client.");
-				}
-				Handle_OSXLogin((const char*)app->pBuffer, app->Size());
+				server_log->Trace("Login received from OSX client.");
+				Handle_Login((const char*)app->pBuffer, app->Size(), "OSX");
 				break;
 			}
-		case OP_Login:
+		case OP_LoginPC:
 			{
 				if(app->Size() < 20)
 				{
 					server_log->Log(log_network_error, "Login received but it is too small, discarding.");
 					break;
 				}
-				if(server.options.IsTraceOn())
-				{
-					server_log->Log(log_network, "Login received from client.");
-				}
-					Handle_PCLogin((const char*)app->pBuffer, app->Size());
+				server_log->Trace("Login received from PC client.");
+				Handle_Login((const char*)app->pBuffer, app->Size(), "PC");
 				break;
 			}
 		case OP_LoginComplete:
 			{
+				server_log->Trace("Login complete received from client.");
 				Handle_LoginComplete((const char*)app->pBuffer, app->Size());
 				break;
 			}
 		case OP_LoginUnknown1: //Seems to be related to world status in older clients; we use our own logic for that though.
 			{
+				server_log->Trace("OP_LoginUnknown1 received from client.");
 				EQApplicationPacket *outapp = new EQApplicationPacket(OP_LoginUnknown2, 0);
 				connection->QueuePacket(outapp);
 				break;
 			}
 		case OP_ServerListRequest:
 			{
-				if(server.options.IsTraceOn())
-				{
-					server_log->Log(log_network, "Server list request received from client.");
-				}
+				server_log->Trace("Server list request received from client.");
 				SendServerListPacket();
 				break;
 			}
@@ -119,15 +109,15 @@ bool Client::Process()
 				break;
 			}
 		case OP_LoginBanner:
-		{
-			Handle_Banner((const char*)app->pBuffer, app->Size());
-			break;
-		}
+			{
+				Handle_Banner(app->Size());
+				break;
+			}
 		default:
 			{
 				char dump[64];
 				app->build_header_dump(dump);
-				server_log->Log(log_network_error, "Recieved unhandled application packet from the client: %s.", dump);
+				server_log->Log(log_network_error, "Received unhandled application packet from the client: %s.", dump);
 			}
 		}
 		delete app;
@@ -185,162 +175,96 @@ void Client::Handle_SessionReady(const char* data, unsigned int size)
 	}
 }
 
-void Client::Handle_OSXLogin(const char* data, unsigned int size)
+void Client::Handle_Login(const char* data, unsigned int size, string client)
 {
+	in_addr in;
+	in.s_addr = connection->GetRemoteIP();
+
 	if (version != cv_old)
 	{
 		cout << "Not old client, gtfo haxxor!";
+		string error = "Unauthorized client from " + string(inet_ntoa(in)) + " , exiting them.";
+		server_log->Log(log_network_error, error.c_str());
 		return;
 	}
-
-	status = cs_logged_in;
-
-	string ourdata = data;
-	if (size < strlen("eqworld-52.989studios.com") + 1){
-		cout << "wrong size?";
-		return;
-	}
-
-	//Get rid of that 989 studios part of the string, plus remove null term zero.
-	string userpass = ourdata.substr(0, ourdata.find("eqworld-52.989studios.com") - 1);
-
-	string username = userpass.substr(0, userpass.find("/"));
-	string password = userpass.substr(userpass.find("/") + 1);
-	string salt = server.options.GetSalt();
-
-	server_log->Log(log_network, "Username: %s", username.c_str());
-	server_log->Log(log_network, "Password: %s", password.c_str());
-
-	unsigned int d_account_id = 0;
-	in_addr in;
-	string d_pass_hash;
-	uchar sha1pass[40];
-	char sha1hash[41];
-	in.s_addr = connection->GetRemoteIP();
-	bool result = false;
-	unsigned int enable;
-	string platform = "OSX";
-	macversion = intel;
-
-	string userandpass = password + salt;
-	if(server.db->GetLoginDataFromAccountName(username, d_pass_hash, d_account_id) == false)
-	{
-		server_log->Log(log_client_error, "Error logging in, user %s does not exist in the database.", username.c_str());
-
-		Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "notexist");
-		if (server.options.IsCreateOn())
-		{
-			Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "created");
-			server.db->UpdateLSAccountInfo(NULL, username, userandpass, "", 2, string(inet_ntoa(in)), string(inet_ntoa(in)));
-			FatalError("Account did not exist so it was created. Hit connect again to login.");
-
-			return;
-		}
-		result = false;
-	}
-	else
-	{
-		sha1::calc(userandpass.c_str(), userandpass.length(), sha1pass);
-		sha1::toHexString(sha1pass,sha1hash);
-		if(d_pass_hash.compare((char*)sha1hash) == 0)
-		{
-			result = true;
-		}
-		else
-		{
-			Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "badpass");
-			server_log->Log(log_client_error, "%s", sha1hash);
-			result = false;
-		}
-	}
-
-	if(result)
-	{
-		if(!sentsessioninfo)
-		{
-			if (server.db->GetStatusLSAccountTable(username, enable) == false)
-			{
-				FatalError("Account is not activated. Server is not allowing open logins at this time.");
-				return;
-			}
-			Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "success");
-			server.db->UpdateLSAccountData(d_account_id, string(inet_ntoa(in)));
-			GenerateKey();
-			account_id = d_account_id;
-			account_name = username.c_str();
-			EQApplicationPacket *outapp = new EQApplicationPacket(OP_LoginAccepted, sizeof(SessionId_Struct));
-			SessionId_Struct* s_id = (SessionId_Struct*)outapp->pBuffer;
-			// this is submitted to world server as "username"
-			sprintf(s_id->session_id, "LS#%i", account_id);
-			strcpy(s_id->unused, "unused");
-			s_id->unknown = 4;
-			connection->QueuePacket(outapp);
-			delete outapp;
-
-			string buf = server.options.GetNetworkIP();
-			EQApplicationPacket *outapp2 = new EQApplicationPacket(OP_ServerName, buf.length() + 1);
-			strncpy((char*)outapp2->pBuffer, buf.c_str(), buf.length() + 1);
-			connection->QueuePacket(outapp2);
-			delete outapp2;
-			sentsessioninfo = true;
-		}
-	}
-	else
-	{
-		//FatalError("Invalid username or password.");
-	}
-	return;
-}
-
-void Client::Handle_PCLogin(const char* data, unsigned int size)
-{
-	if (status != cs_waiting_for_login)
+	else if (status != cs_waiting_for_login)
 	{
 		server_log->Log(log_network_error, "Login received after already having logged in.");
 		return;
 	}
 
-	if (size < sizeof(LoginServerInfo_Struct)) {
-		cout << "wrong size";
+	else if (size < sizeof(LoginServerInfo_Struct))
+	{
+		server_log->Log(log_network_error, "Bad Login Struct size.");
 		return;
 	}
 
-	status = cs_logged_in;
+	string username;
+	string password;
+	string platform;
+	int created;
 
-	string e_hash;
-	char *e_buffer = nullptr;
+	if (client == "OSX")
+	{
+		string ourdata = data;
+		if (size < strlen("eqworld-52.989studios.com") + 1)
+			return;
+
+		//Get rid of that 989 studios part of the string, plus remove null term zero.
+		string userpass = ourdata.substr(0, ourdata.find("eqworld-52.989studios.com") - 1);
+
+		username = userpass.substr(0, userpass.find("/"));
+		password = userpass.substr(userpass.find("/") + 1);
+		platform = "OSX";
+		macversion = intel;
+		created = 2;
+	}
+	else if (client == "PC")
+	{
+		string e_hash;
+		char *e_buffer = nullptr;
+		uchar eqlogin[40];
+		eq_crypto.DoEQDecrypt((unsigned char*)data, eqlogin, 40);
+		LoginCrypt_struct* lcs = (LoginCrypt_struct*)eqlogin;
+		username = lcs->username;
+		password = lcs->password;
+		platform = "PC";
+		macversion = pc;
+		created = 1;
+	}
+
+	string userandpass = mysalt.Salt(password);
+	status = cs_logged_in;
 	unsigned int d_account_id = 0;
 	string d_pass_hash;
-	uchar eqlogin[40];
+	bool result = false;
 	uchar sha1pass[40];
 	char sha1hash[41];
-	eq_crypto.DoEQDecrypt((unsigned char*)data, eqlogin, 40);
-	LoginCrypt_struct* lcs = (LoginCrypt_struct*)eqlogin;
 
-	bool result;
-	in_addr in;
-	in.s_addr = connection->GetRemoteIP();
 
-	string username = lcs->username;
-	string password = lcs->password;
-	string salt = server.options.GetSalt();
-
-	string userandpass = password + salt;
-	unsigned int enable;
-	string platform = "PC";
-	macversion = pc;
-
-	if (server.db->GetLoginDataFromAccountName(username, d_pass_hash, d_account_id) == false)
+	if (db.GetLoginDataFromAccountName(username, d_pass_hash, d_account_id) == false)
 	{
 		server_log->Log(log_client_error, "Error logging in, user %s does not exist in the database.", username.c_str());
 
 		Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "notexist");
-		if (server.options.IsCreateOn())
+
+		if (db.LoadServerSettings("options", "auto_account_create") == "TRUE")
 		{
 			Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "created");
-			server.db->UpdateLSAccountInfo(NULL, username.c_str(), userandpass.c_str(), "", 1, string(inet_ntoa(in)), string(inet_ntoa(in)));
-			FatalError("Account did not exist so it was created. Hit connect again to login.");
-
+			db.CreateLSAccount(username.c_str(), userandpass.c_str(), "", created, string(inet_ntoa(in)), string(inet_ntoa(in)));
+			if (db.LoadServerSettings("options", "auto_account_activate") == "TRUE")
+			{
+				FatalError("Account did not exist so it was created.\nHit connect again to login.");
+			}
+			else
+			{
+				FatalError("Account did not exist so it was created.\nBut, Account is not activated.\nServer is not allowing open logins at this time.\nContact server management.");
+			}
+			return;
+		}
+		else if (db.LoadServerSettings("options", "auto_account_create") == "FALSE")
+		{
+			FatalError("Account does not exist and auto creation is not enabled.");
 			return;
 		}
 		result = false;
@@ -363,29 +287,46 @@ void Client::Handle_PCLogin(const char* data, unsigned int size)
 
 	if (result)
 	{
-		if (server.db->GetStatusLSAccountTable(username, enable) == false)
+		if (!sentsessioninfo)
 		{
-			FatalError("Account is not activated. Server is not allowing open logins at this time.");
-			return;
+			if (db.GetAccountLockStatus(username) == false)
+			{
+				FatalError("Account is not activated.\nServer is not allowing open logins at this time.\nContact server management.");
+				return;
+			}
+			Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "success");
+			db.UpdateLSAccount(d_account_id, string(inet_ntoa(in)));
+			GenerateKey();
+			account_id = d_account_id;
+			account_name = username.c_str();
+			EQApplicationPacket *outapp = new EQApplicationPacket(OP_LoginAccepted, sizeof(SessionId_Struct));
+			SessionId_Struct* s_id = (SessionId_Struct*)outapp->pBuffer;
+			// this is submitted to world server as "username"
+			sprintf(s_id->session_id, "LS#%i", account_id);
+			strcpy(s_id->unused, "unused");
+			s_id->unknown = 4;
+			connection->QueuePacket(outapp);
+			delete outapp;
+
+			if (client == "OSX")
+			{
+				string buf = db.LoadServerSettings("options", "network_ip").c_str();
+				EQApplicationPacket *outapp2 = new EQApplicationPacket(OP_ServerName, buf.length() + 1);
+				strncpy((char*)outapp2->pBuffer, buf.c_str(), buf.length() + 1);
+				connection->QueuePacket(outapp2);
+				delete outapp2;
+				sentsessioninfo = true;
+			}
 		}
-		Logs(platform, d_account_id, username.c_str(), string(inet_ntoa(in)), time(nullptr), "success");
-		server.db->UpdateLSAccountData(d_account_id, string(inet_ntoa(in)));
-		GenerateKey();
-		account_id = d_account_id;
-		account_name = username;
-		EQApplicationPacket *outapp = new EQApplicationPacket(OP_LoginAccepted, sizeof(SessionId_Struct));
-		SessionId_Struct* s_id = (SessionId_Struct*)outapp->pBuffer;
-		// this is submitted to world server as "username"
-		sprintf(s_id->session_id, "LS#%i", account_id);
-		strcpy(s_id->unused, "unused");
-		s_id->unknown = 4;
-		connection->QueuePacket(outapp);
-		delete outapp;
 	}
 	else
 	{
-		FatalError("Invalid username or password.");
+		if (client == "PC")
+		{
+			FatalError("Invalid username or password.");
+		}
 	}
+	return;
 }
 
 void Client::FatalError(const char* message) {
@@ -415,7 +356,7 @@ void Client::Handle_Play(const char* data)
 	}
 	if(data)
 	{
-		server.SM->SendOldUserToWorldRequest(data, account_id);
+		server.SM->SendOldUserToWorldRequest(data, account_id, connection->GetRemoteIP());
 	}
 }
 
@@ -425,7 +366,8 @@ void Client::SendServerListPacket()
 	
 	outapp = server.SM->CreateOldServerListPacket(this);
 
-	if(server.options.IsDumpOutPacketsOn())
+
+	if (server_log->DumpOut())
 	{
 		DumpPacket(outapp);
 	}
@@ -434,37 +376,31 @@ void Client::SendServerListPacket()
 	delete outapp;
 }
 
-void Client::Handle_Banner(const char* data, unsigned int size)
+void Client::Handle_Banner(unsigned int size)
 {
-	char buf[501];
-	EQApplicationPacket *outapp = new EQApplicationPacket(OP_LoginBanner, 5);
-	outapp->pBuffer;
-	memset(buf, 0, sizeof(buf));
-
-	strcpy(buf, "Welcome to The Al'Kabor Project!");
-	outapp->size += strlen("Welcome to The Al'Kabor Project!");
-
-	if (strlen(buf) == 0)
+	std::string ticker = "Welcome to EQMacEmu";
+	if (db.CheckExtraSettings("ticker"))
 	{
-		delete outapp;
+		ticker = db.LoadServerSettings("options", "ticker");
 	}
-	outapp->pBuffer = new uchar[outapp->size];
+
+	EQApplicationPacket *outapp = new EQApplicationPacket(OP_LoginBanner, 5);
+	outapp->size += strlen(ticker.c_str());
+	outapp->pBuffer = new uchar[outapp->size + 3];
 	outapp->pBuffer[0] = 1;
 	outapp->pBuffer[1] = 0;
 	outapp->pBuffer[2] = 0;
 	outapp->pBuffer[3] = 0;
-	strcpy((char *)&outapp->pBuffer[4], buf);
+	strcpy((char *)&outapp->pBuffer[4], ticker.c_str());
 	connection->QueuePacket(outapp);
 	delete outapp;
 }
 
 void Client::SendPlayResponse(EQApplicationPacket *outapp)
 {
-	if(server.options.IsTraceOn())
-	{
-		server_log->Log(log_network_trace, "Sending play response for %s.", GetAccountName().c_str());
-		server_log->LogPacket(log_network_trace, (const char*)outapp->pBuffer, outapp->size);
-	}
+	server_log->Trace("Sending play response to client.");
+	server_log->TracePacket((const char*)outapp->pBuffer, outapp->size);
+
 	connection->QueuePacket(outapp);
 	status = cs_logged_in;
 }
@@ -492,20 +428,20 @@ void Client::GenerateKey()
 void Client::Logs(std::string platform, unsigned int account_id, std::string account_name, std::string IP, unsigned int accessed, std::string reason)
 {
 	// valid reason codes are: notexist, created, badpass, success
-	if (server.options.IsLoginFailsOn() && !server.options.IsCreateOn() && reason == "notexist")
+	if (db.LoadServerSettings("options", "failed_login_log") == "TRUE" && db.LoadServerSettings("options", "auto_account_create") == "FALSE" && reason == "notexist")
 	{
-		server.db->UpdateAccessLog(account_id, account_name, IP, accessed, "Account not exist, " + platform);
+		db.UpdateAccessLog(account_id, account_name, IP, accessed, "Account not exist, " + platform);
 	}
-	if (server.options.IsLoginFailsOn() && server.options.IsCreateOn() && reason == "created")
+	if (db.LoadServerSettings("options", "failed_login_log") == "TRUE" && db.LoadServerSettings("options", "auto_account_create") == "TRUE" && reason == "created")
 	{
-		server.db->UpdateAccessLog(account_id, account_name, IP, accessed, "Account created, " + platform);
+		db.UpdateAccessLog(account_id, account_name, IP, accessed, "Account created, " + platform);
 	}
-	if (server.options.IsLoginFailsOn() && reason == "badpass")
+	if (db.LoadServerSettings("options", "failed_login_log") == "TRUE" && reason == "badpass")
 	{
-		server.db->UpdateAccessLog(account_id, account_name, IP, accessed, "Bad password, " + platform);
+		db.UpdateAccessLog(account_id, account_name, IP, accessed, "Bad password, " + platform);
 	}
-	if (server.options.IsLoggedOn() && reason == "success")
+	if (db.LoadServerSettings("options", "good_loginIP_log") == "TRUE" && reason == "success")
 	{
-		server.db->UpdateAccessLog(account_id, account_name, IP, accessed, "Logged in Success, " + platform);
+		db.UpdateAccessLog(account_id, account_name, IP, accessed, "Logged in Success, " + platform);
 	}
 }

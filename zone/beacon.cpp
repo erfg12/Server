@@ -54,7 +54,7 @@ Beacon::Beacon(Mob *at_mob, int lifetime)
 :Mob
 (
 	nullptr, nullptr, 0, 0, 0, INVISIBLE_MAN, 0, BT_NoTarget, 0, 0, 0, 0, 0, at_mob->GetPosition(), 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ),
 		remove_timer(lifetime),
 		spell_timer(0)
@@ -66,20 +66,21 @@ Beacon::Beacon(Mob *at_mob, int lifetime)
 	resist_adjust = 0;
 	spell_iterations = 0;
 	caster_id = 0;
+	targets_hit = 0;
 
 	if(lifetime)
 	{
 		remove_timer.Start();
 	}
 #ifdef SOLAR
-	entity_list.Message(0, 0, "Beacon being created at %0.2f %0.2f %0.2f heading %0.2f lifetime %d", GetX(), GetY(), GetZ(), GetHeading(), lifetime);
+	entity_list.Message(CC_Default, 0, "Beacon being created at %0.2f %0.2f %0.2f heading %0.2f lifetime %d", GetX(), GetY(), GetZ(), GetHeading(), lifetime);
 #endif
 }
 
 Beacon::~Beacon()
 {
 #ifdef SOLAR
-	entity_list.Message(0, 0, "Beacon %d being removed at %0.2f %0.2f %0.2f heading %0.2f", GetID(), GetX(), GetY(), GetZ(), GetHeading());
+	entity_list.Message(CC_Default, 0, "Beacon %d being removed at %0.2f %0.2f %0.2f heading %0.2f", GetID(), GetX(), GetY(), GetZ(), GetHeading());
 #endif
 }
 
@@ -110,6 +111,8 @@ bool Beacon::Process()
 			spell_iterations = 0;
 			spell_timer.Disable();
 			caster_id = 0;
+			targets_hit = 0;
+
 		}
 	}
 

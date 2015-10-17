@@ -76,8 +76,8 @@ Zone extensions and features
 #define QUEST_SCRIPTS_BYNAME
 
 #ifdef QUEST_SCRIPTS_BYNAME
-//extends byname system to look in a templates directory
-//independant of zone name
+//extends by name system to look in a templates directory
+//independent of zone name
 #define QUEST_GLOBAL_BYNAME
 #define QUEST_GLOBAL_DIRECTORY "global"
 #endif
@@ -86,7 +86,7 @@ Zone extensions and features
 #define FLEE_HP_MINSPEED 22
 //number of tics to try to run straight away before looking again
 #define FLEE_RUN_DURATION 1000
-//number of miliseconds between when a mob will check its flee state
+//number of milliseconds between when a mob will check its flee state
 //this is only checked when the mob is damaged.
 #define FLEE_CHECK_TIMER 2000
 
@@ -138,8 +138,8 @@ enum {	//reuse times
 	FlyingKickReuseTime = 7,
 	SenseTrapsReuseTime = 9,
 	DisarmTrapsReuseTime = 9,
-	HarmTouchReuseTime = 4300,
-	LayOnHandsReuseTime = 4300,
+	HarmTouchReuseTime = 4320,
+	LayOnHandsReuseTime = 4320,
 	FrenzyReuseTime = 10
 };
 
@@ -173,30 +173,30 @@ enum {	//some random constants
 #define MAX_GROUP_LINKS 8
 
 //this is the number of levels above the thief's level that
-//an npc can be and still let the theif PP them
+//an npc can be and still let the thief PP them
 #define THIEF_PICKPOCKET_OVER 5
 
-//This is the entry in npc_types to spawn for trap damagaes
+//This is the entry in npc_types to spawn for trap damages
 #define TRAP_NPC_TYPE 1586
 
 //minimum level to do alchemy
 #define MIN_LEVEL_ALCHEMY 25
 
 //chance ratio that a
-#define THREATENLY_ARRGO_CHANCE 32 // 32/128 (25%) chance that a mob will arrgo on con Threatenly
+#define THREATENLY_ARRGO_CHANCE 32 // 32/128 (25%) chance that a mob will aggro on con Threateningly
 
 //max factions per npc faction list
 #define MAX_NPC_FACTIONS 20
 
 //individual faction pool
-#define MAX_PERSONAL_FACTION 1200
+#define MAX_PERSONAL_FACTION 2000
 #define MIN_PERSONAL_FACTION -3000
 
 //The Level Cap:
 //#define LEVEL_CAP RuleI(Character, MaxLevel)	//hard cap is 127
 #define HARD_LEVEL_CAP 127
 
-//the square of the maximum range at whihc you could possibly use NPC services (shop, tribute, etc)
+//the square of the maximum range at which you could possibly use NPC services (shop, tribute, etc)
 #define USE_NPC_RANGE2 200*200		//arbitrary right now
 
 //the formula for experience for killing a mob.
@@ -221,11 +221,11 @@ enum {
 	minStatusToSeeOthersZoneFlags = 80,
 	minStatusToEditOtherGuilds = 80,
 	commandMovecharSelfOnly = 80,	//below this == only self move allowed
-	commandMovecharToSpecials = 200,	//ability to send people to cshom/load zones
+	commandMovecharToSpecials = 200,	//ability to send people to cshome/load zones
 	commandZoneToSpecials = 80,		//zone to cshome, out of load zones
 	commandToggleAI = 250,			//can turn NPC AI on and off
 	commandCastSpecials = 100,		//can cast special spells
-	commandInstacast = 100,			//insta-cast all #casted spells
+	commandInstacast = 100,			//instant-cast all #casted spells
 	commandLevelAboveCap = 250,		//can #level players above level cap
 	commandLevelNPCAboveCap = 250,	//can #level NPCs above level cap
 	commandSetSkillsOther = 100,	//ability to setskills on others
@@ -238,11 +238,11 @@ enum {
 	commandChangeFlags = 200,		//ability to set/refresh flags
 	commandBanPlayers = 100,		//can set bans on players
 	commandChangeDatarate = 201,	//edit client's data rate
-	commandZoneToCoords = 0,		//can #zone with coords
+	commandZoneToCoords = 0,		//can #zone with coordinates
 	commandInterrogateInv = 100		//below this == only log on error state and self-only target dump
 };
 
-//default states for logging flag on NPCs and clients (having NPCs on by default is prolly a bad idea)
+//default states for logging flag on NPCs and clients (having NPCs on by default is probably a bad idea)
 #define CLIENT_DEFAULT_LOGGING_ENABLED true
 #define NPC_DEFAULT_LOGGING_ENABLED false
 

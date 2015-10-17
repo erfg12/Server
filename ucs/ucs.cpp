@@ -26,6 +26,7 @@
 #include "../common/servertalk.h"
 #include "../common/platform.h"
 #include "../common/crash.h"
+#include "../common/string_util.h"
 #include "database.h"
 #include "ucsconfig.h"
 #include "chatchannel.h"
@@ -171,15 +172,18 @@ int main() {
 
 }
 
-void UpdateWindowTitle(char* iNewTitle) {
+void UpdateWindowTitle(char* iNewTitle)
+{
 #ifdef _WINDOWS
-		char tmp[500];
-		if (iNewTitle) {
-				snprintf(tmp, sizeof(tmp), "UCS: %s", iNewTitle);
-		}
-		else {
-				snprintf(tmp, sizeof(tmp), "UCS");
-		}
-		SetConsoleTitle(tmp);
+	std::string title;
+	if (iNewTitle)
+	{
+		title = StringFormat("UCS: %s", iNewTitle);
+	}
+	else
+	{
+		title = "UCS";
+	}
+	SetConsoleTitle(title.c_str());
 #endif
 }

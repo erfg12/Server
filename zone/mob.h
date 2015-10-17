@@ -116,7 +116,13 @@ public:
 		int32		in_mana_regen,
 		uint8		in_qglobal,
 		uint8		in_maxlevel,
-		uint32		in_scalerate
+		uint32		in_scalerate,
+		uint8		in_armtexture,
+		uint8		in_bracertexture,
+		uint8		in_handtexture,
+		uint8		in_legtexture,
+		uint8		in_feettexture,
+		uint8		in_chesttexture
 	);
 	virtual ~Mob();
 
@@ -126,7 +132,7 @@ public:
 	//Somewhat sorted: needs documenting!
 
 	//Attack
-	virtual void RogueBackstab(Mob* other, bool min_damage = false, int ReuseTime = 10);
+	virtual void RogueBackstab(Mob* defender, bool doMinDmg = false, int ReuseTime = 10);
 	virtual void RogueAssassinate(Mob* other); // solar
 	float MobAngle(Mob *other = 0, float ourx = 0.0f, float oury = 0.0f) const;
 	// greater than 90 is behind
@@ -139,7 +145,6 @@ public:
 	float HeadingAngleToMob(Mob *other); // to keep consistent with client generated messages
 	virtual void RangedAttack(Mob* other) { }
 	virtual void ThrowingAttack(Mob* other) { }
-	uint16 GetThrownDamage(int16 wDmg, int32& TotalDmg, int& minDmg);
 	// 13 = Primary (default), 14 = secondary
 	virtual bool Attack(Mob* other, int Hand = MainPrimary, bool FromRiposte = false, bool IsStrikethrough = false,
 		bool IsFromSpell = false, ExtraAttackOptions *opts = nullptr) = 0;
@@ -148,17 +153,14 @@ public:
 	int MonkSpecialAttack(Mob* other, uint8 skill_used);
 	virtual void TryBackstab(Mob *other,int ReuseTime = 10);
 	void TriggerDefensiveProcs(const ItemInst* weapon, Mob *on, uint16 hand = MainPrimary, int damage = 0);
-	virtual bool AvoidDamage(Mob* attacker, int32 &damage, bool CanRiposte = true);
-	virtual bool CheckHitChance(Mob* attacker, SkillUseTypes skillinuse, int Hand, int16 chance_mod = 0);
+	virtual bool AvoidDamage(Mob* attacker, int32 &damage, bool noRiposte = false, bool isRangedAttack = false);
+	virtual bool AvoidanceCheck(Mob* attacker, SkillUseTypes skillinuse, int16 chance_mod = 0);
 	virtual void TryCriticalHit(Mob *defender, uint16 skill, int32 &damage, ExtraAttackOptions *opts = nullptr);
 	void TryPetCriticalHit(Mob *defender, uint16 skill, int32 &damage);
 	virtual bool TryFinishingBlow(Mob *defender, SkillUseTypes skillinuse);
-	uint32 TryHeadShot(Mob* defender, SkillUseTypes skillInUse);
 	uint32 TryAssassinate(Mob* defender, SkillUseTypes skillInUse, uint16 ReuseTime);
 	virtual void DoRiposte(Mob* defender);
-	void ApplyMeleeDamageBonus(uint16 skill, int32 &damage);
-	virtual void MeleeMitigation(Mob *attacker, int32 &damage, int32 minhit, ExtraAttackOptions *opts = nullptr);
-	virtual int32 GetMeleeMitDmg(Mob *attacker, int32 damage, int32 minhit, float mit_rating, float atk_rating);
+	static int8 RollD20(int32 offense, int32 mitigation);
 	bool CombatRange(Mob* other);
 	virtual inline bool IsBerserk() { return false; } // only clients
 	void RogueEvade(Mob *other);
@@ -250,26 +252,23 @@ public:
 	virtual void DoBuffTic(uint16 spell_id, int slot, uint32 ticsremaining, uint8 caster_level, Mob* caster = 0, int instrumentmod = 10);
 	void BuffFadeBySpellID(uint16 spell_id);
 	void BuffFadeByEffect(int effectid, int skipslot = -1);
-	void BuffFadeAll(bool death = false);
+	void BuffFadeAll(bool skiprez = false, bool message = false);
 	void BuffFadeNonPersistDeath();
 	void BuffFadeDetrimental();
-	void BuffFadeBySlot(int slot, bool iRecalcBonuses = true, bool death = false);
+	void BuffFadeBySlot(int slot, bool iRecalcBonuses = true, bool message = true);
 	void BuffFadeDetrimentalByCaster(Mob *caster);
 	void BuffFadeBySitModifier();
-	void BuffModifyDurationBySpellID(uint16 spell_id, int32 newDuration);
+	void BuffModifyDurationBySpellID(uint16 spell_id, int32 newDuration, bool update);
 	int AddBuff(Mob *caster, const uint16 spell_id, int duration = 0, int32 level_override = -1);
 	int CanBuffStack(uint16 spellid, uint8 caster_level, bool iFailIfOverwrite = false);
 	int CalcBuffDuration(Mob *caster, Mob *target, uint16 spell_id, int32 caster_level_override = -1);
 	virtual int GetCurrentBuffSlots() const { return 0; }
 	virtual int GetCurrentSongSlots() const { return 0; }
-	virtual int GetCurrentDiscSlots() const { return 0; }
 	virtual int GetMaxBuffSlots() const { return 0; }
 	virtual int GetMaxSongSlots() const { return 0; }
-	virtual int GetMaxDiscSlots() const { return 0; }
 	virtual int GetMaxTotalSlots() const { return 0; }
 	virtual void InitializeBuffSlots() { buffs = nullptr; current_buff_count = 0; }
 	virtual void UninitializeBuffSlots() { }
-	void SendBuffsToClient(Client *c);
 	inline Buffs_Struct* GetBuffs() { return buffs; }
 	void DoGravityEffect();
 	void DamageShield(Mob* other, bool spell_ds = false);
@@ -294,6 +293,10 @@ public:
 	inline virtual uint32 GetNimbusEffect3() const { return nimbus_effect3; }
 	inline bool HasEndurUpkeep() const { return endur_upkeep; }
 	inline void SetEndurUpkeep(bool val) { endur_upkeep = val; }
+	bool IsBuffed();
+	bool IsDebuffed();
+	bool IsPacified();
+	bool CanCastBindAffinity();
 
 	//Basic Stats/Inventory
 	virtual void SetLevel(uint8 in_level, bool command = false) { level = in_level; }
@@ -304,7 +307,6 @@ public:
 	virtual uint32 GetEquipment(uint8 material_slot) const { return(0); }
 	virtual int32 GetEquipmentMaterial(uint8 material_slot) const;
 	virtual uint32 GetEquipmentColor(uint8 material_slot) const;
-	virtual uint32 IsEliteMaterialItem(uint8 material_slot) const;
 	bool AffectedBySpellExcludingSlot(int slot, int effect);
 	virtual bool Death(Mob* killerMob, int32 damage, uint16 spell_id, SkillUseTypes attack_skill, uint8 killedby = 0) = 0;
 	virtual void Damage(Mob* from, int32 damage, uint16 spell_id, SkillUseTypes attack_skill,
@@ -324,6 +326,12 @@ public:
 	inline uint8 GetGender() const { return gender; }
 	inline uint8 GetTexture() const { return texture; }
 	inline uint8 GetHelmTexture() const { return helmtexture; }
+	inline uint8 GetChestTexture() const { return chesttexture; }
+	inline uint8 GetArmTexture() const { return armtexture; }
+	inline uint8 GetBracerTexture() const { return bracertexture; }
+	inline uint8 GetHandTexture() const { return handtexture; }
+	inline uint8 GetLegTexture() const { return legtexture; }
+	inline uint8 GetFeetTexture() const { return feettexture; }
 	inline uint8 GetHairColor() const { return haircolor; }
 	inline uint8 GetBeardColor() const { return beardcolor; }
 	inline uint8 GetEyeColor1() const { return eyecolor1; }
@@ -359,7 +367,6 @@ public:
 	inline virtual int32 GetDR() const { return DR + itembonuses.DR + spellbonuses.DR; }
 	inline virtual int32 GetPR() const { return PR + itembonuses.PR + spellbonuses.PR; }
 	inline virtual int32 GetCR() const { return CR + itembonuses.CR + spellbonuses.CR; }
-	inline virtual int32 GetCorrup() const { return Corrup + itembonuses.Corrup + spellbonuses.Corrup; }
 	inline virtual int32 GetPhR() const { return PhR; }
 	inline StatBonuses GetItemBonuses() const { return itembonuses; }
 	inline StatBonuses GetSpellBonuses() const { return spellbonuses; }
@@ -445,7 +452,7 @@ public:
 	void MakeSpawnUpdate(SpawnPositionUpdate_Struct* spu);
 	void SetSpawnUpdate(SpawnPositionUpdate_Struct* incoming, SpawnPositionUpdate_Struct* outgoing);
 	void SendPosition();
-	void SendPositionNearby(uint8 iSendToSelf = 0);
+	void SendRealPosition();
 	void SetFlyMode(uint8 flymode);
 	inline void Teleport(glm::vec3 NewPosition) { m_Position.x = NewPosition.x; m_Position.y = NewPosition.y;
 		m_Position.z = NewPosition.z; }
@@ -460,19 +467,25 @@ public:
 		bool bFrenzy = false, bool iBuffTic = false);
 	bool RemoveFromHateList(Mob* mob);
 	void SetHate(Mob* other, int32 hate = 0, int32 damage = 0) { hate_list.Set(other,hate,damage);}
+	void AddHate(Mob* other, int32 hate = 0, int32 damage = 0, bool bFrenzy = false, bool iAddIfNotExist = true) { hate_list.Add(other,hate,damage,bFrenzy,iAddIfNotExist);}
 	void HalveAggro(Mob *other) { uint32 in_hate = GetHateAmount(other); SetHate(other, (in_hate > 1 ? in_hate / 2 : 1)); }
 	void DoubleAggro(Mob *other) { uint32 in_hate = GetHateAmount(other); SetHate(other, (in_hate ? in_hate * 2 : 1)); }
-	uint32 GetHateAmount(Mob* tmob, bool is_dam = false) { return hate_list.GetEntHate(tmob,is_dam);}
+	uint32 GetHateAmount(Mob* tmob, bool is_dam = false, bool bonus = true) { return hate_list.GetEntHate(tmob,is_dam,bonus);}
 	uint32 GetDamageAmount(Mob* tmob) { return hate_list.GetEntHate(tmob, true);}
-	Mob* GetHateTop() { return hate_list.GetTop(this);}
+	Mob* GetHateTop() { return hate_list.GetTop();}
 	Mob* GetHateDamageTop(Mob* other) { return hate_list.GetDamageTop(other);}
 	Mob* GetHateRandom() { return hate_list.GetRandom();}
-	Mob* GetHateMost() { return hate_list.GetMostHate();}
+	Mob* GetHateMost(bool includeBonus = true) { return hate_list.GetMostHate(includeBonus);}
 	bool IsEngaged() { return(!hate_list.IsEmpty()); }
+	bool HasPrimaryAggro() { return PrimaryAggro; }
+	void SetPrimaryAggro(bool value) { PrimaryAggro = value; if(value) AssistAggro = false; }
+	void SetAssistAggro(bool value) { AssistAggro = value; if(PrimaryAggro) AssistAggro = false; }
+	bool HasAssistAggro() { return AssistAggro; }
 	bool HateSummon();
 	void FaceTarget(Mob* MobToFace = 0);
 	void SetHeading(float iHeading) { if(m_Position.w != iHeading) { SetChanged();
-		m_Position.w = iHeading; } }
+		m_Position.w = iHeading;} }
+	bool SetHeading2(float iHeading);
 	void WipeHateList();
 	void AddFeignMemory(Client* attacker);
 	void RemoveFromFeignMemory(Client* attacker);
@@ -515,6 +528,7 @@ public:
 	void ShowBuffList(Client* client);
 	bool PlotPositionAroundTarget(Mob* target, float &x_dest, float &y_dest, float &z_dest,
 		bool lookForAftArc = true);
+	int32  GetSkillStat(SkillUseTypes skillid);	
 
 	//Procs
 	bool AddRangedProc(uint16 spell_id, uint16 iChance = 3, uint16 base_spell_id = SPELL_UNKNOWN);
@@ -604,6 +618,10 @@ public:
 	void CastOnCure(uint32 spell_id);
 	void CastOnNumHitFade(uint32 spell_id);
 	void SlowMitigation(Mob* caster);
+	virtual int32 GetOffense(int hand = MainPrimary);
+	virtual int32 GetToHit(int hand = MainPrimary);
+	virtual int32 GetMitigation();
+	virtual int32 GetAvoidance();
 	int16 GetCritDmgMob(uint16 skill);
 	int16 GetMeleeDamageMod_SE(uint16 skill);
 	int16 GetMeleeMinDamageMod_SE(uint16 skill);
@@ -677,6 +695,7 @@ public:
 	bool IsFamiliar() const { return(typeofpet == petFamiliar); }
 	bool IsAnimation() const { return(typeofpet == petAnimation); }
 	bool IsCharmed() const { return(typeofpet == petCharmed); }
+	bool IsDireCharmed() { return dire_charmed; }
 	void SetOwnerID(uint16 NewOwnerID);
 	inline uint16 GetOwnerID() const { return ownerid; }
 	inline virtual bool HasOwner() { if(GetOwnerID()==0){return false;} return( entity_list.GetMob(GetOwnerID()) != 0); }
@@ -706,7 +725,7 @@ public:
 	virtual int GetHaste();
 
 	uint8 GetWeaponDamageBonus(const Item_Struct* Weapon);
-	uint16 GetDamageTable(SkillUseTypes skillinuse);
+	uint16 GetDamageTable();
 	virtual int GetMonkHandToHandDamage(void);
 
 	bool CanThisClassDoubleAttack(void) const;
@@ -730,7 +749,6 @@ public:
 
 	virtual void DoSpecialAttackDamage(Mob *who, SkillUseTypes skill, int32 max_damage, int32 min_damage = 1, int32 hate_override = -1, int ReuseTime = 10, bool HitChance=false, bool CanAvoid=true);
 	virtual void DoThrowingAttackDmg(Mob* other, const ItemInst* RangeWeapon=nullptr, const Item_Struct* item=nullptr, uint16 weapon_damage=0, int16 chance_mod=0,int16 focus=0, int ReuseTime=0);
-	virtual void DoMeleeSkillAttackDmg(Mob* other, uint16 weapon_damage, SkillUseTypes skillinuse, int16 chance_mod=0, int16 focus=0, bool CanRiposte=false, int ReuseTime=0);
 	virtual void DoArcheryAttackDmg(Mob* other, const ItemInst* RangeWeapon=nullptr, const ItemInst* Ammo=nullptr, uint16 weapon_damage=0, int16 chance_mod=0, int16 focus=0, int ReuseTime=0);
 	bool CanDoSpecialAttack(Mob *other);
 	bool Flurry(ExtraAttackOptions *opts);
@@ -788,6 +806,7 @@ public:
 	inline bool IsFleeing() { return flee_mode; }
 	void ProcessFlee();
 	void CheckFlee();
+	int GetFleeRatio();
 	inline bool IsBlind() { return spellbonuses.IsBlind; }
 
 	inline bool			CheckAggro(Mob* other) {return hate_list.IsOnHateList(other);}
@@ -834,8 +853,8 @@ public:
 	bool Charmed() const { return charmed; }
 	static uint32 GetLevelHP(uint8 tlevel);
 	uint32 GetZoneID() const; //for perl
-	virtual int32 CheckAggroAmount(uint16 spell_id, bool isproc = false);
-	virtual int32 CheckHealAggroAmount(uint16 spell_id, uint32 heal_possible = 0);
+	virtual int32 CheckAggroAmount(uint16 spell_id, Mob* target, int32 &jolthate, bool isproc = false);
+	virtual int32 CheckHealAggroAmount(uint16 spell_id, Mob* target, uint32 heal_possible = 0);
 	virtual uint32 GetAA(uint32 aa_id) const { return(0); }
 
 	uint32 GetInstrumentMod(uint16 spell_id) const;
@@ -882,10 +901,12 @@ public:
 	inline bool IsFindable() { return findable; }
 	inline uint8 GetManaPercent() { return (uint8)((float)cur_mana / (float)max_mana * 100.0f); }
 	virtual uint8 GetEndurancePercent() { return 0; }
+	inline void SpawnPacketSent(bool val) { spawnpacket_sent = val; };
 
 	inline virtual bool IsBlockedBuff(int16 SpellID) { return false; }
 	inline virtual bool IsBlockedPetBuff(int16 SpellID) { return false; }
 
+	std::string GetGlobal(const char *varname);
 	void SetGlobal(const char *varname, const char *newvalue, int options, const char *duration, Mob *other = nullptr);
 	void TarGlobal(const char *varname, const char *value, const char *duration, int npcid, int charid, int zoneid);
 	void DelGlobal(const char *varname);
@@ -928,18 +949,23 @@ public:
 	void	SetCanDualWield(bool value) { can_dual_wield = value; }
 	uint8	DoubleAttackChance();
 	uint8	DualWieldChance();
-	bool	Disarm();
+	uint8	Disarm(float chance);
 
-	//Command #Tune functions
-	int32 Tune_MeleeMitigation(Mob* GM, Mob *attacker, int32 damage, int32 minhit, ExtraAttackOptions *opts = nullptr, int Msg =0,	int ac_override=0, int atk_override=0, int add_ac=0, int add_atk = 0);
-	virtual int32 Tune_GetMeleeMitDmg(Mob* GM, Mob *attacker, int32 damage, int32 minhit, float mit_rating, float atk_rating);
-	uint32 Tune_GetMeanDamage(Mob* GM, Mob *attacker, int32 damage, int32 minhit, ExtraAttackOptions *opts = nullptr, int Msg = 0,int ac_override=0, int atk_override=0, int add_ac=0, int add_atk = 0);
-	void Tune_FindATKByPctMitigation(Mob* defender, Mob *attacker, float pct_mitigation,  int interval = 50, int max_loop = 100, int ac_override=0,int Msg =0);
-	void Tune_FindACByPctMitigation(Mob* defender, Mob *attacker, float pct_mitigation,  int interval = 50, int max_loop = 100, int atk_override=0,int Msg =0);
-	float Tune_CheckHitChance(Mob* defender, Mob* attacker, SkillUseTypes skillinuse, int Hand, int16 chance_mod, int Msg = 1,int acc_override=0, int avoid_override=0, int add_acc=0, int add_avoid = 0);
-	void Tune_FindAccuaryByHitChance(Mob* defender, Mob *attacker, float hit_chance, int interval, int max_loop, int avoid_override, int Msg = 0);
-	void Tune_FindAvoidanceByHitChance(Mob* defender, Mob *attacker, float hit_chance, int interval, int max_loop, int acc_override, int Msg = 0);
 	float CalcZOffset();
+	uint8 NPCAssistCap() { return npc_assist_cap; }
+	void AddAssistCap() { ++npc_assist_cap; }
+	void DelAssistCap() { --npc_assist_cap; }
+	void ResetAssistCap() { npc_assist_cap = 0; }
+
+	bool IsZomm() { return iszomm; }
+	void SetMerchantSession(uint16 value) { MerchantSession = value; }
+	uint16 GetMerchantSession() { return MerchantSession; }
+	uint32 player_damage;
+	uint32 dire_pet_damage;
+	uint32 total_damage;
+	float  GetBaseEXP();
+	static bool IsPlayableRace(uint16 race);
+	float GetPlayerHeight(uint16 race);
 
 protected:
 	void CommonDamage(Mob* other, int32 &damage, const uint16 spell_id, const SkillUseTypes attack_skill, bool &avoidable, const int8 buffslot, const bool iBuffTic);
@@ -973,7 +999,14 @@ protected:
 	bool pendinggroup;
 	uint16 entity_id_being_looted; //the id of the entity being looted, 0 if not looting.
 	uint8 texture;
+	uint8 chesttexture;
 	uint8 helmtexture;
+	uint8 armtexture;
+	uint8 bracertexture;
+	uint8 handtexture;
+	uint8 legtexture;
+	uint8 feettexture;
+	bool multitexture;
 
 	int AC;
 	int32 ATK;
@@ -1016,6 +1049,7 @@ protected:
 	int16 petpower;
 	uint32 follow;
 	uint32 follow_dist;
+	bool dire_charmed;
 	bool no_target_hotkey;
 	bool can_equip_secondary;
 	bool can_dual_wield;
@@ -1044,6 +1078,7 @@ protected:
 	bool held;
 	bool nocast;
 	bool focused;
+	bool spawnpacket_sent;
 	void CalcSpellBonuses(StatBonuses* newbon);
 	virtual void CalcBonuses();
 	void TrySkillProc(Mob *on, uint16 skill, uint16 ReuseTime, bool Success = false, uint16 hand = 0, bool IsDefensive = false); // hand = MainCursor?
@@ -1187,6 +1222,7 @@ protected:
 	std::unique_ptr<Timer> AIscanarea_timer;
 	std::unique_ptr<Timer> AIwalking_timer;
 	std::unique_ptr<Timer> AIfeignremember_timer;
+	std::unique_ptr<Timer> AIhail_timer;
 	uint32 pLastFightingDelayMoving;
 	HateList hate_list;
 	std::set<uint32> feign_memory_list;
@@ -1222,12 +1258,15 @@ protected:
 	glm::vec3 m_FearWalkTarget;
 	bool curfp;
 
+	Timer	assist_cap_timer; //clear assist cap so more nearby mobs can be called for help
+
 	// Pathing
 	//
 	glm::vec3 PathingDestination;
 	glm::vec3 PathingLastPosition;
 	int PathingLoopCount;
 	int PathingLastNodeVisited;
+	int PathingLastNodeSearched;
 	std::deque<int> Route;
 	LOSType PathingLOSState;
 	Timer *PathingLOSCheckTimer;
@@ -1272,6 +1311,10 @@ protected:
 	SpecialAbility SpecialAbilities[MAX_SPECIAL_ATTACK];
 	bool bEnraged;
 	bool iszomm;
+	bool PrimaryAggro;
+	bool AssistAggro;
+	uint8 npc_assist_cap;
+	uint16 MerchantSession;
 
 private:
 	void _StopSong(); //this is not what you think it is

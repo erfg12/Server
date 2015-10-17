@@ -25,6 +25,7 @@
 #include "../common/servertalk.h"
 #include "../common/platform.h"
 #include "../common/crash.h"
+#include "../common/string_util.h"
 #include "database.h"
 #include "queryservconfig.h"
 #include "worldserver.h"
@@ -115,15 +116,18 @@ int main() {
 	Log.CloseFileLogs();
 }
 
-void UpdateWindowTitle(char* iNewTitle) {
+void UpdateWindowTitle(char* iNewTitle)
+{
 #ifdef _WINDOWS
-	char tmp[500];
-	if (iNewTitle) {
-		snprintf(tmp, sizeof(tmp), "QueryServ: %s", iNewTitle);
+	std::string title;
+	if (iNewTitle)
+	{
+		title = StringFormat("QueryServ: %s", iNewTitle);
 	}
-	else {
-		snprintf(tmp, sizeof(tmp), "QueryServ");
+	else
+	{
+		title = "QueryServ";
 	}
-	SetConsoleTitle(tmp);
+	SetConsoleTitle(title.c_str());
 #endif
 }

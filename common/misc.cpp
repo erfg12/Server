@@ -22,6 +22,8 @@
 #define ENC(c) (((c) & 0x3f) + ' ')
 #define DEC(c)	(((c) - ' ') & 0x3f)
 
+#pragma warning( disable : 4244 4267 )
+
 std::map<int,std::string> DBFieldNames;
 
 #ifndef WIN32
@@ -85,6 +87,25 @@ static char *buffer=nullptr;
 static int buffsize=0;
 static char *temp=nullptr;
 	if (!buffsize || buffsize<(length+1)) {
+		/*
+		C6308	Realloc leak	'realloc' might return null pointer:
+		assigning null pointer to 'char * `bool __cdecl
+		ItemParse(char const *,int,class std::map<int,class std::map<int,
+		class std::basic_string<char,struct std::char_traits<char>,
+		class std::allocator<char> >,struct std::less<int>,
+		class std::allocator<struct std::pair<int const ,
+		class std::basic_string<char,struct std::char_traits<char>,
+		class std::allocator<char> > > > >,struct std::less<int>,
+		class std::allocator<struct std::pair<int const ,
+		class std::map<int,class std::basic_string<char,struct std::char_traits<char>,
+		class std::allocator<char> >,struct std::less<int>,
+		class std::allocator<struct std::pair<int const ,
+		class std::basic_string<char,struct std::char_traits<char>,
+		class std::allocator<char> > > > > > > > &,int,int,int,int)'::`2'::buffer', 
+		which is passed as an argument to 'realloc', will cause the original memory block to be leaked.	
+		common	misc.cpp	90
+		similar message for 91
+		*/
 		buffer=(char *)realloc(buffer,length+1);
 		temp=(char *)realloc(temp,length+1);
 		buffsize=length+1;
@@ -288,49 +309,27 @@ void LoadItemDBFieldNames() {
 	DBFieldNames[68]="unknown069";
 	DBFieldNames[69]="unknown070";		// ?
 	DBFieldNames[70]="focusid";		// Focus Effect Spell Id
-	DBFieldNames[71]="combateffects";	// CombatEffects
-	DBFieldNames[72]="shielding";		// Shielding
-	DBFieldNames[73]="stunresist";		// StunResist
-	DBFieldNames[74]="strikethrough";	// StrikeThrough
-	DBFieldNames[75]="unknown076";
-	DBFieldNames[76]="unknown077";		// ?
-	DBFieldNames[77]="spellshield";		// Spell Shield
-	DBFieldNames[78]="avoidance";		// Avoidance
-	DBFieldNames[79]="accuracy";		// Accuracy
-	DBFieldNames[80]="factionmod1";		// Faction Mod Index 1
-	DBFieldNames[81]="factionmod2";		// Faction Mod Index 2
-	DBFieldNames[82]="factionmod3";		// Faction Mod Index 3
-	DBFieldNames[83]="factionmod4";		// Faction Mod Index 4
-	DBFieldNames[84]="factionamt1";		// Faction Mod Value 1
-	DBFieldNames[85]="factionamt2";		// Faction Mod Value 2
-	DBFieldNames[86]="factionamt3";		// Faction Mod Value 3
-	DBFieldNames[87]="factionamt4";		// Faction Mod Value 4
-	DBFieldNames[88]="unknown089";
-	DBFieldNames[89]="charmfile";		// ** Charm File
-	DBFieldNames[90]="unknown091";
-	DBFieldNames[91]="augslot1type";	// Slot1Type
-	DBFieldNames[92]="augslot2type";	// Slot2Type
-	DBFieldNames[93]="augslot3type";	// Slot3Type
-	DBFieldNames[94]="augslot4type";	// Slot4Type
-	DBFieldNames[95]="augslot5type";	// Slot5Type
-	DBFieldNames[96]="ldonpointtheme";
-	DBFieldNames[97]="ldonpointcost";		// ?
-	DBFieldNames[98]="unknown099";
-	DBFieldNames[99]="bagtype";		// bag type
-	DBFieldNames[100]="bagslots";		// bag slots
-	DBFieldNames[101]="bagsize";		// bag size capacity
-	DBFieldNames[102]="bagwr";		// bag weight reduction
-	DBFieldNames[103]="booktype";		// "book type (0=rolled up note, 1=book)"
-	DBFieldNames[104]="unknown105";
-	DBFieldNames[105]="filename";		// Book Filename
-	DBFieldNames[106]="unknown107";
-	DBFieldNames[107]="unknown108";
-	DBFieldNames[108]="loreflag";
-	DBFieldNames[109]="unknown111";
-	DBFieldNames[110]="unknown112";
-	DBFieldNames[111]="unknown113";
-	DBFieldNames[112]="unknown114";
-	DBFieldNames[113]="unknown115";		// ? (end quote)
+	DBFieldNames[71]="unknown076";
+	DBFieldNames[72]="unknown077";		// ?
+	DBFieldNames[73]="factionmod1";		// Faction Mod Index 1
+	DBFieldNames[74]="factionmod2";		// Faction Mod Index 2
+	DBFieldNames[75]="factionmod3";		// Faction Mod Index 3
+	DBFieldNames[76]="factionmod4";		// Faction Mod Index 4
+	DBFieldNames[77]="factionamt1";		// Faction Mod Value 1
+	DBFieldNames[78]="factionamt2";		// Faction Mod Value 2
+	DBFieldNames[79]="factionamt3";		// Faction Mod Value 3
+	DBFieldNames[80]="factionamt4";		// Faction Mod Value 4
+	DBFieldNames[81]="unknown089";
+	DBFieldNames[82]="charmfile";		// ** Charm File
+	DBFieldNames[83]="unknown091";
+	DBFieldNames[84]="bagtype";		// bag type
+	DBFieldNames[85]="bagslots";		// bag slots
+	DBFieldNames[86]="bagsize";		// bag size capacity
+	DBFieldNames[87]="bagwr";		// bag weight reduction
+	DBFieldNames[88]="booktype";		// "book type (0=rolled up note, 1=book)"
+	DBFieldNames[89]="unknown105";
+	DBFieldNames[90]="filename";		// Book Filename
+	DBFieldNames[91]="unknown107";  // ? (end quote)
 }
 
 void encode_length(unsigned long length, char *out)

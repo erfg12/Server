@@ -115,9 +115,6 @@ namespace Convert {
 		/*016*/	uint32	player_id;	//'global' ID of the caster, for wearoff messages
 		/*020*/
 	};
-	struct Disciplines_Struct {
-		uint32 values[MAX_PP_DISCIPLINES];
-	};
 
 	struct SuspendedMinion_Struct
 	{
@@ -149,7 +146,6 @@ namespace Convert {
 		/*0242*/	uint8							anon;				// 2=roleplay, 1=anon, 0=not anon
 		/*0243*/	uint8							gm;
 		/*0244*/	uint8							guildrank;
-		/*0245*/	uint8							guildbanker;
 		/*0252*/	uint32							intoxication;
 		/*0256*/	uint32							spellSlotRefresh[MAX_PP_REF_MEMSPELL];	//in ms
 		/*0292*/	uint32							abilitySlotRefresh;
@@ -159,10 +155,6 @@ namespace Convert {
 		/*0299*/	uint8							eyecolor2;			// Player right eye color
 		/*0300*/	uint8							hairstyle;			// Player hair style
 		/*0301*/	uint8							beard;				// Beard type
-		/*0302*/	uint8							ability_time_seconds;	//The following four spots are unknown right now.....
-		/*0303*/	uint8							ability_number;		//ability used
-		/*0304*/	uint8							ability_time_minutes;
-		/*0305*/	uint8							ability_time_hours;	//place holder
 		/*0312*/	uint32							item_material[_MaterialCount];	// Item texture/material of worn/held items
 		/*0392*/	Convert::Color_Struct			item_tint[_MaterialCount];
 		/*0428*/	Convert::AA_Array				aa_array[MAX_PP_AA_ARRAY];
@@ -202,24 +194,19 @@ namespace Convert {
 		/*4756*/	int32							gold_cursor;		// Gold on cursor
 		/*4760*/	int32							silver_cursor;		// Silver on cursor
 		/*4764*/	int32							copper_cursor;		// Copper on cursor
-		/*4768*/	int32							platinum_shared;	// Platinum shared between characters	
 		/*4796*/	uint32							skills[MAX_PP_SKILL];	// [400] List of skills	// 100 dword buffer
-		/*5396*/	uint32							ability_down;		// Guessing
 		/*5408*/	uint32							autosplit;			//not used right now
-		/*5418*/	uint16							boatid;				// We use this ID internally for boats.
+		/*5418*/	uint32							boatid;				// We use this ID internally for boats.
 		/*5420*/	uint32							zone_change_count;	// Number of times user has zoned in their career (guessing)
 		/*5452*/	uint32							expansions;			// expansion setting, bit field of expansions avaliable
-		/*5456*/	int32							toxicity;			//from drinking potions, seems to increase by 3 each time you drink
 		/*5476*/	int32							hunger_level;
 		/*5480*/	int32							thirst_level;
-		/*5484*/	uint32							ability_up;
 		/*5504*/	uint16							zone_id;			// Current zone of the player
 		/*5506*/	uint16							zoneInstance;		// Instance ID
 		/*5508*/	Convert::SpellBuff_Struct		buffs[BUFF_COUNT];	// Buffs currently on the player
 		/*6008*/	char							groupMembers[6][64];//
-					char							boat[20];			// The client uses this string for boats.
+					char							boat[32];			// The client uses this string for boats.
 		/*7048*/	uint32							entityid;
-		/*7264*/	Convert::Disciplines_Struct		disciplines;
 		/*7664*/	uint32							recastTimers[MAX_RECAST_TYPES];	// Timers (GMT of last use)
 		/*7904*/	uint32							endurance;
 		/*8184*/	uint32							air_remaining;
@@ -228,6 +215,7 @@ namespace Convert {
 		/*12804*/	uint32							aapoints;			//avaliable, unspent
 		/*18630*/	Convert::SuspendedMinion_Struct	SuspendedMinion; // No longer in use
 		/*19240*/	uint32							timeentitledonaccount;
+					uint8							fatigue;
 		/*19568*/
 	};
 	
@@ -336,6 +324,9 @@ public:
 	bool	CreateCharacter(uint32 account_id, char* name, uint16 gender, uint16 race, uint16 class_, uint8 str, uint8 sta, uint8 cha, uint8 dex, uint8 int_, uint8 agi, uint8 wis, uint8 face);
 	bool	StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inventory* inv);
 	bool	DeleteCharacter(char* name);
+	bool	MarkCharacterDeleted(char* name);
+	bool	UnDeleteCharacter(const char* name);
+	void	DeleteCharacterCorpses(uint32 charid);
 
 	/* General Information Queries */
 
@@ -354,10 +345,10 @@ public:
 	bool	CheckGMIPs(const char* loginIP, uint32 account_id);
 	bool	AddGMIP(char* ip_address, char* name);
 	void	LoginIP(uint32 AccountID, const char* LoginIP);
-	bool	CheckAccountActive(uint32 AccountID);
 	void	ClearAllActive();
 	void	ClearAccountActive(uint32 AccountID);
 	void	SetAccountActive(uint32 AccountID);
+	uint32	GetLevelByChar(const char* charname);
 
 	/*
 	* Instancing Stuff
@@ -395,6 +386,7 @@ public:
 	void	GetAccountFromID(uint32 id, char* oAccountName, int16* oStatus);
 	uint32	CheckLogin(const char* name, const char* password, int16* oStatus = 0);
 	int16	CheckStatus(uint32 account_id);
+	int16	CheckExemption(uint32 account_id);
 	uint32	CreateAccount(const char* name, const char* password, int16 status, uint32 lsaccount_id = 0);
 	bool	DeleteAccount(const char* name);
 	bool	SetAccountStatus(const char* name, int16 status);
@@ -405,6 +397,8 @@ public:
 	uint8	GetAgreementFlag(uint32 acctid);
 	void	SetAgreementFlag(uint32 acctid);
 	uint16	GetExpansion(uint32 acctid);
+	void	ClearAllConsented();
+	void	ClearAllExpiredConsented(LinkedList<ConsentDenied_Struct*>* purged);
 
 	/*
 	* Groups
@@ -434,13 +428,14 @@ public:
 	bool DBSetup_webdata_character();
 	bool DBSetup_webdata_servers();
 	bool DBSetup_feedback();
-	bool DBSetup_account_active();
+	bool DBSetup_player_updates();
 	bool DBSetup_PlayerCorpseBackup();
 	bool DBSetup_CharacterSoulMarks();
 	bool DBSetup_MessageBoards();
 	bool DBSetup_Rules();
 	bool DBSetup_Logs();
 	bool GITInfo();
+	bool DBSetup_IP_Multiplier();
 
 	/*
 	* Database Variables
@@ -462,7 +457,7 @@ public:
 	uint8	GetPEQZone(uint32 zoneID, uint32 version);
 	const char*	GetZoneName(uint32 zoneID, bool ErrorUnknown = false);
 	uint8	GetServerType();
-	bool	GetSafePoints(const char* short_name, uint32 version, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, int16* minstatus = 0, uint8* minlevel = 0, char *flag_needed = nullptr);
+	bool	GetSafePoints(const char* short_name, uint32 version, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, int16* minstatus = 0, uint8* minlevel = 0, char *flag_needed = nullptr, uint8* expansion = 0);
 	bool	GetSafePoints(uint32 zoneID, uint32 version, float* safe_x = 0, float* safe_y = 0, float* safe_z = 0, int16* minstatus = 0, uint8* minlevel = 0, char *flag_needed = nullptr) { return GetSafePoints(GetZoneName(zoneID), version, safe_x, safe_y, safe_z, minstatus, minlevel, flag_needed); }
 	uint8	GetSkillCap(uint8 skillid, uint8 in_race, uint8 in_class, uint16 in_level);
 	uint8	GetRaceSkill(uint8 skillid, uint8 in_race);

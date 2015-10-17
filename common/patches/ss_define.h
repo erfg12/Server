@@ -145,6 +145,9 @@
 		Log.Out(Logs::Detail, Logs::Netcode, "Wrong size on incoming %s (" #struct_ "): Got %d, expected %d", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(struct_)); \
 		return; \
 	}
+
+#pragma warning( disable : 4005 )
+
 #define DECODE_LENGTH_ATLEAST(struct_) \
 	if(__packet->size < sizeof(struct_)) { \
 		__packet->SetOpcode(OP_Unknown); /* invalidate the packet */ \

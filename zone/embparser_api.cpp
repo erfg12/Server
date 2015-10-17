@@ -669,37 +669,6 @@ XS(XS__level)
 	XSRETURN_EMPTY;
 }
 
-XS(XS__traindisc);
-XS(XS__traindisc)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: traindisc(discipline_tome_item_id)");
-
-	int	discipline_tome_item_id = (int)SvIV(ST(0));
-
-	quest_manager.traindisc(discipline_tome_item_id);
-
-	XSRETURN_EMPTY;
-}
-
-XS(XS__isdisctome);
-XS(XS__isdisctome)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: isdisctome(item_id)");
-
-	bool RETVAL;
-	int	item_id = (int)SvIV(ST(0));
-
-	RETVAL = quest_manager.isdisctome(item_id);
-
-	ST(0) = boolSV(RETVAL);
-	sv_2mortal(ST(0));
-	XSRETURN(1);
-}
-
 XS(XS__safemove);
 XS(XS__safemove)
 {
@@ -819,28 +788,6 @@ XS(XS__scribespells)
 	XSRETURN(1);
 }
 
-XS(XS__traindiscs);
-XS(XS__traindiscs)
-{
-	dXSARGS;
-	if (items < 1)
-		Perl_croak(aTHX_ "Usage: traindiscs(max_level, min_level = 1)");
-
-	uint16	RETVAL;
-	dXSTARG;
-
-	uint8 max_level = (uint8)SvIV(ST(0));
-	uint8 min_level = (uint8)SvIV(ST(1));
-
-	if (min_level)
-		RETVAL = quest_manager.traindiscs(max_level, min_level);
-	else
-		RETVAL = quest_manager.traindiscs(max_level);
-
-	XSprePUSH; PUSHu((IV)RETVAL);
-	XSRETURN(1);
-}
-
 XS(XS__unscribespells);
 XS(XS__unscribespells)
 {
@@ -850,19 +797,6 @@ XS(XS__unscribespells)
 
 
 	quest_manager.unscribespells();
-
-	XSRETURN_EMPTY;
-}
-
-XS(XS__untraindiscs);
-XS(XS__untraindiscs)
-{
-	dXSARGS;
-	if (items != 0)
-		Perl_croak(aTHX_ "Usage: untraindiscs()");
-
-
-	quest_manager.untraindiscs();
 
 	XSRETURN_EMPTY;
 }
@@ -2907,8 +2841,6 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "changedeity"), XS__changedeity, file);
 		newXS(strcpy(buf, "exp"), XS__exp, file);
 		newXS(strcpy(buf, "level"), XS__level, file);
-		newXS(strcpy(buf, "traindisc"), XS__traindisc, file);
-		newXS(strcpy(buf, "isdisctome"), XS__isdisctome, file);
 		newXS(strcpy(buf, "safemove"), XS__safemove, file);
 		newXS(strcpy(buf, "rain"), XS__rain, file);
 		newXS(strcpy(buf, "snow"), XS__snow, file);
@@ -2917,9 +2849,7 @@ EXTERN_C XS(boot_quest)
 		newXS(strcpy(buf, "permarace"), XS__permarace, file);
 		newXS(strcpy(buf, "permagender"), XS__permagender, file);
 		newXS(strcpy(buf, "scribespells"), XS__scribespells, file);
-		newXS(strcpy(buf, "traindiscs"), XS__traindiscs, file);
 		newXS(strcpy(buf, "unscribespells"), XS__unscribespells, file);
-		newXS(strcpy(buf, "untraindiscs"), XS__untraindiscs, file);
 		newXS(strcpy(buf, "givecash"), XS__givecash, file);
 		newXS(strcpy(buf, "pvp"), XS__pvp, file);
 		newXS(strcpy(buf, "movepc"), XS__movepc, file);

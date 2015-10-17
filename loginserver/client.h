@@ -23,6 +23,8 @@
 #include "../common/eq_stream_type.h"
 #include "../common/eq_stream_factory.h"
 #include "../common/random.h"
+#include "salt.h"
+
 #include <string>
 
 using namespace std;
@@ -82,15 +84,10 @@ public:
 	*/
 	void Handle_SessionReady(const char* data, unsigned int size);
 
-		/**
-	* Verifies login and send a reply for Mac clients.
-	*/
-	void Handle_OSXLogin(const char* data, unsigned int size);
-
 	/**
-	* Verifies login and sends a reply for older client cryptos.
+	* Verifies login and send a reply for all clients.
 	*/
-	void Handle_PCLogin(const char* data, unsigned int size);
+	void Handle_Login(const char* data, unsigned int size, string client);
 
 	/**
 	* Not sure what this is, old clients need it to continue.
@@ -115,7 +112,7 @@ public:
 	/**
 	* sends a banner packet to the client
 	*/
-	void Handle_Banner(const char* data, unsigned int size);
+	void Handle_Banner(unsigned int size);
 
 	/**
 	* Sends the input packet to the client and clears our play response states.
@@ -173,6 +170,7 @@ public:
 	unsigned int GetMacClientVersion() const { return macversion; }
 
 	EQEmu::Random random;
+	Saltme mysalt;
 private:
 	EQStreamInterface *connection;
 	ClientVersion version;

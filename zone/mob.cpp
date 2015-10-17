@@ -68,7 +68,6 @@ Mob::Mob(const char* in_name,
 		uint8		in_luclinface,
 		uint8		in_beard,
 		uint32		in_armor_tint[_MaterialCount],
-
 		uint8		in_aa_title,
 		uint8		in_see_invis, // see through invis/ivu
 		uint8		in_see_invis_undead,
@@ -78,7 +77,13 @@ Mob::Mob(const char* in_name,
 		int32		in_mana_regen,
 		uint8		in_qglobal,
 		uint8		in_maxlevel,
-		uint32		in_scalerate
+		uint32		in_scalerate,
+		uint8		in_armtexture,
+		uint8		in_bracertexture,
+		uint8		in_handtexture,
+		uint8		in_legtexture,
+		uint8		in_feettexture,
+		uint8		in_chesttexture
 		) :
 		attack_timer(2000),
 		attack_dw_timer(2000),
@@ -183,7 +188,15 @@ Mob::Mob(const char* in_name,
 	m_Light.Level.Active = m_Light.Level.Innate;
 	
 	texture		= in_texture;
+	chesttexture = in_chesttexture;
 	helmtexture	= in_helmtexture;
+	armtexture = in_armtexture;
+	bracertexture = in_bracertexture;
+	handtexture = in_handtexture;
+	legtexture = in_legtexture;
+	feettexture = in_feettexture;
+	multitexture = (chesttexture || armtexture || bracertexture || handtexture || legtexture || feettexture);
+
 	haircolor	= in_haircolor;
 	beardcolor	= in_beardcolor;
 	eyecolor1	= in_eyecolor1;
@@ -237,6 +250,7 @@ Mob::Mob(const char* in_name,
 	invulnerable = false;
 	IsFullHP	= (cur_hp == max_hp);
 	qglobal=0;
+	spawnpacket_sent = false;
 
 	InitializeBuffSlots();
 
@@ -367,8 +381,8 @@ Mob::Mob(const char* in_name,
 	hasTempPet = false;
 	count_TempPet = 0;
 
-	//Boats always "run"
-	if(race == SHIP && RuleB(NPC, BoatsRunByDefault))
+	//Boats always "run." Ignore launches and player controlled ships.
+	if(GetBaseRace() == SHIP && RuleB(NPC, BoatsRunByDefault))
 	{
 		m_is_running = true;
 	}
@@ -387,6 +401,7 @@ Mob::Mob(const char* in_name,
 	PathingLOSState = UnknownLOS;
 	PathingLoopCount = 0;
 	PathingLastNodeVisited = -1;
+	PathingLastNodeSearched = -1;
 	PathingLOSCheckTimer = new Timer(RuleI(Pathing, LOSCheckFrequency));
 	PathingRouteUpdateTimerShort = new Timer(RuleI(Pathing, RouteUpdateFrequencyShort));
 	PathingRouteUpdateTimerLong = new Timer(RuleI(Pathing, RouteUpdateFrequencyLong));
@@ -405,6 +420,13 @@ Mob::Mob(const char* in_name,
 	combat_mana_regen = 0;
 	iszomm = false;
 	adjustedz = 0;
+	PrimaryAggro = false;
+	AssistAggro = false;
+	MerchantSession = 0;
+	dire_charmed = false;
+	player_damage = 0;
+	dire_pet_damage = 0;
+	total_damage = 0;
 }
 
 Mob::~Mob()
@@ -599,6 +621,8 @@ int Mob::_GetWalkSpeed() const {
 		}
 	}
 	speed_mod = (speed_mod >> 2) << 2;
+	if (speed_mod < 4)
+		return 0;
 	return speed_mod;
 }
 
@@ -691,6 +715,8 @@ int Mob::_GetRunSpeed() const {
 		}
 	}
 	speed_mod = (speed_mod >> 2) << 2;
+	if (speed_mod < 4)
+		return 0;
 	return (speed_mod);
 }
 
@@ -727,6 +753,8 @@ int Mob::_GetFearSpeed() const {
 			return int_walkspeed;
 		speed_mod += (base_run * movemod / 100);
 		speed_mod = (speed_mod >> 2) << 2;
+		if (speed_mod < 4)
+			return 0;
 		return (speed_mod);
 	} else {
 		float hp_ratio = GetHPRatio();
@@ -757,6 +785,8 @@ int Mob::_GetFearSpeed() const {
 			if (movemod > 40)
 				speed_mod += 3;
 			speed_mod = (speed_mod >> 2) << 2;
+			if (speed_mod < 4)
+				return 0;
 			return speed_mod;
 		}
 		else if (movemod < 0) {
@@ -768,6 +798,8 @@ int Mob::_GetFearSpeed() const {
 	if (speed_mod < 12)
 		return (8); // 0.2f is slow walking - this should be the slowest walker for fleeing, if not snared enough to stop
 	speed_mod = (speed_mod >> 2) << 2;
+	if (speed_mod < 4)
+		return 0;
 	return speed_mod;
 }
 
@@ -1141,9 +1173,7 @@ void Mob::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho)
 	ns->spawn.face = luclinface;
 	ns->spawn.beard = beard;
 	ns->spawn.StandState = GetAppearanceValue(_appearance);
-	ns->spawn.equip_chest2 = texture;
-
-//	ns->spawn.invis2 = 0xff;//this used to be labeled beard.. if its not FF it will turn mob invis
+	ns->spawn.bodytexture = texture;
 
 	if(helmtexture && helmtexture != 0xFF)
 	{
@@ -1306,55 +1336,20 @@ void Mob::SendPosition()
 	MakeSpawnUpdateNoDelta(&spu->spawn_update);
 	move_tic_count = 0;
 	tar_ndx = 20;
-	entity_list.QueueClients(this, app, true, false);
+	entity_list.QueueCloseClientsPrecalc(this, app, true, nullptr, false);
+	//entity_list.QueueCloseClients(this, app, true, 1000, nullptr, false);
 	safe_delete(app);
 }
 
-// this one is for mobs on the move, and clients.
-void Mob::SendPositionNearby(uint8 iSendToSelf) 
+// this one just warps the mob to the current location
+void Mob::SendRealPosition()
 {
 	EQApplicationPacket* app = new EQApplicationPacket(OP_MobUpdate, sizeof(SpawnPositionUpdates_Struct));
 	SpawnPositionUpdates_Struct* spu = (SpawnPositionUpdates_Struct*)app->pBuffer;
 	spu->num_updates = 1; // hack - only one spawn position per update
-	MakeSpawnUpdate(&spu->spawn_update);
-
-	if (iSendToSelf == 2) {
-		if (this->IsClient()) {
-			this->CastToClient()->FastQueuePacket(&app,false);
-			return;
-		}
-	}
-	else
-	{
-		if(IsClient())
-		{
-			entity_list.QueueCloseClients(this,app,(iSendToSelf==0),300,nullptr,false);
-		}
-		else
-		{
-			uint32 position_update = RuleI(Zone, NPCPositonUpdateTicCount);
-			if(move_tic_count == position_update)
-			{
-				EQApplicationPacket* app2 = new EQApplicationPacket(OP_MobUpdate, sizeof(SpawnPositionUpdates_Struct));
-				SpawnPositionUpdates_Struct* spu2 = (SpawnPositionUpdates_Struct*)app2->pBuffer;
-				spu2->num_updates = 1; // hack - only one spawn position per update
-				MakeSpawnUpdateNoDelta(&spu2->spawn_update);
-				entity_list.QueueCloseClientsSplit(this, app, app2, (iSendToSelf==0), 450, nullptr, false);
-				if (HasOwner())
-					move_tic_count = 0;
-				else
-					move_tic_count = RuleI(Zone, NPCPositonUpdateTicCount) - 6;
-				safe_delete(app2);
-			}
-			else
-			{
-				entity_list.QueueCloseClients(this, app, (iSendToSelf==0), 450, nullptr, false);
-				move_tic_count++;
-			}
-		}
-	}
+	MakeSpawnUpdateNoDelta(&spu->spawn_update);
+	entity_list.QueueClients(this, app, true);
 	safe_delete(app);
-
 }
 
 // this one is for mobs on the move, and clients.
@@ -1378,19 +1373,19 @@ void Mob::SendPosUpdate(uint8 iSendToSelf)
 			if(CastToClient()->gmhideme)
 				entity_list.QueueClientsStatus(this,app,(iSendToSelf==0),CastToClient()->Admin(),255);
 			else
-				entity_list.QueueCloseClients(this,app,(iSendToSelf==0),450,nullptr,false);
+				entity_list.QueueCloseClientsPrecalc(this, app, (iSendToSelf==0), nullptr, false);
 		}
 		else
 		{
 			uint32 position_update = RuleI(Zone, NPCPositonUpdateTicCount);
 			if(move_tic_count == position_update)
 			{
-				entity_list.QueueCloseClients(this, app, (iSendToSelf==0), 1000, nullptr, false);
+				entity_list.QueueCloseClientsPrecalc(this, app, (iSendToSelf==0), nullptr, false, true);
 				move_tic_count = 0;
 			}
 			else
 			{
-				entity_list.QueueCloseClients(this, app, (iSendToSelf==0), 450, nullptr, false);
+				entity_list.QueueCloseClientsPrecalc(this, app, (iSendToSelf==0), nullptr, false);
 				move_tic_count++;
 			}
 		}
@@ -1413,8 +1408,6 @@ void Mob::MakeSpawnUpdateNoDelta(SpawnPositionUpdate_Struct *spu)
 	spu->delta_y	= 0;
 	spu->delta_z	= 0;
 	spu->delta_heading = 0;
-	spu->spacer1	=0;
-	spu->spacer2	=0;
 
 	spu->anim_type	= 0;
 
@@ -1444,12 +1437,10 @@ void Mob::MakeSpawnUpdate(SpawnPositionUpdate_Struct* spu)
 	spu->z_pos = static_cast<int16>(10.0f * m_Position.z);
 	spu->heading	= static_cast<int8>(currentloc.w);
 
-	spu->delta_x	= static_cast<int32>(m_Delta.x/128);
-	spu->delta_y	= static_cast<int32>(m_Delta.y/128);
-	spu->delta_z	= 0;//static_cast<int32>(m_Delta.z); TODO: Figure out magic number for deltaz for now send 0.
+	spu->delta_x	= static_cast<int32>(m_Delta.x) & 0x3FF;
+	spu->delta_y	= static_cast<int32>(m_Delta.y) & 0x7FF;
+	spu->delta_z	= 0;
 	spu->delta_heading = static_cast<int8>(m_Delta.w);
-	spu->spacer1	=0;
-	spu->spacer2	=0;
 
 	if(this->IsClient() || this->iszomm)
 	{
@@ -1473,8 +1464,6 @@ void Mob::SetSpawnUpdate(SpawnPositionUpdate_Struct* incoming, SpawnPositionUpda
 	outgoing->delta_y	= incoming->delta_y;
 	outgoing->delta_z	= incoming->delta_z;
 	outgoing->delta_heading = incoming->delta_heading;
-	outgoing->spacer1	= incoming->spacer1;
-	outgoing->spacer2	= incoming->spacer2;
 	outgoing->anim_type = incoming->anim_type;
 }
 
@@ -1485,43 +1474,47 @@ void Mob::ShowStats(Client* client)
 	}
 	else if (IsCorpse()) {
 		if (IsPlayerCorpse()) {
-			client->Message(0, "  CharID: %i  PlayerCorpse: %i Empty: %i Rezed: %i Exp: %i GMExp: %i KilledBy: %i Rez Time: %d Owner Online: %i", CastToCorpse()->GetCharID(), CastToCorpse()->GetCorpseDBID(), CastToCorpse()->IsEmpty(), CastToCorpse()->IsRezzed(), CastToCorpse()->GetRezExp(), CastToCorpse()->GetGMRezExp(), CastToCorpse()->GetKilledBy(), CastToCorpse()->GetRemainingRezTime(), CastToCorpse()->GetOwnerOnline());
+			client->Message(CC_Default, "  CharID: %i  PlayerCorpse: %i Empty: %i Rezed: %i Exp: %i GMExp: %i KilledBy: %i Rez Time: %d Owner Online: %i", CastToCorpse()->GetCharID(), CastToCorpse()->GetCorpseDBID(), CastToCorpse()->IsEmpty(), CastToCorpse()->IsRezzed(), CastToCorpse()->GetRezExp(), CastToCorpse()->GetGMRezExp(), CastToCorpse()->GetKilledBy(), CastToCorpse()->GetRemainingRezTime(), CastToCorpse()->GetOwnerOnline());
 		}
 		else {
-			client->Message(0, "  NPCCorpse", GetID());
+			client->Message(CC_Default, "  NPCCorpse", GetID());
 		}
 	}
 	else {
-		client->Message(0, "  Level: %i  AC: %i  Class: %i  Size: %1.1f  BaseSize: %1.1f Haste: %i", GetLevel(), GetAC(), GetClass(), GetSize(), GetBaseSize(), GetHaste());
-		client->Message(0, "  HP: %i  Max HP: %i",GetHP(), GetMaxHP());
-		client->Message(0, "  Mana: %i  Max Mana: %i", GetMana(), GetMaxMana());
-		client->Message(0, "  X: %0.2f Y: %0.2f Z: %0.2f", GetX(), GetY(), GetZ());
-		client->Message(0, "  Total ATK: %i  Worn/Spell ATK (Cap %i): %i", GetATK(), RuleI(Character, ItemATKCap), GetATKBonus());
-		client->Message(0, "  STR: %i  STA: %i  DEX: %i  AGI: %i  INT: %i  WIS: %i  CHA: %i", GetSTR(), GetSTA(), GetDEX(), GetAGI(), GetINT(), GetWIS(), GetCHA());
-		client->Message(0, "  MR: %i  PR: %i  FR: %i  CR: %i  DR: %i", GetMR(), GetPR(), GetFR(), GetCR(), GetDR());
-		client->Message(0, "  Race: %i  BaseRace: %i  Texture: %i  HelmTexture: %i  Gender: %i  BaseGender: %i BodyType: %i", GetRace(), GetBaseRace(), GetTexture(), GetHelmTexture(), GetGender(), GetBaseGender(), GetBodyType());
-		client->Message(0, "  Face: % i Beard: %i  BeardColor: %i  Hair: %i  HairColor: %i Light: %i ActiveLight: %i ", GetLuclinFace(), GetBeard(), GetBeardColor(), GetHairStyle(), GetHairColor(), GetInnateLightType(), GetActiveLightType());
+		client->Message(CC_Default, "  Level: %i  AC: %i  Class: %i  Size: %1.1f  BaseSize: %1.1f Haste: %i", GetLevel(), GetAC(), GetClass(), GetSize(), GetBaseSize(), GetHaste());
+		client->Message(CC_Default, "  HP: %i  Max HP: %i",GetHP(), GetMaxHP());
+		client->Message(CC_Default, "  Mana: %i  Max Mana: %i", GetMana(), GetMaxMana());
+		client->Message(CC_Default, "  X: %0.2f Y: %0.2f Z: %0.2f", GetX(), GetY(), GetZ());
+		client->Message(CC_Default, "  Offense: %i  To-Hit: %i  Mitigation: %i  Avoidance: %i", GetOffense(), GetToHit(), GetMitigation(), GetAvoidance());
+		client->Message(CC_Default, "  Total ATK: %i  Worn/Spell ATK (Cap %i): %i", GetATK(), RuleI(Character, ItemATKCap), GetATKBonus());
+		client->Message(CC_Default, "  STR: %i  STA: %i  DEX: %i  AGI: %i  INT: %i  WIS: %i  CHA: %i", GetSTR(), GetSTA(), GetDEX(), GetAGI(), GetINT(), GetWIS(), GetCHA());
+		client->Message(CC_Default, "  MR: %i  PR: %i  FR: %i  CR: %i  DR: %i", GetMR(), GetPR(), GetFR(), GetCR(), GetDR());
+		client->Message(CC_Default, "  Race: %i  BaseRace: %i Gender: %i  BaseGender: %i BodyType: %i", GetRace(), GetBaseRace(), GetGender(), GetBaseGender(), GetBodyType());
+		client->Message(CC_Default, "  Face: % i Beard: %i  BeardColor: %i  Hair: %i  HairColor: %i Light: %i ActiveLight: %i ", GetLuclinFace(), GetBeard(), GetBeardColor(), GetHairStyle(), GetHairColor(), GetInnateLightType(), GetActiveLightType());
+		client->Message(CC_Default, "  Texture: %i  HelmTexture: %i  Chest: %i Arms: %i Bracer: %i Hands: %i Legs: %i Feet: %i ", GetTexture(), GetHelmTexture(), GetChestTexture(), GetArmTexture(), GetBracerTexture(), GetHandTexture(), GetLegTexture(), GetFeetTexture());
+		client->Message(CC_Default, "  IsPet: %i PetID: %i  OwnerID: %i IsFamiliar: %i IsCharmed: %i IsDireCharm: %i IsZomm: %i ", IsPet(), GetPetID(), GetOwnerID(), IsFamiliar(), IsCharmed(), IsDireCharmed(), iszomm);
 		if (client->Admin() >= 100)
-			client->Message(0, "  EntityID: %i  PetID: %i  OwnerID: %i IsZomm: %i AIControlled: %i Targetted: %i", GetID(), GetPetID(), GetOwnerID(), iszomm, IsAIControlled(), targeted);
+			client->Message(CC_Default, "  EntityID: %i AIControlled: %i Targetted: %i", GetID(), IsAIControlled(), targeted);
 
 		if (IsNPC()) {
 			NPC *n = CastToNPC();
 			uint32 spawngroupid = 0;
 			if(n->respawn2 != 0)
 				spawngroupid = n->respawn2->SpawnGroupID();
-			client->Message(0, "  NPCID: %u  SpawnGroupID: %u Grid: %i FactionID: %i PreCharmFactionID: %i PrimaryFaction: %i", GetNPCTypeID(),spawngroupid, n->GetGrid(), n->GetNPCFactionID(), n->GetPreCharmNPCFactionID(), GetPrimaryFaction());
-			client->Message(0, "  HP Regen: %i Mana Regen: %i Magic Atk: %i Immune to Melee: %i", n->GetHPRegen(), n->GetManaRegen(), GetSpecialAbility(SPECATK_MAGICAL), GetSpecialAbility(IMMUNE_MELEE_NONMAGICAL));
-			client->Message(0, "  Attack Speed: %i Accuracy: %i LootTable: %u SpellsID: %u MerchantID: %i", n->GetAttackTimer(), n->GetAccuracyRating(), n->GetLoottableID(), n->GetNPCSpellsID(), n->MerchantType);
-			client->Message(0, "  EmoteID: %i Trackable: %i SeeInvis: %i SeeInvUndead: %i SeeHide: %i SeeImpHide: %i", n->GetEmoteID(), n->IsTrackable(), n->SeeInvisible(), n->SeeInvisibleUndead(), n->SeeHide(), n->SeeImprovedHide());
-			client->Message(0, "  CanEquipSec: %i DualWield: %i KickDmg: %i BashDmg: %i HasShield: %i", n->CanEquipSecondary(), n->CanDualWield(), n->GetKickDamage(), n->GetBashDamage(), n->HasShieldEquiped());
-			client->Message(0, "  PriSkill: %i SecSkill: %i PriMelee: %i SecMelee: %i Double Atk Chance: %i Dual Wield Chance: %i", n->GetPrimSkill(), n->GetSecSkill(), n->GetPrimaryMeleeTexture(), n->GetSecondaryMeleeTexture(), n->DoubleAttackChance(), n->DualWieldChance());
-			client->Message(0, "  Runspeed: %f Walkspeed: %f RunSpeedAnim: %i CurrentSpeed: %f", GetRunspeed(), GetWalkspeed(), GetRunAnimSpeed(), GetCurrentSpeed());
+			client->Message(CC_Default, "  NPCID: %u  SpawnGroupID: %u Grid: %i FactionID: %i PreCharmFactionID: %i PrimaryFaction: %i", GetNPCTypeID(),spawngroupid, n->GetGrid(), n->GetNPCFactionID(), n->GetPreCharmNPCFactionID(), GetPrimaryFaction());
+			client->Message(CC_Default, "  HP Regen: %i Mana Regen: %i Magic Atk: %i Immune to Melee: %i", n->GetHPRegen(), n->GetManaRegen(), GetSpecialAbility(SPECATK_MAGICAL), GetSpecialAbility(IMMUNE_MELEE_NONMAGICAL));
+			client->Message(CC_Default, "  Attack Speed: %i Accuracy: %i LootTable: %u SpellsID: %u MerchantID: %i", n->GetAttackTimer(), n->GetAccuracyRating(), n->GetLoottableID(), n->GetNPCSpellsID(), n->MerchantType);
+			client->Message(CC_Default, "  EmoteID: %i Trackable: %i SeeInvis: %i SeeInvUndead: %i SeeHide: %i SeeImpHide: %i", n->GetEmoteID(), n->IsTrackable(), n->SeeInvisible(), n->SeeInvisibleUndead(), n->SeeHide(), n->SeeImprovedHide());
+			client->Message(CC_Default, "  CanEquipSec: %i DualWield: %i KickDmg: %i BashDmg: %i HasShield: %i", n->CanEquipSecondary(), n->CanDualWield(), n->GetKickDamage(), n->GetBashDamage(), n->HasShieldEquiped());
+			client->Message(CC_Default, "  PriSkill: %i SecSkill: %i PriMelee: %i SecMelee: %i Double Atk Chance: %i Dual Wield Chance: %i", n->GetPrimSkill(), n->GetSecSkill(), n->GetPrimaryMeleeTexture(), n->GetSecondaryMeleeTexture(), n->DoubleAttackChance(), n->DualWieldChance());
+			client->Message(CC_Default, "  Runspeed: %f Walkspeed: %f RunSpeedAnim: %i CurrentSpeed: %f", GetRunspeed(), GetWalkspeed(), GetRunAnimSpeed(), GetCurrentSpeed());
+			client->Message(CC_Default, "  Aggro: Pri/Asst %d %d AssistCap: %d IgnoreDistance: %0.2f",  HasPrimaryAggro(), HasAssistAggro(), NPCAssistCap(), n->GetIgnoreDistance());
 			if(flee_mode)
-				client->Message(0, "  Fleespeed: %f", n->GetFearSpeed());
+				client->Message(CC_Default, "  Fleespeed: %f", n->GetFearSpeed());
 			n->QueryLoot(client);
 		}
 		if (IsAIControlled()) {
-			client->Message(0, "  AggroRange: %1.0f  AssistRange: %1.0f", GetAggroRange(), GetAssistRange());
+			client->Message(CC_Default, "  AggroRange: %1.0f  AssistRange: %1.0f", GetAggroRange(), GetAssistRange());
 		}
 	}
 }
@@ -1543,33 +1536,33 @@ void Mob::DoAnim(Animation animnum, int type, bool ackreq, eqFilterType filter) 
 void Mob::ShowBuffs(Client* client) {
 	if(SPDAT_RECORDS <= 0)
 		return;
-	client->Message(0, "Buffs on: %s", this->GetName());
+	client->Message(CC_Default, "Buffs on: %s", this->GetName());
 	uint32 i;
 	uint32 buff_count = GetMaxTotalSlots();
 	for (i=0; i < buff_count; i++) {
 		if (buffs[i].spellid != SPELL_UNKNOWN) {
 			if (spells[buffs[i].spellid].buffdurationformula == DF_Permanent)
-				client->Message(0, "  %i: %s: Permanent", i, spells[buffs[i].spellid].name);
+				client->Message(CC_Default, "  %i: %s: Permanent", i, spells[buffs[i].spellid].name);
 			else
-				client->Message(0, "  %i: %s: %i tics left", i, spells[buffs[i].spellid].name, buffs[i].ticsremaining);
+				client->Message(CC_Default, "  %i: %s: %i tics left", i, spells[buffs[i].spellid].name, buffs[i].ticsremaining);
 
 		}
 	}
 	if (IsClient()){
-		client->Message(0, "itembonuses:");
-		client->Message(0, "Atk:%i Ac:%i HP(%i):%i Mana:%i", itembonuses.ATK, itembonuses.AC, itembonuses.HPRegen, itembonuses.HP, itembonuses.Mana);
-		client->Message(0, "Str:%i Sta:%i Dex:%i Agi:%i Int:%i Wis:%i Cha:%i",
+		client->Message(CC_Default, "itembonuses:");
+		client->Message(CC_Default, "Atk:%i Ac:%i HP(%i):%i Mana:%i", itembonuses.ATK, itembonuses.AC, itembonuses.HPRegen, itembonuses.HP, itembonuses.Mana);
+		client->Message(CC_Default, "Str:%i Sta:%i Dex:%i Agi:%i Int:%i Wis:%i Cha:%i",
 			itembonuses.STR,itembonuses.STA,itembonuses.DEX,itembonuses.AGI,itembonuses.INT,itembonuses.WIS,itembonuses.CHA);
-		client->Message(0, "SvMagic:%i SvFire:%i SvCold:%i SvPoison:%i SvDisease:%i",
+		client->Message(CC_Default, "SvMagic:%i SvFire:%i SvCold:%i SvPoison:%i SvDisease:%i",
 				itembonuses.MR,itembonuses.FR,itembonuses.CR,itembonuses.PR,itembonuses.DR);
-		client->Message(0, "DmgShield:%i Haste:%i", itembonuses.DamageShield, itembonuses.haste );
-		client->Message(0, "spellbonuses:");
-		client->Message(0, "Atk:%i Ac:%i HP(%i):%i Mana:%i", spellbonuses.ATK, spellbonuses.AC, spellbonuses.HPRegen, spellbonuses.HP, spellbonuses.Mana);
-		client->Message(0, "Str:%i Sta:%i Dex:%i Agi:%i Int:%i Wis:%i Cha:%i",
+		client->Message(CC_Default, "DmgShield:%i Haste:%i", itembonuses.DamageShield, itembonuses.haste );
+		client->Message(CC_Default, "spellbonuses:");
+		client->Message(CC_Default, "Atk:%i Ac:%i HP(%i):%i Mana:%i", spellbonuses.ATK, spellbonuses.AC, spellbonuses.HPRegen, spellbonuses.HP, spellbonuses.Mana);
+		client->Message(CC_Default, "Str:%i Sta:%i Dex:%i Agi:%i Int:%i Wis:%i Cha:%i",
 			spellbonuses.STR,spellbonuses.STA,spellbonuses.DEX,spellbonuses.AGI,spellbonuses.INT,spellbonuses.WIS,spellbonuses.CHA);
-		client->Message(0, "SvMagic:%i SvFire:%i SvCold:%i SvPoison:%i SvDisease:%i",
+		client->Message(CC_Default, "SvMagic:%i SvFire:%i SvCold:%i SvPoison:%i SvDisease:%i",
 				spellbonuses.MR,spellbonuses.FR,spellbonuses.CR,spellbonuses.PR,spellbonuses.DR);
-		client->Message(0, "DmgShield:%i Haste:%i", spellbonuses.DamageShield, spellbonuses.haste );
+		client->Message(CC_Default, "DmgShield:%i Haste:%i", spellbonuses.DamageShield, spellbonuses.haste );
 	}
 }
 
@@ -1577,12 +1570,12 @@ void Mob::ShowBuffList(Client* client) {
 	if(SPDAT_RECORDS <= 0)
 		return;
 
-	client->Message(0, "Buffs on: %s", this->GetCleanName());
+	client->Message(CC_Default, "Buffs on: %s", this->GetCleanName());
 	uint32 i;
 	uint32 buff_count = GetMaxTotalSlots();
 	for (i=0; i < buff_count; i++) {
 		if (buffs[i].spellid != SPELL_UNKNOWN) {
-			client->Message(0, "  %i: %s", i, spells[buffs[i].spellid].name);
+			client->Message(CC_Default, "  %i: %s", i, spells[buffs[i].spellid].name);
 		}
 	}
 }
@@ -1601,7 +1594,7 @@ void Mob::GMMove(float x, float y, float z, float heading, bool SendUpdate) {
 	if (m_Position.w != 0.01)
 		this->m_Position.w = heading;
 	if(IsNPC())
-		CastToNPC()->SaveGuardSpot(true);
+		CastToNPC()->SaveGuardSpot();
 	if(SendUpdate)
 		SendPosition();
 }
@@ -1611,10 +1604,12 @@ void Mob::SetCurrentSpeed(float speed) {
 	{ 
 		current_speed = speed; 
 		tar_ndx = 20;
-		if (speed == 0) {
+		if (speed < 0.1f) {
 			SetRunAnimSpeed(0);
 			SetMoving(false);
 			SendPosition();
+		} else {
+			move_tic_count = RuleI(Zone, NPCPositonUpdateTicCount);
 		}
 	} 
 }
@@ -1645,7 +1640,7 @@ void Mob::SendIllusionPacket(uint16 in_race, uint8 in_gender, uint8 in_texture, 
 			gender = in_gender;
 	}
 	if (in_texture == 0xFF) {
-		if (in_race <= 12 || in_race == 128 || in_race == 130 || in_race == 330 || in_race == 522)
+		if (IsPlayableRace(in_race))
 			this->texture = 0xFF;
 		else
 			this->texture = GetTexture();
@@ -1654,7 +1649,7 @@ void Mob::SendIllusionPacket(uint16 in_race, uint8 in_gender, uint8 in_texture, 
 		this->texture = in_texture;
 
 	if (in_helmtexture == 0xFF) {
-		if (in_race <= 12 || in_race == 128 || in_race == 130 || in_race == 330 || in_race == 522)
+		if (IsPlayableRace(in_race))
 			this->helmtexture = 0xFF;
 		else if (in_texture != 0xFF)
 			this->helmtexture = in_texture;
@@ -1720,34 +1715,7 @@ void Mob::SendIllusionPacket(uint16 in_race, uint8 in_gender, uint8 in_texture, 
 		this->luclinface = CastToClient()->GetBaseFace();
 		this->beard	= CastToClient()->GetBaseBeard();
 		this->aa_title = 0xFF;
-		switch(race){
-			case OGRE:
-				this->size = 9;
-				break;
-			case TROLL:
-				this->size = 8;
-				break;
-			case VAHSHIR:
-			case BARBARIAN:
-				this->size = 7;
-				break;
-			case HALF_ELF:
-			case WOOD_ELF:
-			case DARK_ELF:
-			case FROGLOK:
-				this->size = 5;
-				break;
-			case DWARF:
-				this->size = 4;
-				break;
-			case HALFLING:
-			case GNOME:
-				this->size = 3;
-				break;
-			default:
-				this->size = 6;
-				break;
-		}
+		this->size = GetBaseSize();
 	}
 
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_Illusion, sizeof(Illusion_Struct));
@@ -1775,9 +1743,8 @@ void Mob::SendIllusionPacket(uint16 in_race, uint8 in_gender, uint8 in_texture, 
 }
 
 uint8 Mob::GetDefaultGender(uint16 in_race, uint8 in_gender) {
-	if ((in_race > 0 && in_race <= GNOME )
-		|| in_race == IKSAR || in_race == VAHSHIR || in_race == FROGLOK
-		|| in_race == 15 || in_race == 50 || in_race == 57 || in_race == 70 || in_race == 98 || in_race == 118) {
+	if (IsPlayableRace(in_race) ||
+		in_race == 15 || in_race == 50 || in_race == 57 || in_race == 70 || in_race == 98 || in_race == 118) {
 		if (in_gender >= 2) {
 			// Female default for PC Races
 			return 1;
@@ -1863,15 +1830,14 @@ void Mob::ChangeSize(float in_size = 0, bool bNoRestriction) {
 	if (!bNoRestriction)
 	{
 		if (this->IsClient() || this->petid != 0)
+		{
 			if (in_size < 3.0)
 				in_size = 3.0;
 
-
-			if (this->IsClient() || this->petid != 0)
-				if (in_size > 15.0)
-					in_size = 15.0;
+			if (in_size > 15.0)
+				in_size = 15.0;
+		}
 	}
-
 
 	if (in_size < 1.0)
 		in_size = 1.0;
@@ -2296,11 +2262,15 @@ bool Mob::RemoveFromHateList(Mob* mob)
 		{
 			AI_Event_NoLongerEngaged();
 			zone->DelAggroMob();
+			if(IsNPC() && !RuleB(AlKabor, AllowTickSplit))
+			{
+				ResetAssistCap();
+			}
 		}
 	}
 	if(GetTarget() == mob)
 	{
-		SetTarget(hate_list.GetTop(this));
+		SetTarget(hate_list.GetTop());
 	}
 
 	return bFound;
@@ -2311,12 +2281,60 @@ void Mob::WipeHateList()
 	if(IsEngaged())
 	{
 		hate_list.Wipe();
+		SetTarget(nullptr);
 		AI_Event_NoLongerEngaged();
 	}
 	else
 	{
 		hate_list.Wipe();
 	}
+}
+
+bool Mob::SetHeading2(float iHeading)
+{
+	if (GetHeading() != iHeading)
+	{
+		float diff = GetHeading() - iHeading;
+		if (abs(diff) < 13 || abs(diff) > 243)
+		{
+			// close enough, so snap to heading
+			m_Delta.w = 0.0f;
+			SetHeading(iHeading);
+			SendPosition();
+			return true;
+		}
+		moved = true;
+		while (diff < 0)
+			diff += 256;
+		while (diff >= 256.0)
+			diff -= 256.0f;
+		float delta_heading = ((256 - diff) < diff) ? 12.0f : -12.0f;
+		if (IsBoat())
+			delta_heading /= 2.0f;
+
+		bool send_update = false;
+		if (m_Delta.w == 0.0f)
+			send_update = true;
+
+		m_Delta = glm::vec4(0.0, 0.0f, 0.0f, delta_heading);
+		if (send_update)
+			SendPosUpdate(1);
+
+		float new_heading = GetHeading() + delta_heading;
+
+		if (new_heading < 0.0f)
+			new_heading += 256.0f;
+		if (new_heading >= 256.0f)
+			new_heading -= 256.0f;
+
+		SetHeading(new_heading);
+		return false;
+	} 
+	if (m_Delta.w != 0.0f) {
+		m_Delta.w = 0.0f;
+		SendPosition();
+	}
+	return true;
 }
 
 uint32 Mob::RandomTimer(int min,int max) {
@@ -2345,7 +2363,6 @@ void Mob::SendWearChange(uint8 material_slot)
 
 	wc->spawn_id = GetID();
 	wc->material = GetEquipmentMaterial(material_slot);
-	wc->elite_material = IsEliteMaterialItem(material_slot);
 	wc->color.color = GetEquipmentColor(material_slot);
 	wc->wear_slot_id = material_slot;
 
@@ -2443,6 +2460,23 @@ int32 Mob::GetEquipmentMaterial(uint8 material_slot) const
 			return item->Material;
 		}
 	}
+	else if(IsNPC())
+	{
+		if(material_slot == MaterialHead)
+			return helmtexture;
+		else if(material_slot == MaterialChest)
+			return chesttexture;
+		else if(material_slot == MaterialArms)
+			return armtexture;
+		else if(material_slot == MaterialWrist)
+			return bracertexture;
+		else if(material_slot == MaterialHands)
+			return handtexture;
+		else if(material_slot == MaterialLegs)
+			return legtexture;
+		else if(material_slot == MaterialFeet)
+			return feettexture;
+	}
 
 	return 0;
 }
@@ -2455,19 +2489,6 @@ uint32 Mob::GetEquipmentColor(uint8 material_slot) const
 	if(item != 0)
 	{
 		return item->Color;
-	}
-
-	return 0;
-}
-
-uint32 Mob::IsEliteMaterialItem(uint8 material_slot) const
-{
-	const Item_Struct *item;
-
-	item = database.GetItem(GetEquipment(material_slot));
-	if(item != 0)
-	{
-		return item->EliteMaterial;
 	}
 
 	return 0;
@@ -2684,7 +2705,7 @@ void Mob::ExecWeaponProc(const ItemInst *inst, uint16 spell_id, Mob *on) {
 
 	if(!IsValidSpell(spell_id)) { // Check for a valid spell otherwise it will crash through the function
 		if(IsClient()){
-			Message(0, "Invalid spell proc %u", spell_id);
+			Message(CC_Default, "Invalid spell proc %u", spell_id);
 			Log.Out(Logs::Detail, Logs::Spells, "Player %s, Weapon Procced invalid spell %u", this->GetName(), spell_id);
 		}
 		return;
@@ -2709,14 +2730,16 @@ void Mob::ExecWeaponProc(const ItemInst *inst, uint16 spell_id, Mob *on) {
 	if(twinproc_chance && zone->random.Roll(twinproc_chance))
 		twinproc = true;
 
-	if (IsBeneficialSpell(spell_id)
-		&& (!IsNPC() || CastToNPC()->GetInnateProcSpellId() != spell_id))		// innate NPC procs always hit the target
+	if ((inst && inst->GetID() == 14811) ||	// Iron Bound Tome was bugged during this era and would proc on self
+		(IsBeneficialSpell(spell_id) &&
+		(!IsNPC() || CastToNPC()->GetInnateProcSpellId() != spell_id)))		// innate NPC procs always hit the target
 	{
 		SpellFinished(spell_id, this, 10, 0, -1, spells[spell_id].ResistDiff, true);
 		if(twinproc)
 			SpellOnTarget(spell_id, this, false, false, 0, true);
 	}
-	else if(!(on->IsClient() && on->CastToClient()->dead)) { //dont proc on dead clients
+	else if(!(on->IsClient() && on->CastToClient()->dead)) //dont proc on dead clients
+	{ 
 		SpellFinished(spell_id, on, 10, 0, -1, spells[spell_id].ResistDiff, true);
 		if(twinproc)
 			SpellOnTarget(spell_id, on, false, false, 0, true);
@@ -3401,24 +3424,8 @@ int32 Mob::GetItemStat(uint32 itemid, const char *identifier)
 		stat = int32(item->Price);
 	if (id == "icon")
 		stat = int32(item->Icon);
-	if (id == "loregroup")
-		stat = int32(item->LoreGroup);
-	if (id == "loreflag")
-		stat = int32(item->LoreFlag);
-	if (id == "pendingloreflag")
-		stat = int32(item->PendingLoreFlag);
-	if (id == "artifactflag")
-		stat = int32(item->ArtifactFlag);
-	if (id == "summonedflag")
-		stat = int32(item->SummonedFlag);
 	if (id == "fvnodrop")
 		stat = int32(item->FVNoDrop);
-	if (id == "favor")
-		stat = int32(item->Favor);
-	if (id == "guildfavor")
-		stat = int32(item->GuildFavor);
-	if (id == "pointtype")
-		stat = int32(item->PointType);
 	if (id == "bagtype")
 		stat = int32(item->BagType);
 	if (id == "bagslots")
@@ -3513,28 +3520,8 @@ int32 Mob::GetItemStat(uint32 itemid, const char *identifier)
 		stat = int32(item->Material);
 	if (id == "casttime")
 		stat = int32(item->CastTime);
-	if (id == "elitematerial")
-		stat = int32(item->EliteMaterial);
 	if (id == "procrate")
 		stat = int32(item->ProcRate);
-	if (id == "combateffects")
-		stat = int32(item->CombatEffects);
-	if (id == "shielding")
-		stat = int32(item->Shielding);
-	if (id == "stunresist")
-		stat = int32(item->StunResist);
-	if (id == "strikethrough")
-		stat = int32(item->StrikeThrough);
-	if (id == "extradmgskill")
-		stat = int32(item->ExtraDmgSkill);
-	if (id == "extradmgamt")
-		stat = int32(item->ExtraDmgAmt);
-	if (id == "spellshield")
-		stat = int32(item->SpellShield);
-	if (id == "avoidance")
-		stat = int32(item->Avoidance);
-	if (id == "accuracy")
-		stat = int32(item->Accuracy);
 	if (id == "charmfileid")
 		stat = int32(item->CharmFileID);
 	if (id == "factionmod1")
@@ -3553,30 +3540,10 @@ int32 Mob::GetItemStat(uint32 itemid, const char *identifier)
 		stat = int32(item->FactionAmt3);
 	if (id == "factionamt4")
 		stat = int32(item->FactionAmt4);
-	if (id == "banedmgraceamt")
-		stat = int32(item->BaneDmgRaceAmt);
-	if (id == "endur")
-		stat = int32(item->Endur);
-	if (id == "dotshielding")
-		stat = int32(item->DotShielding);
-	if (id == "attack")
-		stat = int32(item->Attack);
-	if (id == "regen")
-		stat = int32(item->Regen);
-	if (id == "manaregen")
-		stat = int32(item->ManaRegen);
-	if (id == "enduranceregen")
-		stat = int32(item->EnduranceRegen);
-	if (id == "haste")
-		stat = int32(item->Haste);
-	if (id == "damageshield")
-		stat = int32(item->DamageShield);
 	if (id == "recastdelay")
 		stat = int32(item->RecastDelay);
 	if (id == "recasttype")
 		stat = int32(item->RecastType);
-	if (id == "attuneable")
-		stat = int32(item->Attuneable);
 	if (id == "nopet")
 		stat = int32(item->NoPet);
 	if (id == "stackable")
@@ -3591,50 +3558,6 @@ int32 Mob::GetItemStat(uint32 itemid, const char *identifier)
 		stat = int32(item->Book);
 	if (id == "booktype")
 		stat = int32(item->BookType);
-	if (id == "svcorruption")
-		stat = int32(item->SVCorruption);
-	if (id == "purity")
-		stat = int32(item->Purity);
-	if (id == "backstabdmg")
-		stat = int32(item->BackstabDmg);
-	if (id == "dsmitigation")
-		stat = int32(item->DSMitigation);
-	if (id == "heroicstr")
-		stat = int32(item->HeroicStr);
-	if (id == "heroicint")
-		stat = int32(item->HeroicInt);
-	if (id == "heroicwis")
-		stat = int32(item->HeroicWis);
-	if (id == "heroicagi")
-		stat = int32(item->HeroicAgi);
-	if (id == "heroicdex")
-		stat = int32(item->HeroicDex);
-	if (id == "heroicsta")
-		stat = int32(item->HeroicSta);
-	if (id == "heroiccha")
-		stat = int32(item->HeroicCha);
-	if (id == "heroicmr")
-		stat = int32(item->HeroicMR);
-	if (id == "heroicfr")
-		stat = int32(item->HeroicFR);
-	if (id == "heroiccr")
-		stat = int32(item->HeroicCR);
-	if (id == "heroicdr")
-		stat = int32(item->HeroicDR);
-	if (id == "heroicpr")
-		stat = int32(item->HeroicPR);
-	if (id == "heroicsvcorrup")
-		stat = int32(item->HeroicSVCorrup);
-	if (id == "healamt")
-		stat = int32(item->HealAmt);
-	if (id == "spelldmg")
-		stat = int32(item->SpellDmg);
-	if (id == "scriptfileid")
-		stat = int32(item->ScriptFileID);
-	if (id == "expendablearrow")
-		stat = int32(item->ExpendableArrow);
-	if (id == "clairvoyance")
-		stat = int32(item->Clairvoyance);
 	// Begin Effects
 	if (id == "clickeffect")
 		stat = int32(item->Click.Effect);
@@ -3679,6 +3602,39 @@ int32 Mob::GetItemStat(uint32 itemid, const char *identifier)
 
 	safe_delete(inst);
 	return stat;
+}
+
+std::string Mob::GetGlobal(const char *varname) {
+	int qgCharid = 0;
+	int qgNpcid = 0;
+	
+	if (this->IsNPC())
+		qgNpcid = this->GetNPCTypeID();
+	
+	if (this->IsClient())
+		qgCharid = this->CastToClient()->CharacterID();
+	
+	QGlobalCache *qglobals = nullptr;
+	std::list<QGlobal> globalMap;
+	
+	if (this->IsClient())
+		qglobals = this->CastToClient()->GetQGlobals();
+	
+	if (this->IsNPC())
+		qglobals = this->CastToNPC()->GetQGlobals();
+
+	if(qglobals)
+		QGlobalCache::Combine(globalMap, qglobals->GetBucket(), qgNpcid, qgCharid, zone->GetZoneID());
+	
+	std::list<QGlobal>::iterator iter = globalMap.begin();
+	while(iter != globalMap.end()) {
+		if ((*iter).name.compare(varname) == 0)
+			return (*iter).value;
+
+		++iter;
+	}
+	
+	return "Undefined";
 }
 
 void Mob::SetGlobal(const char *varname, const char *newvalue, int options, const char *duration, Mob *other) {
@@ -4071,7 +4027,7 @@ bool Mob::TrySpellOnDeath()
 			}
 		}
 
-	BuffFadeAll(true);
+	BuffFadeAll();
 	return false;
 	//You should not be able to use this effect and survive (ALWAYS return false),
 	//attempting to place a heal in these effects will still result
@@ -4343,8 +4299,9 @@ void Mob::SpreadVirus(uint16 spell_id, uint16 casterID)
 	}
 }
 
-bool Mob::IsBoat() const {
-	return (race == 72 || race == 73 || race == 114 || race == 404 || race == 550 || race == 551 || race == 552);
+bool Mob::IsBoat() const 
+{
+	return (GetBaseRace() == SHIP || GetBaseRace() == LAUNCH || GetBaseRace() == CONTROLLED_BOAT);
 }
 
 void Mob::SetBodyType(bodyType new_body, bool overwrite_orig) {
@@ -4457,7 +4414,7 @@ void Mob::CastOnNumHitFade(uint32 spell_id)
 
 void Mob::SlowMitigation(Mob* caster)
 {
-	if (GetSlowMitigation() && caster && caster->IsClient())
+	/*if (GetSlowMitigation() && caster && caster->IsClient())
 	{
 		if ((GetSlowMitigation() > 0) && (GetSlowMitigation() < 26))
 			caster->Message_StringID(MT_SpellFailure, SLOW_MOSTLY_SUCCESSFUL);
@@ -4470,7 +4427,7 @@ void Mob::SlowMitigation(Mob* caster)
 
 		else if (GetSlowMitigation() > 100)
 			caster->Message_StringID(MT_SpellFailure, SPELL_OPPOSITE_EFFECT);
-	}
+	}*/
 }
 
 uint16 Mob::GetSkillByItemType(int ItemType)
@@ -5050,7 +5007,6 @@ int32 Mob::GetSpellStat(uint32 spell_id, const char *identifier, uint8 slot)
 	else if (id == "bonushate") {stat = spells[spell_id].bonushate; }
 	else if (id == "EndurCost") {stat = spells[spell_id].EndurCost; }
 	else if (id == "EndurTimerIndex") {stat = spells[spell_id].EndurTimerIndex; }
-	else if (id == "IsDisciplineBuf") {stat = spells[spell_id].IsDisciplineBuff; }
 	else if (id == "HateAdded") {stat = spells[spell_id].HateAdded; }
 	else if (id == "EndurUpkeep") {stat = spells[spell_id].EndurUpkeep; }
 	else if (id == "numhitstype") {stat = spells[spell_id].numhitstype; }
@@ -5252,46 +5208,57 @@ uint8 Mob::DualWieldChance()
 	}
 }
 
-bool Mob::Disarm()
+uint8 Mob::Disarm(float chance)
 {
 	if(this->IsNPC())
 	{
 		ServerLootItem_Struct* weapon = CastToNPC()->GetItem(MainPrimary);
 		if(weapon)
 		{
-			uint16 weaponid = weapon->item_id;
-			const ItemInst* inst = database.CreateItem(weaponid);
-
-			if (inst->GetItem()->Magic)
+			float roll = zone->random.Real(0, 150);
+			if (roll < chance) 
 			{
+				uint16 weaponid = weapon->item_id;
+				const ItemInst* inst = database.CreateItem(weaponid);
+
+				if (inst->GetItem()->Magic)
+				{
+					safe_delete(inst);
+					return 0;				// magic weapons cannot be disarmed
+				}
+
+				const Item_Struct* item = inst->GetItem();
+				int8 charges = item->MaxCharges;
+				CastToNPC()->RemoveItem(weaponid, 1, MainPrimary);
+
+				if (inst->GetItem()->NoDrop == 0)
+				{
+					CastToNPC()->AddLootDrop(item, &CastToNPC()->itemlist, charges, 1, 127, false, true);
+				}
+				else
+				{
+					entity_list.CreateGroundObject(weaponid, glm::vec4(GetX(), GetY(), GetZ(), 0), RuleI(Groundspawns, DisarmDecayTime));
+				}
+
+				CastToNPC()->SetPrimSkill(SkillHandtoHand);
+				if (!GetSpecialAbility(SPECATK_INNATE_DW) && !GetSpecialAbility(SPECATK_QUAD))
+					can_dual_wield = false;
+
+				WearChange(MaterialPrimary, 0, 0);
+
 				safe_delete(inst);
-				return false;				// magic weapons cannot be disarmed
-			}
 
-			const Item_Struct* item = inst->GetItem();
-			int8 charges = item->MaxCharges;
-			CastToNPC()->RemoveItem(weaponid, 1, MainPrimary);
-
-			if (inst->GetItem()->NoDrop == 0)
-			{
-				CastToNPC()->AddLootDrop(item, &CastToNPC()->itemlist, charges, 1, 127, false, true);
+				// NPC has a weapon and was disarmed.
+				return 2;
 			}
 			else
 			{
-				entity_list.CreateGroundObject(weaponid, glm::vec4(GetX(), GetY(), GetZ(), 0), RuleI(Groundspawns, DisarmDecayTime));
+				// NPC has a weapon, but the roll failed.
+				return 1;
 			}
-
-			CastToNPC()->SetPrimSkill(SkillHandtoHand);
-			if (!GetSpecialAbility(SPECATK_INNATE_DW) && !GetSpecialAbility(SPECATK_QUAD))
-				can_dual_wield = false;
-
-			WearChange(MaterialPrimary, 0, 0);
-
-			safe_delete(inst);
-			return true;
 		}
 	}
-	return false;
+	return 0;
 }
 
 float Mob::CalcZOffset()
@@ -5301,4 +5268,146 @@ float Mob::CalcZOffset()
 		mysize = RuleR(Map, BestZSizeMax);
 
 	return (RuleR(Map, BestZMultiplier) * mysize);
+}
+
+int32 Mob::GetSkillStat(SkillUseTypes skillid)
+{
+
+	if(EQEmu::IsSpellSkill(skillid))
+	{
+		if(GetCasterClass() == 'I')
+		{
+			return (GetINT() <= 190) ? GetINT() : 190;
+		}
+		else
+		{
+			return (GetWIS() <= 190) ? GetWIS() : 190;
+		}
+	}
+
+	int32 stat = GetINT();
+	bool penalty = true;
+	switch (skillid) 
+	{
+		case Skill1HBlunt: 
+		case Skill1HSlashing: 
+		case Skill2HBlunt: 
+		case Skill2HSlashing: 
+		case SkillArchery: 
+		case Skill1HPiercing: 
+		case SkillHandtoHand: 
+		case SkillThrowing: 
+		case SkillApplyPoison: 
+		case SkillDisarmTraps: 
+		case SkillPickLock: 
+		case SkillPickPockets:
+		case SkillSenseTraps: 
+		case SkillSafeFall: 
+		case SkillHide: 
+		case SkillSneak:
+			stat = GetDEX();
+			penalty = false;
+			break;
+		case SkillBackstab: 
+		case SkillBash: 
+		case SkillDisarm: 
+		case SkillDoubleAttack:
+		case SkillDragonPunch: 
+		case SkillDualWield: 
+		case SkillEagleStrike:
+		case SkillFlyingKick: 
+		case SkillKick: 
+		case SkillOffense: 
+		case SkillRoundKick:
+		case SkillTigerClaw: 
+		case SkillTaunt: 
+		case SkillIntimidation: 
+		case SkillFrenzy:			
+			stat = GetSTR();
+			penalty = false;
+			break;
+		case SkillBlock: 
+		case SkillDefense: 
+		case SkillDodge: 
+		case SkillParry: 
+		case SkillRiposte:
+			stat = GetAGI();
+			penalty = true;
+			break;
+		case SkillBegging:
+			stat = GetCHA();
+			penalty = false;
+			break;
+		case SkillSwimming:
+			stat = GetSTA();
+			penalty = true;
+			break;
+		default:
+			penalty = true;
+			break;
+	}
+
+	int16 higher_from_int_wis = (GetINT() > GetWIS()) ? GetINT() : GetWIS();
+	stat = (higher_from_int_wis > stat) ? higher_from_int_wis : stat;
+
+	if(penalty)
+		stat -= 15;
+
+	return (stat <= 190) ? stat : 190;
+}
+
+bool Mob::IsPlayableRace(uint16 race)
+{
+	if(race > 0 && (race <= GNOME || race == IKSAR || race == VAHSHIR))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+float Mob::GetPlayerHeight(uint16 race)
+{
+	switch (race)
+	{
+		case OGRE:
+			return 9;
+		case TROLL:
+			return 8;
+		case VAHSHIR: case BARBARIAN:
+			return 7;
+		case HUMAN: case HIGH_ELF: case ERUDITE: case IKSAR:
+			return 6;
+		case HALF_ELF:
+			return 5.5;
+		case WOOD_ELF: case DARK_ELF: case WOLF: case ELEMENTAL:
+			return 5;
+		case DWARF:
+			return 4;
+		case HALFLING:
+			return 3.5;
+		case GNOME:
+			return 3;
+		default:
+			return 6;
+	}
+}
+
+bool Mob::CanCastBindAffinity()
+{
+	uint8 class_ = GetClass();
+	uint8 level = GetLevel();
+
+	if(level >= 12 && (class_ == NECROMANCER || class_ == WIZARD || class_ == MAGICIAN || class_ == ENCHANTER))
+	{
+		return true;
+	}
+	else if(level >= 14 && (class_ == CLERIC || class_ == SHAMAN || class_ == DRUID))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }

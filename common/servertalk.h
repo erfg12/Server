@@ -83,6 +83,7 @@
 #define ServerOP_QGlobalDelete		0x0064
 #define ServerOP_DepopPlayerCorpse	0x0065
 #define ServerOP_RequestTellQueue	0x0066 // client asks for it's tell queues
+#define ServerOP_ChangeSharedMem	0x0067
 
 #define ServerOP_RaidAdd			0x0100 //in use
 #define ServerOP_RaidRemove			0x0101 //in use
@@ -109,11 +110,10 @@
 #define ServerOP_WhoAll				0x0210
 #define ServerOP_FriendsWho			0x0211
 #define ServerOP_LFGMatches			0x0212
-#define ServerOP_LFPUpdate			0x0213
-#define ServerOP_LFPMatches			0x0214
 #define ServerOP_ClientVersionSummary 0x0215
 #define ServerOP_Soulmark			0x0216
 #define ServerOP_AddSoulmark		0x0217
+#define ServerOP_ReloadSkills		0x0218
 #define ServerOP_LSInfo				0x1000
 #define ServerOP_LSStatus			0x1001
 #define ServerOP_LSClientAuth		0x1002
@@ -518,6 +518,7 @@ struct ServerLSPeerConnect {
 
 struct ServerConnectInfo {
 	char	address[250];
+	char	local_address[250];
 	uint16	port;
 };
 
@@ -630,6 +631,7 @@ struct ServerSyncWorldList_Struct {
 struct UsertoWorldRequest_Struct {
 	uint32	lsaccountid;
 	uint32	worldid;
+	uint32  ip;
 	uint32	FromID;
 	uint32	ToID;
 };
@@ -743,6 +745,7 @@ typedef enum {
 struct LauncherZoneRequest {
 	uint8 command;
 	char short_name[33];
+	uint16 port;
 };
 
 struct LauncherZoneStatus {

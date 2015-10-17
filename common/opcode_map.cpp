@@ -187,7 +187,7 @@ void load_opcode_names()
 	opcode_map[0x016e]="LiveOP_DuelResponse2";
 	opcode_map[0x007c]="LiveOP_InstillDoubt";
 	opcode_map[0x00ac]="LiveOP_SafeFallSuccess";
-	opcode_map[0x02fb]="LiveOP_DisciplineUpdate";
+	opcode_map[0x02fb]="LiveOP_DisciplineChange";
 	opcode_map[0x0198]="LiveOP_SetDataRate";
 	opcode_map[0x023b]="LiveOP_ZoneEntry";
 	opcode_map[0x006b]="LiveOP_PlayerProfile";

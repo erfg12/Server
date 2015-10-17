@@ -21,6 +21,8 @@
 #include <mysql.h>
 #include <cstring>
 
+#pragma warning( disable : 4244 4267 )
+
 EQDB EQDB::s_EQDB;
 
 EQDB::EQDB() {

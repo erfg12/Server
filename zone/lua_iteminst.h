@@ -44,7 +44,6 @@ public:
 	bool IsWeapon();
 	bool IsAmmo();
 	uint32 GetID();
-	uint32 GetItemScriptID();
 	int GetCharges();
 	void SetCharges(int charges);
 	uint32 GetPrice();

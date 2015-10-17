@@ -18,21 +18,24 @@
 #ifndef EQEMU_CONFIG_H
 #define EQEMU_CONFIG_H
 
-#include <stdio.h>
+#include "../common/global_define.h"
+#include "error_log.h"
+
 #include <list>
 #include <map>
 #include <string>
 
-/**
- * Keeps track of all the configuration for the application with a small parser.
- * Note: This is not a thread safe class, but only parse writes to variables in the class.
- * Thus making it mostly safe so long as you're careful with where you call Parse()
- */
 class Config
 {
 public:
 	Config() { }
 	~Config() { }
+
+	/**
+	* Runs all configuration routines and sets loginserver settings.
+	*/
+	bool ConfigSetup();
+
 
 	/**
 	* Parses the selected file for variables, will clear current variables if selected.
@@ -42,7 +45,9 @@ public:
 	/**
 	* Gets a variable if it exists.
 	*/
-	std::string GetVariable(std::string title, std::string parameter);
+	std::string LoadOption(std::string title, std::string parameter, std::string filename);
+	void WriteDBini();
+	void UpdateSettings();
 
 protected:
 	std::map<std::string, std::map<std::string, std::string> > vars;

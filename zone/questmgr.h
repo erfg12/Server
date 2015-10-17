@@ -90,8 +90,6 @@ public:
 	void changedeity(int diety_id);
 	void exp(int amt);
 	void level(int newlevel);
-	void traindisc(int discipline_tome_item_id);
-	bool isdisctome(int item_id);
 	void safemove();
 	void rain(int weather);
 	void snow(int weather);
@@ -100,9 +98,7 @@ public:
 	void permarace(int race_id);
 	void permagender(int gender_id);
 	uint16 scribespells(uint8 max_level, uint8 min_level = 1);
-	uint16 traindiscs(uint8 max_level, uint8 min_level = 1);
 	void unscribespells();
-	void untraindiscs();
 	void givecash(int copper, int silver, int gold, int platinum);
 	void pvp(const char *mode);
 	void movepc(int zone_id, float x, float y, float z, float heading);

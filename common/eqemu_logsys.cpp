@@ -55,6 +55,8 @@ std::ofstream process_log;
 #define LC_CYAN    "\033[36m"      /* Cyan */
 #define LC_WHITE   "\033[37m"      /* White */
 
+#pragma warning( disable : 4996 )
+
 namespace Console {
 	enum Color {
 		Black = 0,

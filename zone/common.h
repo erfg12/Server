@@ -132,7 +132,8 @@ enum {
 	NPC_CHASE_DISTANCE = 40,
 	ALLOW_TO_TANK = 41,
 	PROX_AGGRO = 42,
-	MAX_SPECIAL_ATTACK = 43
+	ALWAYS_CALL_HELP = 43,
+	MAX_SPECIAL_ATTACK = 44
 	
 };
 
@@ -190,6 +191,7 @@ struct Buffs_Struct {
 	bool	persistant_buff;
 	bool	client; //True if the caster is a client
 	bool	UpdateClient;
+	bool	isdisc;
 };
 
 struct StatBonuses {
@@ -205,43 +207,28 @@ struct StatBonuses {
 	//would it be worth it to create a Stat_Struct?
 	int32	STR;
 	int32	STRCapMod;
-	int32	HeroicSTR;
 	int32	STA;
 	int32	STACapMod;
-	int32	HeroicSTA;
 	int32	DEX;
 	int32	DEXCapMod;
-	int32	HeroicDEX;
 	int32	AGI;
 	int32	AGICapMod;
-	int32	HeroicAGI;
 	int32	INT;
 	int32	INTCapMod;
-	int32	HeroicINT;
 	int32	WIS;
 	int32	WISCapMod;
-	int32	HeroicWIS;
 	int32	CHA;
 	int32	CHACapMod;
-	int32	HeroicCHA;
 	int32	MR;
 	int32	MRCapMod;
-	int32	HeroicMR;
 	int32	FR;
 	int32	FRCapMod;
-	int32	HeroicFR;
 	int32	CR;
 	int32	CRCapMod;
-	int32	HeroicCR;
 	int32	PR;
 	int32	PRCapMod;
-	int32	HeroicPR;
 	int32	DR;
 	int32	DRCapMod;
-	int32	HeroicDR;
-	int32	Corrup;
-	int32	CorrupCapMod;
-	int32	HeroicCorrup;
 	uint16	DamageShieldSpellID;
 	int		DamageShield;						// this is damage done to mobs that attack this
 	DmgShieldType	DamageShieldType;
@@ -318,10 +305,6 @@ struct StatBonuses {
 	int32	HealRate;							// Spell effect that influences effectiveness of heals
 	int32	MaxHPChange;						// Spell Effect
 	int16	SkillDmgTaken[HIGHEST_SKILL+2];		// All Skills + -1
-	int32	HealAmt;							// Item Effect
-	int32	SpellDmg;							// Item Effect
-	int32	Clairvoyance;						// Item Effect
-	int32	DSMitigation;						// Item Effect
 	int32	DSMitigationOffHand;				// Lowers damage shield from off hand attacks.
 	uint32	SpellTriggers[MAX_SPELL_TRIGGER];	// Innate/Spell/Item Spells that trigger when you cast
 	uint32	SpellOnKill[MAX_SPELL_TRIGGER*3];	// Chance to proc after killing a mob
@@ -401,9 +384,7 @@ struct StatBonuses {
 	int32	ChannelChanceSpells;				// Modify chance to channel a spell.
 	int32	ChannelChanceItems;					// Modify chance to channel a items.
 	uint8	SeeInvis;							// See Invs.
-	uint8	TripleBackstab;						// Chance to triple backstab
 	bool	FrontalBackstabMinDmg;				// Allow frontal backstabs for min damage
-	uint8	FrontalBackstabChance;				// Chance to backstab from the front for full damage
 	uint8	ConsumeProjectile;					// Chance to not consume arrow.
 	uint8	ForageAdditionalItems;				// Chance to forage another item.
 	uint8	SalvageChance;						// Chance to salvage a tradeskill components on fail.

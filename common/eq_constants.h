@@ -388,6 +388,7 @@ enum ChatColor
 	CC_Blue						= 4, // Skills/Spells/Emote
 	CC_Purple					= 5, // Item Tags
 	CC_LightGrey				= 6, 
+	CC_Say						= 7,
 	CC_Red						= 13, // Shout/Fizzles
 	CC_LightGreen				= 14, // Guild
 	CC_Yellow					= 15, // Spell Worn Off/Broadcast
@@ -714,7 +715,7 @@ enum MaterialUseSlots : uint8
 enum InventoryMapTypes : int16 {
 	MapPossessions = 0,
 	MapBank,
-	MapSharedBank,
+	MapUnused,
 	MapTrade,
 	MapWorld,
 	MapLimbo,
@@ -729,7 +730,7 @@ enum InventoryMapTypes : int16 {
 	MapRealEstate,
 	MapViewMODPC,
 	MapViewMODBank,
-	MapViewMODSharedBank,
+	MapViewMODUnused,
 	MapViewMODLimbo,
 	MapAltStorage,
 	MapArchived,
@@ -849,11 +850,6 @@ namespace legacy {
 		SLOT_BANK_END			= 2007,
 		SLOT_BANK_BAGS_BEGIN	= 2030,
 		SLOT_BANK_BAGS_END		= 2107,
-
-		SLOT_SHARED_BANK_BEGIN		= 2500,
-		SLOT_SHARED_BANK_END		= 2501,
-		SLOT_SHARED_BANK_BAGS_BEGIN	= 2531,
-		SLOT_SHARED_BANK_BAGS_END	= 2550,
 
 		SLOT_TRADE_BEGIN		= 3000,
 		SLOT_TRADE_END			= 3007,
@@ -1052,6 +1048,32 @@ enum Zones
 	nightmareb=221,
 	poearthb=222,
 	potimeb=223,
+};
+
+//These are NPCIDs in the database. All of these boats send a BoardBoat opcode when boarded.
+enum Boats
+{
+	Stormbreaker = 770, //freporte-oot-butcherblock
+	SirensBane  = 771,
+	Sea_King = 772, //erudext-erudsxing-qeynos
+	Golden_Maiden  = 773,
+	Maidens_Voyage  = 838, //timorous-firiona
+	Bloated_Belly = 839, //timorous-overthere
+	Barrel_Barge = 840, //Shuttle timorous-oasis
+	Muckskimmer = 841,
+	Sabrina = 24056, //Shuttle in Erud
+	Island_Shuttle = 96075 //Shuttle to Elf docks in timorous
+	//Captains_Skiff = //Shuttle timorous-butcherblock
+};
+
+// Values are bitwise, so we can compare with the expansion field in account.
+enum Expansions
+{
+	ClassicEQ = 0,
+	KunarkEQ = 1,
+	VeliousEQ = 2,
+	LuclinEQ = 4,
+	PlanesEQ = 8
 };
 
 static const uint32 MAX_SPELL_DB_ID_VAL = 65535;

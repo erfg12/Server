@@ -60,6 +60,8 @@ EQEmu::Random emudb_random;
 #	define _ISNAN_(a) std::isnan(a)
 #endif
 
+#pragma warning( disable : 4267 4244 4018 )
+
 Database::Database () {
 	DBInitVars();
 }
@@ -227,6 +229,28 @@ int16 Database::CheckStatus(uint32 account_id) {
 	return status;
 }
 
+int16 Database::CheckExemption(uint32 account_id)
+{
+	std::string query = StringFormat("SELECT `ip_exemption_multiplier` FROM `account` WHERE `id` = %i", account_id);
+	Log.Out(Logs::General, Logs::World_Server, "Checking exemption on account ID: '%i'.", account_id);
+
+	auto results = QueryDatabase(query);
+	if (!results.Success())
+	{
+		return 1;
+	}
+
+	if (results.RowCount() != 1)
+	{
+		return 1;
+	}
+
+	auto row = results.begin();
+	int16 exemption = atoi(row[0]);
+
+	return exemption;
+}
+
 uint32 Database::CreateAccount(const char* name, const char* password, int16 status, uint32 lsaccount_id) {
 	std::string query;
 
@@ -310,6 +334,38 @@ bool Database::ReserveName(uint32 account_id, char* name) {
 	return true;
 }
 
+bool Database::MarkCharacterDeleted(char *name) {
+	std::string query = StringFormat("UPDATE character_data SET is_deleted = 1 where name='%s'", EscapeString(name).c_str());
+
+	auto results = QueryDatabase(query);
+
+	if (!results.Success()) {
+		return false;
+	}
+
+	if (results.RowsAffected() == 0) {
+		return false;
+	}
+
+	return true;
+}
+
+bool Database::UnDeleteCharacter(const char *name) {
+	std::string query = StringFormat("UPDATE character_data SET is_deleted = 0 where name='%s'", EscapeString(name).c_str());
+
+	auto results = QueryDatabase(query);
+
+	if (!results.Success()) {
+		return false;
+	}
+
+	if (results.RowsAffected() == 0) {
+		return false;
+	}
+
+	return true;
+}
+
 /*
 	Delete the character with the name "name"
 	returns false on failure, true otherwise
@@ -330,15 +386,13 @@ bool Database::DeleteCharacter(char *name) {
 
 	query = StringFormat("DELETE FROM `quest_globals` WHERE `charid` = '%d'", charid); QueryDatabase(query);			   
 	query = StringFormat("DELETE FROM `friends` WHERE `charid` = '%d'", charid); QueryDatabase(query);				  
-	query = StringFormat("DELETE FROM `mail` WHERE `charid` = '%d'", charid); QueryDatabase(query);					  
-	query = StringFormat("DELETE FROM `timers` WHERE `char_id` = '%d'", charid); QueryDatabase(query);				  
-	query = StringFormat("DELETE FROM `inventory` WHERE `charid` = '%d'", charid); QueryDatabase(query);				  
-	query = StringFormat("DELETE FROM `char_recipe_list` WHERE `char_id` = '%d'", charid); QueryDatabase(query);		  
-	query = StringFormat("DELETE FROM `zone_flags` WHERE `charID` = '%d'", charid); QueryDatabase(query);				  
+	query = StringFormat("DELETE FROM `mail` WHERE `charid` = '%d'", charid); QueryDatabase(query);					  		  			  
+	query = StringFormat("DELETE FROM `char_recipe_list` WHERE `char_id` = '%d'", charid); QueryDatabase(query);		  		  
 	query = StringFormat("DELETE FROM `titles` WHERE `char_id` = '%d'", charid); QueryDatabase(query);				  
-	query = StringFormat("DELETE FROM `player_titlesets` WHERE `char_id` = '%d'", charid); QueryDatabase(query);		  		  
-	query = StringFormat("DELETE FROM `faction_values` WHERE `char_id` = '%d'", charid); QueryDatabase(query);		  
-	query = StringFormat("DELETE FROM `instance_list_player` WHERE `charid` = '%d'", charid); QueryDatabase(query);	  
+	query = StringFormat("DELETE FROM `player_titlesets` WHERE `char_id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `instance_list_player` WHERE `charid` = '%d'", charid); QueryDatabase(query);	 
+	query = StringFormat("DELETE FROM `character_inventory` WHERE `id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_faction_values` WHERE `id` = '%d'", charid); QueryDatabase(query);		   
 	query = StringFormat("DELETE FROM `character_data` WHERE `id` = '%d'", charid); QueryDatabase(query);				  
 	query = StringFormat("DELETE FROM `character_skills` WHERE `id` = %u", charid); QueryDatabase(query);				  
 	query = StringFormat("DELETE FROM `character_languages` WHERE `id` = %u", charid); QueryDatabase(query);			  
@@ -347,14 +401,36 @@ bool Database::DeleteCharacter(char *name) {
 	query = StringFormat("DELETE FROM `character_currency` WHERE `id` = %u", charid); QueryDatabase(query);			  
 	query = StringFormat("DELETE FROM `character_data` WHERE `id` = %u", charid); QueryDatabase(query);				  
 	query = StringFormat("DELETE FROM `character_spells` WHERE `id` = %u", charid); QueryDatabase(query);				  
-	query = StringFormat("DELETE FROM `character_memmed_spells` WHERE `id` = %u", charid); QueryDatabase(query);		  
-	query = StringFormat("DELETE FROM `character_disciplines` WHERE `id` = %u", charid); QueryDatabase(query);		  
+	query = StringFormat("DELETE FROM `character_memmed_spells` WHERE `id` = %u", charid); QueryDatabase(query);		  	  
 	query = StringFormat("DELETE FROM `character_material` WHERE `id` = %u", charid); QueryDatabase(query);			  
 	query = StringFormat("DELETE FROM `character_inspect_messages` WHERE `id` = %u", charid); QueryDatabase(query);	  
-	query = StringFormat("DELETE FROM `guild_members` WHERE `char_id` = '%d'", charid);
-	QueryDatabase(query);
+	query = StringFormat("DELETE FROM `character_zone_flags` WHERE `id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_keyring` WHERE `id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_buffs` WHERE `id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_consent` WHERE `id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_soulmarks` WHERE `id` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_timers` WHERE `id` = '%d'", charid); QueryDatabase(query);		
+	query = StringFormat("DELETE FROM `guild_members` WHERE `char_id` = '%d'", charid); QueryDatabase(query);
+	DeleteCharacterCorpses(charid);
 	
 	return true;
+}
+
+void Database::DeleteCharacterCorpses(uint32 charid) 
+{
+
+	std::string query = StringFormat("SELECT `id` from `character_corpses` WHERE `charid` = '%d'", charid);
+	auto results = QueryDatabase(query);
+	for (auto row = results.begin(); row != results.end(); ++row) 
+	{ 
+		uint32 corpseid = atoi(row[0]); 
+		std::string delete_query = StringFormat("DELETE FROM `character_corpse_items` WHERE `corpse_id` = '%d'", corpseid); QueryDatabase(delete_query);	
+		delete_query = StringFormat("DELETE FROM `character_corpse_items_backup` WHERE `corpse_id` = '%d'", corpseid); QueryDatabase(delete_query);	
+	}
+
+	query = StringFormat("DELETE FROM `character_corpses` WHERE `charid` = '%d'", charid); QueryDatabase(query);	
+	query = StringFormat("DELETE FROM `character_corpses_backup` WHERE `charid` = '%d'", charid); QueryDatabase(query);	
+
 }
 
 bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, PlayerProfile_Struct* pp){
@@ -383,10 +459,6 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		"eye_color_2,"
 		"hair_style,"
 		"beard,"
-		"ability_time_seconds,"
-		"ability_number,"
-		"ability_time_minutes,"
-		"ability_time_hours,"
 		"title,"
 		"suffix,"
 		"exp,"
@@ -407,10 +479,8 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		"heading,"
 		"autosplit_enabled,"
 		"zone_change_count,"
-		"toxicity,"
 		"hunger_level,"
 		"thirst_level,"
-		"ability_up,"
 		"zone_id,"
 		"zone_instance,"
 		"endurance,"
@@ -445,10 +515,6 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		"%u,"  // eye_color_2			
 		"%u,"  // hair_style			
 		"%u,"  // beard					
-		"%u,"  // ability_time_seconds	
-		"%u,"  // ability_number		
-		"%u,"  // ability_time_minutes	
-		"%u,"  // ability_time_hours	
 		"'%s',"  // title				
 		"'%s',"  // suffix				
 		"%u,"  // exp					
@@ -468,11 +534,9 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		"%f,"  // z						
 		"%f,"  // heading				
 		"%u,"  // autosplit_enabled		
-		"%u,"  // zone_change_count		
-		"%i,"  // toxicity				
+		"%u,"  // zone_change_count					
 		"%i,"  // hunger_level			
-		"%i,"  // thirst_level			
-		"%u,"  // ability_up			
+		"%i,"  // thirst_level					
 		"%u,"  // zone_id				
 		"%u,"  // zone_instance			
 		"%u,"  // endurance				
@@ -507,10 +571,6 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		pp->eyecolor2,					  // " eye_color_2,               "
 		pp->hairstyle,					  // " hair_style,                "
 		pp->beard,						  // " beard,                     "
-		pp->ability_time_seconds,		  // " ability_time_seconds,      "
-		pp->ability_number,				  // " ability_number,            "
-		pp->ability_time_minutes,		  // " ability_time_minutes,      "
-		pp->ability_time_hours,			  // " ability_time_hours,        "
 		EscapeString(pp->title).c_str(),  // " title,                     "
 		EscapeString(pp->suffix).c_str(), // " suffix,                    "
 		pp->exp,						  // " exp,                       "
@@ -531,10 +591,8 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		pp->heading,					  // " heading,                   "
 		pp->autosplit,					  // " autosplit_enabled,         "
 		pp->zone_change_count,			  // " zone_change_count,         "
-		pp->toxicity,					  // " toxicity,                  "
 		pp->hunger_level,				  // " hunger_level,              "
 		pp->thirst_level,				  // " thirst_level,              "
-		pp->ability_up,					  // " ability_up,                "
 		pp->zone_id,					  // " zone_id,                   "
 		pp->zoneInstance,				  // " zone_instance,             "
 		pp->endurance,					  // " endurance,                 "
@@ -621,7 +679,7 @@ bool Database::StoreCharacter(uint32 account_id, PlayerProfile_Struct* pp, Inven
 	{
 		const ItemInst* newinv = inv->GetItem(i);
 		if (newinv) {
-			invquery = StringFormat("INSERT INTO `inventory` (charid, slotid, itemid, charges, color) VALUES (%u, %i, %u, %i, %u)",
+			invquery = StringFormat("INSERT INTO `character_inventory` (id, slotid, itemid, charges, color) VALUES (%u, %i, %u, %i, %u)",
 				charid, i, newinv->GetItem()->ID, newinv->GetCharges(), newinv->GetColor()); 
 			
 			auto results = QueryDatabase(invquery); 
@@ -688,6 +746,20 @@ uint32 Database::GetAccountIDByChar(const char* charname, uint32* oCharID) {
 		*oCharID = atoi(row[1]);
 
 	return accountId;
+}
+
+uint32 Database::GetLevelByChar(const char* charname) {
+	std::string query = StringFormat("SELECT `level` FROM `character_data` WHERE name='%s'", EscapeString(charname).c_str()); 
+	auto results = QueryDatabase(query); 
+	if (!results.Success()) {
+		return 0;
+	}
+
+	if (results.RowCount() != 1)
+		return 0;
+
+	auto row = results.begin(); 
+	return atoi(row[0]);
 }
 
 // Retrieve account_id for a given char_id
@@ -924,9 +996,9 @@ bool Database::SetVariable(const char* varname_in, const char* varvalue_in) {
 }
 
 // Get zone starting points from DB
-bool Database::GetSafePoints(const char* short_name, uint32 version, float* safe_x, float* safe_y, float* safe_z, int16* minstatus, uint8* minlevel, char *flag_needed) {
+bool Database::GetSafePoints(const char* short_name, uint32 version, float* safe_x, float* safe_y, float* safe_z, int16* minstatus, uint8* minlevel, char *flag_needed, uint8* expansion) {
 	
-	std::string query = StringFormat("SELECT safe_x, safe_y, safe_z, min_status, min_level, flag_needed FROM zone "
+	std::string query = StringFormat("SELECT safe_x, safe_y, safe_z, min_status, min_level, flag_needed, expansion FROM zone "
 		" WHERE short_name='%s' AND (version=%i OR version=0) ORDER BY version DESC", short_name, version);
 	auto results = QueryDatabase(query);
 
@@ -950,6 +1022,27 @@ bool Database::GetSafePoints(const char* short_name, uint32 version, float* safe
 		*minlevel = atoi(row[4]);
 	if (flag_needed != nullptr)
 		strcpy(flag_needed, row[5]);
+	if(expansion != nullptr)
+	{
+		uint8 zone_expansion = atoi(row[6]);
+		if(zone_expansion == 1)
+			*expansion = ClassicEQ;
+
+		else if(zone_expansion == 2)
+			*expansion = KunarkEQ;
+
+		else if(zone_expansion == 3)
+			*expansion = VeliousEQ;
+
+		else if(zone_expansion == 4)
+			*expansion = LuclinEQ;
+
+		else if(zone_expansion == 5)
+			*expansion = PlanesEQ;
+
+		else
+			*expansion = 0;
+	}
 
 	return true;
 }
@@ -1463,7 +1556,7 @@ bool Database::CharacterJoin(uint32 char_id, char* char_name) {
 		time(nullptr)						  // last_login
 		);
 	auto join_results = QueryDatabase(join_query);
-	Log.Out(Logs::Detail, Logs::Debug, "CharacterJoin should have wrote to database for %s with ID %i at %i and last_seen should be zero.", char_name, char_id, time(nullptr));
+	Log.Out(Logs::Detail, Logs::Character, "CharacterJoin should have wrote to database for %s with ID %i at %i and last_seen should be zero.", char_name, char_id, time(nullptr));
 
 	if (!join_results.Success()){
 		return false;
@@ -1474,12 +1567,12 @@ bool Database::CharacterJoin(uint32 char_id, char* char_name) {
 bool Database::CharacterQuit(uint32 char_id) {
 	std::string query = StringFormat("UPDATE `webdata_character` SET `last_seen`='%i' WHERE `id` = '%i'", time(nullptr), char_id);
 	auto results = QueryDatabase(query);
-	Log.Out(Logs::Detail, Logs::Debug, "CharacterQuit should have wrote to database for %i at %i", char_id, time(nullptr));
+	
 	if (!results.Success()){
 		Log.Out(Logs::Detail, Logs::Debug, "Error updating character_data table from CharacterQuit.");
 		return false;
 	}
-	Log.Out(Logs::Detail, Logs::Debug, "CharacterQuit should have wrote to database for %i...", char_id);
+	Log.Out(Logs::Detail, Logs::Character, "CharacterQuit should have wrote to database for %i at %i", char_id, time(nullptr));
 	return true;
 }
 
@@ -2478,36 +2571,10 @@ void Database::ClearAllActive() {
 	return;
 }
 
-bool Database::CheckAccountActive(uint32 account_id) {
-	std::string query = StringFormat("SELECT `active` FROM `account` WHERE `id` = %i", account_id);
-
-	auto results = QueryDatabase(query); 
-	if (!results.Success()) {
-		return false;
-	}
-
-	if (results.RowCount() != 1)
-		return false;
-	
-	auto row = results.begin(); 
-	uint8 active = atoi(row[0]); 
-
-	if(active == 0)
-	{
-		std::string query = StringFormat("UPDATE `account` SET active = 1 WHERE id = %i", account_id);
-		QueryDatabase(query);
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-}
-
 void Database::ClearAccountActive(uint32 account_id) {
 	std::string query = StringFormat("UPDATE `account` set active = 0 WHERE id = %i", account_id);
 	auto results = QueryDatabase(query);
-	Log.Out(Logs::Detail, Logs::World_Server,"Setting account %d inactive", account_id);
+
 	return;
 }
 
@@ -2564,4 +2631,57 @@ bool Database::AdjustSpawnTimes()
 		Log.Out(Logs::General, Logs::World_Server, "Boot time respawn timer adjusted for id: %d duration is: %d (base: %d var: %d)", atoi(row[0]), rspawn, atoi(row[1]), atoi(row[2]));
 	}
 	return true;
+}
+
+void Database::ClearAllConsented() {
+	std::string query = "DELETE FROM character_consent";
+	auto results = QueryDatabase(query);
+
+	return;
+}
+
+void Database::ClearAllExpiredConsented(LinkedList<ConsentDenied_Struct*>* purged) 
+{
+	purged->Clear();
+	std::string query = StringFormat("SELECT consented_name,id FROM character_consent");
+	auto results = QueryDatabase(query);
+	if (!results.Success())
+        return;
+
+	if(results.RowCount() == 0)
+		return;
+
+	for (auto row = results.begin(); row != results.end(); ++row) 
+	{
+		std::string name = row[0];
+		std::string timestamp_query = StringFormat("SELECT (UNIX_TIMESTAMP(NOW()) - last_login) FROM `character_data` WHERE name = '%s'", name.c_str());
+		auto timestamp_results = QueryDatabase(timestamp_query);
+
+		if (!timestamp_results.Success())
+			continue;
+
+		if (timestamp_results.RowCount() != 1)
+			continue;
+
+		auto timestamp_row = timestamp_results.begin();
+		uint32 seconds = atoi(timestamp_row[0]);
+		if(seconds >= 1200)
+		{
+			std::string name = row[0];
+			uint32 charid = atoi(row[1]);
+			ConsentDenied_Struct* cd = new ConsentDenied_Struct;
+			cd->ccharid = charid;
+			strn0cpy(cd->oname, name.c_str(), 64);
+			purged->Insert(cd);
+
+			std::string delete_query = StringFormat("DELETE FROM character_consent WHERE consented_name = '%s' AND id = %d", name.c_str(), charid, seconds);
+			auto delete_results = QueryDatabase(delete_query);
+
+			if (delete_results.Success())
+			{
+				Log.Out(Logs::General, Logs::Status, "%s (last seen %d sec ago) cleared consent for character %i", name.c_str(), seconds, charid);
+			}
+
+		}
+	}
 }

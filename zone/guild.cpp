@@ -73,8 +73,7 @@ void Client::SendGuildList() {
 	outapp = new EQApplicationPacket(OP_GuildsList);
 
 	//ask the guild manager to build us a nice guild list packet
-	 OldGuildsList_Struct* guildstruct = guild_mgr.MakeOldGuildList(outapp->size);
-	outapp->pBuffer = reinterpret_cast<uchar*>(guildstruct);
+	outapp->pBuffer = guild_mgr.MakeOldGuildList(outapp->size);
 
 	if(outapp->pBuffer == nullptr) {
 		Log.Out(Logs::Detail, Logs::Guilds, "Unable to make guild list!");

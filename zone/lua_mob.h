@@ -124,7 +124,6 @@ public:
 	int GetDR();
 	int GetPR();
 	int GetCR();
-	int GetCorruption();
 	int GetMaxSTR();
 	int GetMaxSTA();
 	int GetMaxDEX();
@@ -240,10 +239,10 @@ public:
 	void NPCSpecialAttacks(const char *parse, int perm, bool reset, bool remove);
 	int GetResist(int type);
 	bool Charmed();
-	int CheckAggroAmount(int spell_id);
-	int CheckAggroAmount(int spell_id, bool is_proc);
-	int CheckHealAggroAmount(int spell_id);
-	int CheckHealAggroAmount(int spell_id, uint32 heal_possible);
+	int CheckAggroAmount(int spell_id, Lua_Mob target);
+	int CheckAggroAmount(int spell_id, Lua_Mob target, bool is_proc);
+	int CheckHealAggroAmount(int spell_id, Lua_Mob target);
+	int CheckHealAggroAmount(int spell_id, Lua_Mob target, uint32 heal_possible);
 	int GetAA(int id);
 	bool DivineAura();
 	void SetOOCRegen(int regen);
@@ -263,10 +262,6 @@ public:
 	void DoThrowingAttackDmg(Lua_Mob other, Lua_ItemInst range_weapon, Lua_Item item, int weapon_damage);
 	void DoThrowingAttackDmg(Lua_Mob other, Lua_ItemInst range_weapon, Lua_Item item, int weapon_damage, int chance_mod);
 	void DoThrowingAttackDmg(Lua_Mob other, Lua_ItemInst range_weapon, Lua_Item item, int weapon_damage, int chance_mod, int focus);
-	void DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill);
-	void DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill, int chance_mod);
-	void DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill, int chance_mod, int focus);
-	void DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill, int chance_mod, int focus, bool can_riposte);
 	void DoArcheryAttackDmg(Lua_Mob other);
 	void DoArcheryAttackDmg(Lua_Mob other, Lua_ItemInst range_weapon);
 	void DoArcheryAttackDmg(Lua_Mob other, Lua_ItemInst range_weapon, Lua_ItemInst ammo);
@@ -290,6 +285,7 @@ public:
 	void SetRace(int in);
 	void SetGender(int in);
 	void SendIllusionPacket(luabind::adl::object illusion);
+	std::string GetGlobal(const char *varname);
 	void SetGlobal(const char *varname, const char *newvalue, int options, const char *duration);
 	void SetGlobal(const char *varname, const char *newvalue, int options, const char *duration, Lua_Mob other);
 	void TarGlobal(const char *varname, const char *value, const char *duration, int npc_id, int char_id, int zone_id);
@@ -326,7 +322,8 @@ public:
 	void BuffFadeBySpellID(int spell_id);
 	void BuffFadeByEffect(int effect_id);
 	void BuffFadeByEffect(int effect_id, int skipslot);
-	void BuffFadeAll(bool death);
+	void BuffFadeAll();
+	void BuffFadeAll(bool skiprez);
 	void BuffFadeBySlot(int slot);
 	void BuffFadeBySlot(int slot, bool recalc_bonuses, bool death);
 	int CanBuffStack(int spell_id, int caster_level);

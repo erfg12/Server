@@ -57,7 +57,7 @@ void WorldServer::Process(){
 		return;
 
 	ServerPacket *pack = nullptr;
-	while((pack = tcpc.PopPacket())){
+	while((pack = tcpc.PopPacket())) {
 		Log.Out(Logs::Detail, Logs::WebInterface_Server, "Received Opcode: %4X", pack->opcode);
 		switch(pack->opcode) {
 			case 0: { break; }
@@ -228,8 +228,8 @@ void WorldServer::Process(){
 				break;
 			}
 		}
+		safe_delete(pack);
 	}
 
-	safe_delete(pack);
 	return;
 }

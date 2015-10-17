@@ -91,20 +91,7 @@ struct Item_Struct {
 	uint32	Slots;			// Bitfield for which slots this item can be used in
 	uint32	Price;			// Item cost (?)
 	uint32	Icon;			// Icon Number
-	uint32	LoreGroup;		// Later items use LoreGroup instead of LoreFlag. we might want to see about changing this to int32 since it is commonly -1 and is constantly being cast from signed (-1) to unsigned (4294967295)
-	bool	LoreFlag;		// This will be true if LoreGroup is non-zero
-	bool	PendingLoreFlag;
-	bool	ArtifactFlag;
-	bool	SummonedFlag;
 	uint8	FVNoDrop;		// Firiona Vie nodrop flag
-	uint32	Favor;			// Individual favor
-	uint32	GuildFavor;		// Guild favor
-	uint32	PointType;
-
-	//uint32	Unk117;
-	//uint32	Unk118;
-	//uint32	Unk121;
-	//uint32	Unk124;
 
 	uint8	BagType;		// 0:Small Bag, 1:Large Bag, 2:Quiver, 3:Belt Pouch ... there are 50 types
 	uint8	BagSlots;		// Number of slots: can only be 2, 4, 6, 8, or 10
@@ -161,17 +148,7 @@ struct Item_Struct {
 		uint32 Fulfilment;	// Food fulfilment (How long it lasts)
 		int16 CastTime;		// Cast Time for clicky effects, in milliseconds
 	};
-	uint32 EliteMaterial;
 	int32	ProcRate;
-	int8	CombatEffects;	// PoP: Combat Effects +
-	int8	Shielding;		// PoP: Shielding %
-	int8	StunResist;		// PoP: Stun Resist %
-	int8	StrikeThrough;	// PoP: Strike Through %
-	uint32	ExtraDmgSkill;
-	uint32	ExtraDmgAmt;
-	int8	SpellShield;	// PoP: Spell Shield %
-	int8	Avoidance;		// PoP: Avoidance +
-	int8	Accuracy;		// PoP: Accuracy +
 	uint32	CharmFileID;
 	int32	FactionMod1;	// Faction Mod 1
 	int32	FactionMod2;	// Faction Mod 2
@@ -182,71 +159,20 @@ struct Item_Struct {
 	int32	FactionAmt3;	// Faction Amt 3
 	int32	FactionAmt4;	// Faction Amt 4
 	char	CharmFile[32];	// ?
-	uint32	AugType;
-	uint8	AugSlotType[EmuConstants::ITEM_COMMON_SIZE];	// LDoN: Augment Slot 1-5 Type
-	uint8	AugSlotVisible[EmuConstants::ITEM_COMMON_SIZE];	// LDoN: Augment Slot 1-5 Visible
-	uint8	AugSlotUnk2[EmuConstants::ITEM_COMMON_SIZE];	// LDoN: Augment Slot 1-5 Unknown
-	uint32	LDoNTheme;
-	uint32	LDoNPrice;
-	uint32	LDoNSold;
-	uint32	BaneDmgRaceAmt;
-	uint32	AugRestrict;
-	uint32	Endur;
-	uint32	DotShielding;
-	uint32	Attack;
-	uint32	Regen;
-	uint32	ManaRegen;
-	uint32	EnduranceRegen;
-	uint32	Haste;
-	uint32	DamageShield;
 	uint32	RecastDelay;
 	uint32	RecastType;
-	uint32	AugDistiller;
-	bool	Attuneable;
 	bool	NoPet;
-	bool	PotionBelt;
 	bool	Stackable;
 	int8	Stackable_; //Stackable is not a bool on EQMac
 	bool	NoTransfer;
 	bool	QuestItemFlag;
 	int16	StackSize;
-	uint8	PotionBeltSlots;
 	ItemEffect_Struct Click, Proc, Worn, Focus, Scroll, Bard;
-
 	uint8	Book;			// 0=Not book, 1=Book
 	uint32	BookType;
 	char	Filename[33];	// Filename for book data
-	// Begin SoF Fields
-	int32 SVCorruption;
-	uint32 Purity;
-	uint8 EvolvingLevel;
-	uint32 BackstabDmg;
-	uint32 DSMitigation;
-	int32 HeroicStr;
-	int32 HeroicInt;
-	int32 HeroicWis;
-	int32 HeroicAgi;
-	int32 HeroicDex;
-	int32 HeroicSta;
-	int32 HeroicCha;
-	int32 HeroicMR;
-	int32 HeroicFR;
-	int32 HeroicCR;
-	int32 HeroicDR;
-	int32 HeroicPR;
-	int32 HeroicSVCorrup;
-	int32 HealAmt;
-	int32 SpellDmg;
-	uint32 LDoNSellBackRate;
-	uint32 ScriptFileID;
-	uint16 ExpendableArrow;
-	uint32 Clairvoyance;
-	char	ClickName[65];
-	char	ProcName[65];
-	char	WornName[65];
-	char	FocusName[65];
-	char	ScrollName[65];
 	int8	GMFlag;
+	int8	Soulbound;
 
 };
 

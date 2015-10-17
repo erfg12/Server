@@ -26,6 +26,8 @@
 
 #include "timer.h"
 
+#pragma warning( disable : 4244 )
+
 uint32 current_time = 0;
 uint32 last_time = 0;
 

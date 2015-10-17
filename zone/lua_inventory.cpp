@@ -98,16 +98,6 @@ int Lua_Inventory::HasItemByUse(int use, uint8 quantity, uint8 where) {
 	return self->HasItemByUse(use, quantity, where);
 }
 
-int Lua_Inventory::HasItemByLoreGroup(uint32 loregroup) {
-	Lua_Safe_Call_Int();
-	return self->HasItemByLoreGroup(loregroup);
-}
-
-int Lua_Inventory::HasItemByLoreGroup(uint32 loregroup, int where) {
-	Lua_Safe_Call_Int();
-	return self->HasItemByLoreGroup(loregroup, where);
-}
-
 int Lua_Inventory::FindFreeSlot(bool for_bag, bool try_cursor) {
 	Lua_Safe_Call_Int();
 	return self->FindFreeSlot(for_bag, try_cursor);
@@ -182,8 +172,6 @@ luabind::scope lua_register_inventory() {
 		.def("HasItemByUse", (int(Lua_Inventory::*)(int))&Lua_Inventory::HasItemByUse)
 		.def("HasItemByUse", (int(Lua_Inventory::*)(int,uint8))&Lua_Inventory::HasItemByUse)
 		.def("HasItemByUse", (int(Lua_Inventory::*)(int,uint8,uint8))&Lua_Inventory::HasItemByUse)
-		.def("HasItemByLoreGroup", (int(Lua_Inventory::*)(uint32))&Lua_Inventory::HasItemByLoreGroup)
-		.def("HasItemByLoreGroup", (int(Lua_Inventory::*)(uint32,int))&Lua_Inventory::HasItemByLoreGroup)
 		.def("FindFreeSlot", (int(Lua_Inventory::*)(bool,bool))&Lua_Inventory::FindFreeSlot)
 		.def("FindFreeSlot", (int(Lua_Inventory::*)(bool,bool,int))&Lua_Inventory::FindFreeSlot)
 		.def("FindFreeSlot", (int(Lua_Inventory::*)(bool,bool,int,bool))&Lua_Inventory::FindFreeSlot)

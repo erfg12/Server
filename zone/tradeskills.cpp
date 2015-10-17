@@ -648,7 +648,7 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec) {
 
 void Client::CheckIncreaseTradeskill(uint16 success_modifier, SkillUseTypes tradeskill)
 {
-	float skillup_modifier = RuleR(Skill, TradeskillSkillUpModifier);
+	float skillup_modifier = RuleR(Skills, TradeskillSkillUpModifier);
 	// Rework based on the info on eqtraders.com
 	// http://mboards.eqtraders.com/eq/showthread.php?t=22246
 	// 09/10/2006 v0.1 (eq4me)

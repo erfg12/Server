@@ -86,22 +86,30 @@ void ZoneDatabase::AddLootTableToNPC(NPC* npc, uint32 loottable_id, ItemList* it
 
 	// Do items
 	for (uint32 i = 0; i<lts->NumEntries; i++) {
+		uint8 multiplier_count = 0;
 		for (uint32 k = 1; k <= lts->Entries[i].multiplier; k++) {
 			uint8 droplimit = lts->Entries[i].droplimit;
 			uint8 mindrop = lts->Entries[i].mindrop;
+			uint8 multiplier_min = lts->Entries[i].multiplier_min;
 
 			//LootTable Entry probability
 			float ltchance = 0.0f;
 			ltchance = lts->Entries[i].probability;
 
 			float drop_chance = 0.0f;
-			if (ltchance > 0.0 && ltchance < 100.0) {
+			if (ltchance > 0.0 && ltchance < 100.0 && multiplier_count >= multiplier_min) {
 				drop_chance = (float)zone->random.Real(0.0, 100.0);
+			}
+			else if (multiplier_count < multiplier_min)
+			{
+				drop_chance = 0.0f;
 			}
 
 			if (ltchance != 0.0 && (ltchance == 100.0 || drop_chance <= ltchance)) {
 				AddLootDropToNPC(npc, lts->Entries[i].lootdrop_id, itemlist, droplimit, mindrop);
 			}
+
+			++multiplier_count;
 		}
 	}
 }
@@ -252,7 +260,7 @@ void ZoneDatabase::AddLootDropToNPC(NPC* npc, uint32 lootdrop_id, ItemList* item
 }
 
 //if itemlist is null, just send wear changes
-void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charges, uint8 minlevel, uint8 maxlevel, bool equipit, bool wearchange) {
+void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charges, uint8 minlevel, uint8 maxlevel, bool equipit, bool wearchange, bool quest, bool pet) {
 	if(item2 == nullptr)
 		return;
 
@@ -260,10 +268,14 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 	if(!itemlist && !wearchange)
 		return;
 
+	
+	if(CountQuestItems() >= 8)
+		return;
+
 	ServerLootItem_Struct* item = new ServerLootItem_Struct;
-#if EQDEBUG>=11
-		Log.Out(Logs::General, Logs::None, "Adding drop to npc: %s, Item: %i", GetName(), item2->ID);
-#endif
+
+	if(quest)
+		Log.Out(Logs::Detail, Logs::Trading, "Adding %s to npc: %s. Wearchange: %d Equipit: %d Multiquest: %d", item2->Name, GetName(), wearchange, equipit, quest);
 
 	EQApplicationPacket* outapp = nullptr;
 	WearChange_Struct* wc = nullptr;
@@ -278,6 +290,16 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 	item->charges = charges;
 	item->min_level = minlevel;
 	item->max_level = maxlevel;
+	item->quest = quest;
+	item->equip_slot = MainGeneral1; //Set default slot to general inventory. NPCs can have multiple items in the same slot.
+	item->pet = pet;
+
+	if(pet && quest)
+	{
+		Log.Out(Logs::Detail, Logs::Trading, "Error: Item %s is being added to %s as both a pet and a quest.", item2->Name, GetName());
+		item->pet = 0;
+	}
+
 	if (equipit) {
 		uint8 eslot = 0xFF;
 		char newid[20];
@@ -418,6 +440,12 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 			eslot = MaterialFeet;
 			item->equip_slot = MainFeet;
 		}
+		else if (foundslot == MainEar1 || foundslot == MainEar2 || foundslot == MainFace || foundslot ==  MainNeck || foundslot == MainShoulders ||
+			foundslot == MainBack || foundslot == MainRange || foundslot == MainFinger1 || foundslot == MainFinger2 || foundslot == MainWaist ||
+			foundslot == MainAmmo)
+		{
+				item->equip_slot = foundslot;
+		}
 
 		//if we found an open slot it goes in...
 		if(eslot != 0xFF) {
@@ -447,17 +475,17 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 		SendAppearancePacket(AT_Light, GetActiveLightType());
 }
 
-void NPC::AddItem(const Item_Struct* item, uint16 charges, bool equipitem) {
+void NPC::AddItem(const Item_Struct* item, uint16 charges, bool equipitem, bool quest) {
 	//slot isnt needed, its determined from the item.
-	AddLootDrop(item, &itemlist, charges, 1, 127, equipitem, equipitem);
+	AddLootDrop(item, &itemlist, charges, 1, 127, equipitem, equipitem, quest);
 }
 
-void NPC::AddItem(uint32 itemid, uint16 charges, bool equipitem) {
+void NPC::AddItem(uint32 itemid, uint16 charges, bool equipitem, bool quest) {
 	//slot isnt needed, its determined from the item.
 	const Item_Struct * i = database.GetItem(itemid);
 	if(i == nullptr)
 		return;
-	AddLootDrop(i, &itemlist, charges, 1, 127, equipitem, equipitem);
+	AddLootDrop(i, &itemlist, charges, 1, 127, equipitem, equipitem, quest);
 }
 
 void NPC::AddLootTable() {
@@ -470,4 +498,255 @@ void NPC::AddLootTable(uint32 ldid) {
 	if (npctype_id != 0) { // check if it's a GM spawn
 	  database.AddLootTableToNPC(this,ldid, &itemlist, &copper, &silver, &gold, &platinum);
 	}
+}
+
+bool NPC::GetQuestLootItem(int16 itemid) 
+{
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if(sitem && sitem->quest == 1 && sitem->item_id == itemid) 
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool NPC::QuestLootCount(uint16 itemid1, uint16 itemid2, uint16 itemid3, uint16 itemid4)
+{
+	if(itemid2 == 0 && itemid3 == 0 && itemid4 == 0)
+		return true;
+
+	uint8 item2count = 0, item3count = 0, item4count = 0, item1npc = 0, item2npc = 0, item3npc = 0, item4npc = 0;
+	uint8 item1count = 1; 
+	if(itemid2 > 0)
+		item2count = 1;
+	if(itemid3 > 0)
+		item3count = 1;
+	if(itemid4 > 0)
+		item4count = 1;
+
+	if(itemid1 == itemid2 && itemid2 > 0)
+	{
+		item2count = item1count;
+		++item1count;
+		++item2count;
+	}
+	if(itemid1 == itemid3 && itemid3 > 0)
+	{
+		item3count = item1count;
+		++item1count;
+		++item3count;
+	}
+	if(itemid1 == itemid4 && itemid4 > 0)
+	{
+		item4count = item1count;
+		++item1count;
+		++item4count;
+	}
+
+	if(itemid2 == itemid3  && itemid2 > 0 && itemid3 > 0)
+	{
+		item3count = item2count;
+		++item2count;
+		++item3count;
+	}
+	if(itemid2 == itemid4  && itemid2 > 0 && itemid4 > 0)
+	{
+		item4count = item2count;
+		++item2count;
+		++item4count;
+	}
+
+	if(itemid3 == itemid4 && itemid3 > 0 && itemid4 > 0)
+	{
+		item4count = item3count;
+		++item3count;
+		++item4count;
+	}
+
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if(sitem && sitem->quest == 1) 
+		{
+			if(sitem->item_id == itemid1)
+				++item1npc;
+
+			if(sitem->item_id == itemid2 && itemid2 > 0)
+				++item2npc;
+
+			if(sitem->item_id == itemid3 && itemid3 > 0)
+				++item3npc;
+
+			if(sitem->item_id == itemid4 && itemid4 > 0)
+				++item4npc;
+		}
+	}
+
+	if(item1npc < item1count)
+	{
+		return false;
+	}
+
+	if(itemid2 > 0 && item2npc < item2count)
+		return false;
+
+	if(itemid3 > 0 && item3npc < item3count)
+		return false;
+
+	if(itemid4 > 0 && item4npc < item4count)
+		return false;
+
+	return true;
+}
+
+bool NPC::HasQuestLootItem() 
+{
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for(; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if(sitem && sitem->quest == 1) 
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void NPC::CleanQuestLootItems() 
+{
+	//Removes nodrop or multiple quest loot items from a NPC before sending the corpse items to the client.
+
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	uint8 count = 0;
+	for(; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if(sitem && (sitem->quest == 1 || sitem->pet == 1))
+		{
+			uint8 count = CountQuestItem(sitem->item_id);
+			if(count > 1 && sitem->pet != 1)
+			{
+				RemoveItem(sitem->item_id);
+				return;
+			}
+			else
+			{
+				const Item_Struct* item = database.GetItem(sitem->item_id);
+				if(item && item->NoDrop == 0)
+				{
+					RemoveItem(sitem->item_id);
+					return;
+				}
+			}
+		}
+	}
+}
+
+uint8 NPC::CountQuestItem(uint16 itemid)
+{
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	uint8 count = 0;
+	for(; cur != end; ++cur) 
+	{
+		ServerLootItem_Struct* sitem = *cur;
+		if(sitem && sitem->item_id == itemid)
+		{
+			++count;
+		}
+	}
+
+	return count;
+}
+
+uint8 NPC::CountQuestItems()
+{
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	uint8 count = 0;
+	for(; cur != end; ++cur) 
+	{
+		ServerLootItem_Struct* sitem = *cur;
+		if(sitem && sitem->quest == 1)
+		{
+			++count;
+		}
+	}
+
+	return count;
+}
+
+bool NPC::RemoveQuestLootItems(int16 itemid) 
+{
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for (; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if (sitem && sitem->quest == 1) {
+			if(itemid == 0)
+			{
+				RemoveItem(sitem);
+				return true;
+			}
+			else if(itemid == sitem->item_id)
+			{
+				RemoveItem(sitem);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void NPC::RemoveItem(ServerLootItem_Struct* item_data)
+{
+	for (auto iter = itemlist.begin(); iter != itemlist.end(); ++iter) {
+		auto sitem = *iter;
+		if (sitem != item_data) { continue; }
+
+		itemlist.erase(iter);
+
+		uint8 material = Inventory::CalcMaterialFromSlot(sitem->equip_slot); // autos to unsigned char
+		if (material != _MaterialInvalid)
+			SendWearChange(material);
+
+		UpdateEquipmentLight();
+		if (UpdateActiveLight())
+			SendAppearancePacket(AT_Light, GetActiveLightType());
+
+		safe_delete(sitem);
+		return;
+	}
+}
+
+bool NPC::IsEquipped(int16 itemid)
+{
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for (; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if (sitem && sitem->item_id == itemid && sitem->equip_slot <= MainAmmo) 
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

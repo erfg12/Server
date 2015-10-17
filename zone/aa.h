@@ -980,7 +980,7 @@ typedef enum {	//AA IDs
 	aaDeathsFury							=834,
 	aaQuickeningofDeath						=839,//implemented as bonus
 	aaAdvancedTheftofLife					=844,//implemented as bonus-focus
-	aaTripleBackstab						=846,//implemented as bonus
+	aaTripleBackstab						=846,// removed; GoD AA
 	aaHastenedPiety							=849,
 	aaImmobilizingBash						=852,
 	aaViciousSmash							=855,//implemented as bonus

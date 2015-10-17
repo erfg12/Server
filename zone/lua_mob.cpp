@@ -560,11 +560,6 @@ int Lua_Mob::GetCR() {
 	return self->GetCR();
 }
 
-int Lua_Mob::GetCorruption() {
-	Lua_Safe_Call_Int();
-	return self->GetCorrup();
-}
-
 int Lua_Mob::GetMaxSTR() {
 	Lua_Safe_Call_Int();
 	return self->GetMaxSTR();
@@ -1154,24 +1149,26 @@ bool Lua_Mob::Charmed() {
 	return self->Charmed();
 }
 
-int Lua_Mob::CheckAggroAmount(int spell_id) {
+int Lua_Mob::CheckAggroAmount(int spell_id, Lua_Mob target) {
 	Lua_Safe_Call_Int();
-	return self->CheckAggroAmount(spell_id);
+	int32 jolthate = 0;
+	return self->CheckAggroAmount(spell_id, target, jolthate);
 }
 
-int Lua_Mob::CheckAggroAmount(int spell_id, bool is_proc) {
+int Lua_Mob::CheckAggroAmount(int spell_id, Lua_Mob target, bool is_proc) {
 	Lua_Safe_Call_Int();
-	return self->CheckAggroAmount(spell_id, is_proc);
+	int32 jolthate = 0;
+	return self->CheckAggroAmount(spell_id, target, jolthate, is_proc);
 }
 
-int Lua_Mob::CheckHealAggroAmount(int spell_id) {
+int Lua_Mob::CheckHealAggroAmount(int spell_id, Lua_Mob target) {
 	Lua_Safe_Call_Int();
-	return self->CheckHealAggroAmount(spell_id);
+	return self->CheckHealAggroAmount(spell_id, target);
 }
 
-int Lua_Mob::CheckHealAggroAmount(int spell_id, uint32 heal_possible) {
+int Lua_Mob::CheckHealAggroAmount(int spell_id, Lua_Mob target, uint32 heal_possible) {
 	Lua_Safe_Call_Int();
-	return self->CheckHealAggroAmount(spell_id, heal_possible);
+	return self->CheckHealAggroAmount(spell_id, target, heal_possible);
 }
 
 int Lua_Mob::GetAA(int id) {
@@ -1274,26 +1271,6 @@ void Lua_Mob::DoThrowingAttackDmg(Lua_Mob other, Lua_ItemInst range_weapon, Lua_
 								  int focus) {
 	Lua_Safe_Call_Void();
 	self->DoThrowingAttackDmg(other, range_weapon, item, weapon_damage, chance_mod, focus);
-}
-
-void Lua_Mob::DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill) {
-	Lua_Safe_Call_Void();
-	self->DoMeleeSkillAttackDmg(other, weapon_damage, static_cast<SkillUseTypes>(skill));
-}
-
-void Lua_Mob::DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill, int chance_mod) {
-	Lua_Safe_Call_Void();
-	self->DoMeleeSkillAttackDmg(other, weapon_damage, static_cast<SkillUseTypes>(skill), chance_mod);
-}
-
-void Lua_Mob::DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill, int chance_mod, int focus) {
-	Lua_Safe_Call_Void();
-	self->DoMeleeSkillAttackDmg(other, weapon_damage, static_cast<SkillUseTypes>(skill), chance_mod, focus);
-}
-
-void Lua_Mob::DoMeleeSkillAttackDmg(Lua_Mob other, int weapon_damage, int skill, int chance_mod, int focus, bool can_riposte) {
-	Lua_Safe_Call_Void();
-	self->DoMeleeSkillAttackDmg(other, weapon_damage, static_cast<SkillUseTypes>(skill), chance_mod, focus, can_riposte);
 }
 
 void Lua_Mob::DoArcheryAttackDmg(Lua_Mob other) {
@@ -1537,6 +1514,11 @@ void Lua_Mob::SendIllusionPacket(luabind::adl::object illusion) {
 		beard, aa_title, size);
 }
 
+std::string Lua_Mob::GetGlobal(const char *varname) {
+	Lua_Safe_Call_String();
+	return self->GetGlobal(varname);
+}
+
 void Lua_Mob::SetGlobal(const char *varname, const char *newvalue, int options, const char *duration) {
 	Lua_Safe_Call_Void();
 	self->SetGlobal(varname, newvalue, options, duration);
@@ -1712,9 +1694,14 @@ void Lua_Mob::BuffFadeByEffect(int effect_id, int skipslot) {
 	self->BuffFadeByEffect(effect_id, skipslot);
 }
 
-void Lua_Mob::BuffFadeAll(bool death) {
+void Lua_Mob::BuffFadeAll() {
 	Lua_Safe_Call_Void();
-	self->BuffFadeAll(death);
+	self->BuffFadeAll();
+}
+
+void Lua_Mob::BuffFadeAll(bool skiprez) {
+	Lua_Safe_Call_Void();
+	self->BuffFadeAll(skiprez, false);
 }
 
 void Lua_Mob::BuffFadeBySlot(int slot) {
@@ -1834,7 +1821,6 @@ luabind::scope lua_register_mob() {
 		.def("GetDR", &Lua_Mob::GetDR)
 		.def("GetPR", &Lua_Mob::GetPR)
 		.def("GetCR", &Lua_Mob::GetCR)
-		.def("GetCorruption", &Lua_Mob::GetCorruption)
 		.def("GetMaxSTR", &Lua_Mob::GetMaxSTR)
 		.def("GetMaxSTA", &Lua_Mob::GetMaxSTA)
 		.def("GetMaxDEX", &Lua_Mob::GetMaxDEX)
@@ -1947,10 +1933,10 @@ luabind::scope lua_register_mob() {
 		.def("NPCSpecialAttacks", (void(Lua_Mob::*)(const char*,int,bool,bool))&Lua_Mob::NPCSpecialAttacks)
 		.def("GetResist", (int(Lua_Mob::*)(int))&Lua_Mob::GetResist)
 		.def("Charmed", (bool(Lua_Mob::*)(void))&Lua_Mob::Charmed)
-		.def("CheckAggroAmount", (int(Lua_Mob::*)(int))&Lua_Mob::CheckAggroAmount)
-		.def("CheckAggroAmount", (int(Lua_Mob::*)(int,bool))&Lua_Mob::CheckAggroAmount)
-		.def("CheckHealAggroAmount", (int(Lua_Mob::*)(int))&Lua_Mob::CheckHealAggroAmount)
-		.def("CheckHealAggroAmount", (int(Lua_Mob::*)(int,uint32))&Lua_Mob::CheckHealAggroAmount)
+		.def("CheckAggroAmount", (int(Lua_Mob::*)(int,Lua_Mob))&Lua_Mob::CheckAggroAmount)
+		.def("CheckAggroAmount", (int(Lua_Mob::*)(int,Lua_Mob,bool))&Lua_Mob::CheckAggroAmount)
+		.def("CheckHealAggroAmount", (int(Lua_Mob::*)(int,Lua_Mob))&Lua_Mob::CheckHealAggroAmount)
+		.def("CheckHealAggroAmount", (int(Lua_Mob::*)(int,Lua_Mob,uint32))&Lua_Mob::CheckHealAggroAmount)
 		.def("GetAA", (int(Lua_Mob::*)(int))&Lua_Mob::GetAA)
 		.def("DivineAura", (bool(Lua_Mob::*)(void))&Lua_Mob::DivineAura)
 		.def("SetOOCRegen", (void(Lua_Mob::*)(int))&Lua_Mob::SetOOCRegen)
@@ -1970,10 +1956,6 @@ luabind::scope lua_register_mob() {
 		.def("DoThrowingAttackDmg", (void(Lua_Mob::*)(Lua_Mob,Lua_ItemInst,Lua_Item,int))&Lua_Mob::DoThrowingAttackDmg)
 		.def("DoThrowingAttackDmg", (void(Lua_Mob::*)(Lua_Mob,Lua_ItemInst,Lua_Item,int,int))&Lua_Mob::DoThrowingAttackDmg)
 		.def("DoThrowingAttackDmg", (void(Lua_Mob::*)(Lua_Mob,Lua_ItemInst,Lua_Item,int,int,int))&Lua_Mob::DoThrowingAttackDmg)
-		.def("DoMeleeSkillAttackDmg", (void(Lua_Mob::*)(Lua_Mob,int,int))&Lua_Mob::DoMeleeSkillAttackDmg)
-		.def("DoMeleeSkillAttackDmg", (void(Lua_Mob::*)(Lua_Mob,int,int,int))&Lua_Mob::DoMeleeSkillAttackDmg)
-		.def("DoMeleeSkillAttackDmg", (void(Lua_Mob::*)(Lua_Mob,int,int,int,int))&Lua_Mob::DoMeleeSkillAttackDmg)
-		.def("DoMeleeSkillAttackDmg", (void(Lua_Mob::*)(Lua_Mob,int,int,int,int,bool))&Lua_Mob::DoMeleeSkillAttackDmg)
 		.def("DoArcheryAttackDmg", (void(Lua_Mob::*)(Lua_Mob))&Lua_Mob::DoArcheryAttackDmg)
 		.def("DoArcheryAttackDmg", (void(Lua_Mob::*)(Lua_Mob,Lua_ItemInst))&Lua_Mob::DoArcheryAttackDmg)
 		.def("DoArcheryAttackDmg", (void(Lua_Mob::*)(Lua_Mob,Lua_ItemInst,Lua_ItemInst))&Lua_Mob::DoArcheryAttackDmg)
@@ -1997,6 +1979,7 @@ luabind::scope lua_register_mob() {
 		.def("SetRace", (void(Lua_Mob::*)(int))&Lua_Mob::SetRace)
 		.def("SetGender", (void(Lua_Mob::*)(int))&Lua_Mob::SetGender)
 		.def("SendIllusionPacket", (void(Lua_Mob::*)(luabind::adl::object))&Lua_Mob::SendIllusionPacket)
+		.def("GetGlobal", (std::string(Lua_Mob::*)(const char*))&Lua_Mob::GetGlobal)
 		.def("SetGlobal", (void(Lua_Mob::*)(const char*,const char*,int,const char*))&Lua_Mob::SetGlobal)
 		.def("SetGlobal", (void(Lua_Mob::*)(const char*,const char*,int,const char*,Lua_Mob))&Lua_Mob::SetGlobal)
 		.def("TarGlobal", (void(Lua_Mob::*)(const char*,const char*,const char*,int,int,int))&Lua_Mob::TarGlobal)
@@ -2032,6 +2015,7 @@ luabind::scope lua_register_mob() {
 		.def("BuffFadeBySpellID", (void(Lua_Mob::*)(int))&Lua_Mob::BuffFadeBySpellID)
 		.def("BuffFadeByEffect", (void(Lua_Mob::*)(int))&Lua_Mob::BuffFadeByEffect)
 		.def("BuffFadeByEffect", (void(Lua_Mob::*)(int,int))&Lua_Mob::BuffFadeByEffect)
+		.def("BuffFadeAll", (void(Lua_Mob::*)(void))&Lua_Mob::BuffFadeAll)
 		.def("BuffFadeAll", (void(Lua_Mob::*)(bool))&Lua_Mob::BuffFadeAll)
 		.def("BuffFadeBySlot", (void(Lua_Mob::*)(int))&Lua_Mob::BuffFadeBySlot)
 		.def("BuffFadeBySlot", (void(Lua_Mob::*)(int,bool,bool))&Lua_Mob::BuffFadeBySlot)

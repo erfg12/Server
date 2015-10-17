@@ -55,7 +55,6 @@ public:
 	// these are currently hard-coded for existing inventory system..do not use in place of special client version handlers until ready
 	static const uint16	MAP_POSSESSIONS_SIZE = _MainCount;
 	static const uint16 MAP_BANK_SIZE = 8;
-	static const uint16 MAP_SHARED_BANK_SIZE = 2;
 	static const uint16 MAP_TRADE_SIZE = 8;
 	static const uint16 MAP_WORLD_SIZE = 10;
 	static const uint16 MAP_LIMBO_SIZE = 36;
@@ -67,7 +66,6 @@ public:
 	static const uint16 MAP_REAL_ESTATE_SIZE = 0;
 	static const uint16 MAP_VIEW_MOD_PC_SIZE = NOT_USED;
 	static const uint16 MAP_VIEW_MOD_BANK_SIZE = NOT_USED;
-	static const uint16 MAP_VIEW_MOD_SHARED_BANK_SIZE = NOT_USED;
 	static const uint16 MAP_VIEW_MOD_LIMBO_SIZE = NOT_USED;
 	static const uint16 MAP_ALT_STORAGE_SIZE = 0;
 	static const uint16 MAP_ARCHIVED_SIZE = 0;
@@ -97,12 +95,6 @@ public:
 	static const int16 BANK_BAGS_END_OFFSET = 79;
 	static const int16 BANK_BAGS_END = BANK_BAGS_BEGIN + BANK_BAGS_END_OFFSET;
 
-	static const int16 SHARED_BANK_BEGIN = 2500;
-	static const int16 SHARED_BANK_END = 2501;
-	static const int16 SHARED_BANK_BAGS_BEGIN = 2531;
-	static const int16 SHARED_BANK_BAGS_END_OFFSET = 19;
-	static const int16 SHARED_BANK_BAGS_END = SHARED_BANK_BAGS_BEGIN + SHARED_BANK_BAGS_END_OFFSET;
-
 	static const int16 TRADE_BEGIN = 3000;
 	static const int16 TRADE_END = 3007;
 	static const int16 TRADE_NPC_END = 3003;
@@ -115,7 +107,6 @@ public:
 	static const int16 WORLD_SIZE = MAP_WORLD_SIZE;
 
 	static const int16 CORPSE_BEGIN = 22;
-	//static const int16 CORPSE_END = RoF::consts::CORPSE_END; // not ready for use
 
 	static const int16 MATERIAL_BEGIN = MaterialHead;
 	static const int16 MATERIAL_END = MaterialSecondary;
@@ -126,6 +117,9 @@ public:
 	// common and container sizes will not increase until the new 'location' struct is implemented
 	static const uint16 ITEM_COMMON_SIZE = MAC::consts::ITEM_COMMON_SIZE;
 	static const uint16 ITEM_CONTAINER_SIZE = MAC::consts::ITEM_CONTAINER_SIZE;
+
+	static const int16 CURSOR_QUEUE_BEGIN = 8000;
+	static const int16 CURSOR_QUEUE_END = 8999;
 
 	// player profile
 	//static const uint32 CLASS_BITMASK = 0;	// needs value

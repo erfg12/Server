@@ -15,14 +15,16 @@ EQStreamIdentifier::~EQStreamIdentifier() {
 	end = m_streams.end();
 	for(; cur != end; ++cur) {
 		Record *r = *cur;
-		r->stream->ReleaseFromUse();
+		if (r != nullptr)
+			r->stream->ReleaseFromUse();
 		delete r;
 	}
 	oldcur = m_oldstreams.begin();
 	oldend = m_oldstreams.end();
 	for(; oldcur != oldend; ++oldcur) {
 		OldRecord *r = *oldcur;
-		r->stream->ReleaseFromUse();
+		if (r != nullptr)
+			r->stream->ReleaseFromUse();
 		delete r;
 	}
 
@@ -177,7 +179,7 @@ void EQStreamIdentifier::Process() {
 		OldRecord *r = *oldcur;
 
 		//first see if this stream has expired
-		if(r->expire.Check(false)) {
+		if(r != nullptr && r->expire.Check(false)) {
 			//this stream has failed to match any pattern in our timeframe.
 			Log.Out(Logs::Detail, Logs::Netcode, "Unable to identify stream from %s:%d before timeout.", long2ip(r->stream->GetRemoteIP()).c_str(), ntohs(r->stream->GetRemotePort()));
 			r->stream->ReleaseFromUse();
@@ -188,11 +190,11 @@ void EQStreamIdentifier::Process() {
 
 		//then make sure the stream is still active
 		//if stream hasn't finished initializing then continue;
-		if(r->stream->GetState() == UNESTABLISHED)
+		if (r != nullptr && r->stream->GetState() == UNESTABLISHED)
 		{
 			continue;
 		}
-		if(r->stream->GetState() != ESTABLISHED) {
+		if (r != nullptr && r->stream->GetState() != ESTABLISHED) {
 			//the stream closed before it was identified.
 			Log.Out(Logs::Detail, Logs::Netcode, "Unable to identify stream from %s:%d before it closed.", long2ip(r->stream->GetRemoteIP()).c_str(), ntohs(r->stream->GetRemotePort()));
 			switch(r->stream->GetState())

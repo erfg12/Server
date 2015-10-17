@@ -47,6 +47,8 @@ public:
 	bool	Process();
 	virtual void	Depop(bool not_used = true)	{ remove_me = true; }
 	void AELocationSpell(Mob *caster, uint16 cast_spell_id, int16 resist_adjust);
+	uint8	GetTargetsHit() { return targets_hit; }
+	void	SetTargetsHit(uint8 value) { targets_hit = value; } 
 
 protected:
 	Timer remove_timer;
@@ -58,6 +60,7 @@ protected:
 	Timer spell_timer;
 
 	uint16 caster_id;
+	uint8 targets_hit;
 private:
 };
 

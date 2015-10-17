@@ -28,6 +28,7 @@ struct LootTableEntries_Struct {
 	uint8	mindrop;
 	uint8	multiplier;
 	float	probability;
+	uint8	multiplier_min;
 };
 
 struct LootTable_Struct {

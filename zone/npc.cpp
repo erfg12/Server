@@ -101,7 +101,14 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int if
 		d->mana_regen,
 		d->qglobal,
 		d->maxlevel,
-		d->scalerate ),
+		d->scalerate,
+		d->armtexture,
+		d->bracertexture,
+		d->handtexture,
+		d->legtexture,
+		d->feettexture,
+		d->chesttexture
+		),
 	attacked_timer(CombatEventTimer_expire),
 	swarm_timer(100),
 	classattack_timer(1000),
@@ -202,6 +209,8 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int if
 
 	MerchantType = d->merchanttype;
 	merchant_open = GetClass() == MERCHANT;
+	if(MerchantType > 0 && GetClass() == MERCHANT)
+		zone->ResetMerchantQuantity(MerchantType);
 	flymode = iflymode;
 	guard_anim = eaStanding;
 	roambox_distance = 0;
@@ -282,6 +291,10 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int if
 	InitializeBuffSlots();
 	CalcBonuses();
 	raid_target = d->raid_target;
+	npc_assist_cap = 0;
+	ignore_distance = d->ignore_distance;
+	base_texture = d->texture;
+	base_size = d->size;
 }
 
 NPC::~NPC()
@@ -432,7 +445,7 @@ void NPC::ClearItemList() {
 
 void NPC::QueryLoot(Client* to) {
 	int x = 0;
-	to->Message(0, "Coin: %ip %ig %is %ic", platinum, gold, silver, copper);
+	to->Message(CC_Default, "Coin: %ip %ig %is %ic", platinum, gold, silver, copper);
 
 	ItemList::iterator cur, end;
 	cur = itemlist.begin();
@@ -443,13 +456,13 @@ void NPC::QueryLoot(Client* to) {
 		{
 			static char itemid[7];
 			sprintf(itemid, "%06d", item->ID);
-			to->Message(0, "(%i:%i) minlvl: %i maxlvl: %i %i: %c%c%s%s%c", (*cur)->equip_slot, (*cur)->lootslot, (*cur)->min_level, (*cur)->max_level, (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
+			to->Message(CC_Default, "slot: %i min/maxlvl: %i/%i quest: %i pet: %i %i: %c%c%s%s%c", (*cur)->equip_slot, (*cur)->min_level, (*cur)->max_level, (*cur)->quest, (*cur)->pet, (int)item->ID, 0x12, 0x30, itemid, item->Name, 0x12);
 		}
 		else
 			Log.Out(Logs::General, Logs::Error, "Database error, invalid item");
 		x++;
 	}
-	to->Message(0, "%i items on %s.", x, GetName());
+	to->Message(CC_Default, "%i items on %s.", x, GetName());
 }
 
 void NPC::AddCash(uint16 in_copper, uint16 in_silver, uint16 in_gold, uint16 in_platinum) {
@@ -572,8 +585,30 @@ bool NPC::Process()
 	}
 
 	//Handle assists...
-	if(assist_timer.Check() && IsEngaged() && !Charmed()) {
-		entity_list.AIYellForHelp(this, GetTarget());
+	if(assist_cap_timer.Check())
+	{
+		if(NPCAssistCap() > 0)
+		{
+			DelAssistCap();
+		}
+		else
+		{
+			assist_cap_timer.Disable();
+		}
+	}
+
+	if(assist_timer.Check())
+	{
+		if(!Charmed() && IsEngaged() && 
+			(GetSpecialAbility(ALWAYS_CALL_HELP) || 
+			(!HasAssistAggro() && NPCAssistCap() < RuleI(Combat, NPCAssistCap))))
+		{
+			entity_list.AIYellForHelp(this, GetTarget());
+			if(NPCAssistCap() > 0 && !assist_cap_timer.Enabled())
+			{
+				assist_cap_timer.Start(RuleI(Combat, NPCAssistCapTimer));
+			}
+		}
 	}
 
 	if(qGlobals)
@@ -858,17 +893,17 @@ NPC* NPC::SpawnNPC(const char* spawncommand, const glm::vec4& position, Client* 
 
 		if (client) {
 			// Notify client of spawn data
-			client->Message(0, "New spawn:");
-			client->Message(0, "Name: %s", npc->name);
-			client->Message(0, "Race: %u", npc->race);
-			client->Message(0, "Level: %u", npc->level);
-			client->Message(0, "Material: %u", npc->texture);
-			client->Message(0, "Current/Max HP: %i", npc->max_hp);
-			client->Message(0, "Gender: %u", npc->gender);
-			client->Message(0, "Class: %u", npc->class_);
-			client->Message(0, "Weapon Item Number: %u/%u", npc->d_melee_texture1, npc->d_melee_texture2);
-			client->Message(0, "MerchantID: %u", npc->MerchantType);
-			client->Message(0, "Bodytype: %u", npc->bodytype);
+			client->Message(CC_Default, "New spawn:");
+			client->Message(CC_Default, "Name: %s", npc->name);
+			client->Message(CC_Default, "Race: %u", npc->race);
+			client->Message(CC_Default, "Level: %u", npc->level);
+			client->Message(CC_Default, "Material: %u", npc->texture);
+			client->Message(CC_Default, "Current/Max HP: %i", npc->max_hp);
+			client->Message(CC_Default, "Gender: %u", npc->gender);
+			client->Message(CC_Default, "Class: %u", npc->class_);
+			client->Message(CC_Default, "Weapon Item Number: %u/%u", npc->d_melee_texture1, npc->d_melee_texture2);
+			client->Message(CC_Default, "MerchantID: %u", npc->MerchantType);
+			client->Message(CC_Default, "Bodytype: %u", npc->bodytype);
 		}
 
 		return npc;
@@ -1135,7 +1170,7 @@ uint32 ZoneDatabase::AddNPCTypes(const char* zone, uint32 zone_version, Client *
     npc_type_id = results.LastInsertedID();
 
 	if(client)
-        client->Message(0, "%s npc_type ID %i created successfully!", numberlessName, npc_type_id);
+        client->Message(CC_Default, "%s npc_type ID %i created successfully!", numberlessName, npc_type_id);
 
 	return 1;
 }
@@ -1182,6 +1217,16 @@ int32 NPC::GetEquipmentMaterial(uint8 material_slot) const
 			return helmtexture;
 		case MaterialChest:
 			return texture;
+		case MaterialArms:
+			return armtexture;
+		case MaterialWrist:
+			return bracertexture;
+		case MaterialHands:
+			return handtexture;
+		case MaterialLegs:
+			return legtexture;
+		case MaterialFeet:
+			return feettexture;
 		case MaterialPrimary:
 			return d_melee_texture1;
 		case MaterialSecondary:
@@ -1210,42 +1255,51 @@ uint32 NPC::GetMaxDamage(uint8 tlevel)
 	return dmg;
 }
 
-void NPC::PickPocket(Client* thief) {
+void NPC::PickPocket(Client* thief) 
+{
 
-	thief->CheckIncreaseSkill(SkillPickPockets, nullptr, 5);
+	if(bodytype == BT_Undead || IsPet())
+	{
+		thief->SendPickPocketResponse(this, 0, PickPocketFailed, 0, nullptr, true);
+		return;
+	}
 
-	//make sure were allowed to targte them:
 	int olevel = GetLevel();
-	if(thief->GetLevel() < 50) {
-		if(olevel > 45) {
-			thief->Message(CC_Red, "You are too inexperienced to pick pocket this target");
-			thief->SendPickPocketResponse(this, 0, PickPocketFailed);
-			//should we check aggro
+	if(thief->GetLevel() < 50) 
+	{
+		if(olevel > 45) 
+		{
+			thief->Message_StringID(CC_User_Skills, STEAL_OUTSIDE_LEVEL);
+			thief->SendPickPocketResponse(this, 0, PickPocketFailed, 0, nullptr, true);
 			return;
 		}
-	} else if(olevel > (thief->GetLevel() + THIEF_PICKPOCKET_OVER)) {
-		thief->Message(CC_Red, "You are too inexperienced to pick pocket this target");
-		thief->SendPickPocketResponse(this, 0, PickPocketFailed);
-		//should we check aggro
+	} 
+	else if(olevel > (thief->GetLevel() + THIEF_PICKPOCKET_OVER)) 
+	{
+		thief->Message_StringID(CC_User_Skills, STEAL_OUTSIDE_LEVEL);
+		thief->SendPickPocketResponse(this, 0, PickPocketFailed, 0, nullptr, true);
 		return;
 	}
 
-	if(zone->random.Roll(5)) {
+	uint16 steal_skill = thief->GetSkill(SkillPickPockets);
+
+	if(zone->random.Int(1,200) > steal_skill && zone->random.Roll(9)) 
+	{
 		AddToHateList(thief, 50);
-		Say("Stop thief! <%s>", thief->GetName());
-		thief->Message(CC_Red, "You are noticed trying to steal!");
+		if(CanTalk())
+			Say_StringID(PP_FAIL, thief->GetName());
 		thief->SendPickPocketResponse(this, 0, PickPocketFailed);
 		return;
 	}
 
-	int steal_skill = thief->GetSkill(SkillPickPockets);
-	int stealchance = steal_skill*100/(5*olevel+5);
-	ItemInst* inst = 0;
-	int x = 0;
-	int slot[50];
-	int steal_items[50];
-	int charges[50];
-	int money[4];
+	float success = 2.0;
+	ItemInst* inst = nullptr;
+	uint16 steal_items[50];
+	uint8 charges[50];
+	memset(steal_items,0,50);
+	memset(charges,0,50);
+
+	uint8 money[4];
 	money[0] = GetPlatinum();
 	money[1] = GetGold();
 	money[2] = GetSilver();
@@ -1254,14 +1308,13 @@ void NPC::PickPocket(Client* thief) {
 		money[0] = 0;
 	if (steal_skill < 60)
 		money[1] = 0;
-	memset(slot,0,50);
-	memset(steal_items,0,50);
-	memset(charges,0,50);
-	//Determine wheter to steal money or an item.
+
+	//Determine whether to steal money or an item.
 	bool no_coin = ((money[0] + money[1] + money[2] + money[3]) == 0);
-	bool steal_item = (zone->random.Roll(50) || no_coin);
+	bool steal_item = (steal_skill > zone->random.Int(1,250) || no_coin);
 	if (steal_item)
 	{
+		int x = 0;
 		ItemList::iterator cur,end;
 		cur = itemlist.begin();
 		end = itemlist.end();
@@ -1271,13 +1324,8 @@ void NPC::PickPocket(Client* thief) {
 			if (item)
 			{
 				inst = database.CreateItem(item, citem->charges);
-				bool is_arrow = (item->ItemType == ItemTypeArrow) ? true : false;
-				int slot_id = thief->GetInv().FindFreeSlot(false, true, inst->GetItem()->Size, is_arrow);
-				if (/*!Equipped(item->ID) &&*/
-					!item->Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer) && slot_id != INVALID_INDEX
-					/*&& steal_skill > item->StealSkill*/ )
+				if (!IsEquipped(item->ID) && !item->Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer))
 				{
-					slot[x] = slot_id;
 					steal_items[x] = item->ID;
 					if (inst->IsStackable())
 						charges[x] = 1;
@@ -1287,6 +1335,7 @@ void NPC::PickPocket(Client* thief) {
 				}
 			}
 		}
+
 		if (x > 0)
 		{
 			int random = zone->random.Int(0, x-1);
@@ -1296,12 +1345,20 @@ void NPC::PickPocket(Client* thief) {
 				const Item_Struct* item = inst->GetItem();
 				if (item)
 				{
-					if (/*item->StealSkill || */steal_skill >= stealchance)
+					if (steal_skill > zone->random.Int(1,210))
 					{
-						thief->PutItemInInventory(slot[random], *inst);
-						thief->SendItemPacket(slot[random], inst, ItemPacketTrade);
-						RemoveItem(item->ID);
-						thief->SendPickPocketResponse(this, 0, PickPocketItem, item);
+						int16 slotid = 0;
+						if(!thief->GetPickPocketSlot(inst, slotid))
+						{
+							thief->SendPickPocketResponse(this, 0, PickPocketFailed);
+						}
+						else
+						{
+							thief->SendPickPocketResponse(this, 0, PickPocketItem, slotid, inst);
+							RemoveItem(item->ID);
+						}
+						safe_delete(inst);
+						return;
 					}
 					else
 						steal_item = false;
@@ -1318,62 +1375,76 @@ void NPC::PickPocket(Client* thief) {
 		}
 		else
 		{
-			thief->Message(0, "This target's pockets are empty");
+			thief->Message(CC_Default, "This target's pockets are empty.");
 			thief->SendPickPocketResponse(this, 0, PickPocketFailed);
 		}
 	}
 	if (!steal_item) //Steal money
 	{
-		uint32 amt = zone->random.Int(1, (steal_skill/25)+1);
-		int steal_type = 0;
-		if (!money[0])
+		uint8 maxamt = (steal_skill/25)+1;
+		if(maxamt < 1)
+			maxamt = 1;
+	
+		uint8 mincoin = 0;
+		if(steal_skill < 125)
+			mincoin = 1;
+		if(steal_skill < 60)
+			mincoin = 2;
+
+		uint32 amt = zone->random.Int(1, maxamt);
+		uint8 random_coin = zone->random.Int(mincoin,3);
+
+		uint8 steal_type = 3;
+		if(money[random_coin] > 0 && amt > 0)
 		{
-			steal_type = 1;
-			if (!money[1])
-			{
-				steal_type = 2;
-				if (!money[2])
-				{
-					steal_type = 3;
-				}
-			}
+			steal_type = random_coin;
+		}
+		else
+		{
+			thief->SendPickPocketResponse(this, 0, PickPocketFailed);
+			safe_delete(inst);
+			return;
 		}
 
-		if (zone->random.Roll(stealchance))
+		if (steal_skill > zone->random.Int(1,210))
 		{
 			switch (steal_type)
 			{
-				case 0:{
-						if (amt > GetPlatinum())
-							amt = GetPlatinum();
-						SetPlatinum(GetPlatinum()-amt);
-						thief->AddMoneyToPP(0,0,0,amt,false);
-						thief->SendPickPocketResponse(this, amt, PickPocketPlatinum);
-						break;
+				case 0:
+				{
+					if (amt > GetPlatinum())
+						amt = GetPlatinum();
+					SetPlatinum(GetPlatinum()-amt);
+					thief->AddMoneyToPP(0,0,0,amt,false);
+					thief->SendPickPocketResponse(this, amt, PickPocketPlatinum);
+					break;
 				}
-				case 1:{
-						if (amt > GetGold())
-							amt = GetGold();
-						SetGold(GetGold()-amt);
-						thief->AddMoneyToPP(0,0,amt,0,false);
-						thief->SendPickPocketResponse(this, amt, PickPocketGold);
-						break;
+				case 1:
+				{
+					if (amt > GetGold())
+						amt = GetGold();
+					SetGold(GetGold()-amt);
+					thief->AddMoneyToPP(0,0,amt,0,false);
+					thief->SendPickPocketResponse(this, amt, PickPocketGold);
+					break;
 				}
-				case 2:{
-						if (amt > GetSilver())
-							amt = GetSilver();
-						SetSilver(GetSilver()-amt);
-						thief->AddMoneyToPP(0,amt,0,0,false);
-						thief->SendPickPocketResponse(this, amt, PickPocketSilver);
-						break;
+				case 2:
+				{
+					if (amt > GetSilver())
+						amt = GetSilver();
+					SetSilver(GetSilver()-amt);
+					thief->AddMoneyToPP(0,amt,0,0,false);
+					thief->SendPickPocketResponse(this, amt, PickPocketSilver);
+					break;
 				}
-				case 3:{
-						if (amt > GetCopper())
-							amt = GetCopper();
-						SetCopper(GetCopper()-amt);
-						thief->AddMoneyToPP(amt,0,0,0,false);
-						thief->SendPickPocketResponse(this, amt, PickPocketCopper);
-						break;
+				case 3:
+				{
+					if (amt > GetCopper())
+						amt = GetCopper();
+					SetCopper(GetCopper()-amt);
+					thief->AddMoneyToPP(amt,0,0,0,false);
+					thief->SendPickPocketResponse(this, amt, PickPocketCopper);
+					break;
 				}
 			}
 		}
@@ -2094,9 +2165,9 @@ void NPC::DoNPCEmote(uint8 event_, uint16 emoteid)
 
 bool NPC::CanTalk()
 {
-	//Races that should be able to talk. (Races up to Titanium)
+	//Races that should be able to talk.
 
-	uint16 TalkRace[473] =
+	uint16 TalkRace[329] =
 	{1,2,3,4,5,6,7,8,9,10,11,12,0,0,15,16,0,18,19,20,0,0,23,0,25,0,0,0,0,0,0,
 	32,0,0,0,0,0,0,39,40,0,0,0,44,0,0,0,0,49,0,51,0,53,54,55,56,57,58,0,0,0,
 	62,0,64,65,66,67,0,0,70,71,0,0,0,0,0,77,78,79,0,81,82,0,0,0,86,0,0,0,90,
@@ -2108,12 +2179,7 @@ bool NPC::CanTalk()
 	0,0,235,236,0,238,239,240,241,242,243,244,0,246,247,0,0,0,251,0,0,254,255,
 	256,257,0,0,0,0,0,0,0,0,266,267,0,0,270,271,0,0,0,0,0,277,278,0,0,0,0,283,
 	284,0,286,0,288,289,290,0,0,0,0,295,296,297,298,299,300,0,0,0,304,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,320,0,322,323,324,325,0,0,0,0,330,331,332,333,334,335,
-	336,337,338,339,340,341,342,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,359,360,361,362,
-	0,364,365,366,0,368,369,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,385,386,0,0,0,0,0,392,
-	393,394,395,396,397,398,0,400,402,0,0,0,0,406,0,408,0,0,411,0,413,0,0,0,417,
-	0,0,420,0,0,0,0,425,0,0,0,0,0,0,0,433,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,458,0,0,0,0,0,0,0,0,467,0,0,470,0,0,473};
+	0,0,0,0,0,0,0,0,0,0,0,320,0,322,323,324,325,0,0,0,0};
 
 	int talk_check = TalkRace[GetRace() - 1];
 
@@ -2258,8 +2324,9 @@ void NPC::DoQuestPause(Mob *other) {
 		FaceTarget(other);
 	} else if(!IsMoving()) {
 		FaceTarget(other);
+		// this stops them from auto changing direction, in AI_DoMovement()
+		AIhail_timer->Start((RuleI(NPC, SayPauseTimeInSec)-1)*1000);
 	}
-
 }
 
 void NPC::DepopSwarmPets()
@@ -2705,4 +2772,91 @@ float NPC::ApplyPushVector(bool noglance)
 	}
 
 	return pushedDist;
+}
+
+bool NPC::AddQuestLoot(int16 itemid, int8 charges)
+{
+	const Item_Struct* item = database.GetItem(itemid);
+	if(item)
+	{
+		AddLootDrop(item, &itemlist, charges, 1, 127, false, false, true);
+	}
+	else
+		return false;
+
+	return true;
+}
+
+bool NPC::AddPetLoot(int16 itemid, int8 charges)
+{
+	const Item_Struct* item = database.GetItem(itemid);
+	if(item)
+	{
+		AddLootDrop(item, &itemlist, charges, 1, 127, true, true, false, true);
+	}
+	else
+		return false;
+
+	return true;
+}
+
+void NPC::DeleteQuestLoot(int16 itemid1, int16 itemid2, int16 itemid3, int16 itemid4)
+{
+	int16 items = itemlist.size();
+	for (int i = 0; i < items; ++i)
+	{
+		if(itemid1 == 0)
+		{
+			if(!RemoveQuestLootItems(itemid1))
+				break;
+		}
+		else
+		{
+			if(itemid1 != 0)
+			{
+				RemoveQuestLootItems(itemid1);
+			}
+			if(itemid2 != 0)
+			{
+				RemoveQuestLootItems(itemid2);
+			}
+			if(itemid3 != 0)
+			{
+				RemoveQuestLootItems(itemid3);
+			}
+			if(itemid4 != 0)
+			{
+				RemoveQuestLootItems(itemid4);
+			}
+		}
+	}
+}
+
+void NPC::DeleteInvalidQuestLoot()
+{
+	int16 items = itemlist.size();
+	for (int i = 0; i < items; ++i)
+	{
+		CleanQuestLootItems();
+	}
+}
+
+bool NPC::IsBoat()
+{
+	return (GetBaseRace() == SHIP || GetBaseRace() == LAUNCH || GetBaseRace() == CONTROLLED_BOAT);
+}
+
+
+void NPC::ShowQuickStats(Client* c)
+{
+	//This is just #npcstats, but accessible using #showstats 1
+	c->Message(CC_Default, "NPC Stats:");
+	c->Message(CC_Default, "Name: %s   NpcID: %u", GetName(), GetNPCTypeID());
+	c->Message(CC_Default, "Race: %i  Level: %i  Class: %i  Material: %i", GetRace(), GetLevel(), GetClass(), GetTexture());
+	c->Message(CC_Default, "Current HP: %i  Max HP: %i", GetHP(), GetMaxHP());
+	c->Message(CC_Default, "Gender: %i  Size: %f  Bodytype: %d", GetGender(), GetSize(), GetBodyType());
+	c->Message(CC_Default, "Runspeed: %f  Walkspeed: %f", GetRunspeed(), GetWalkspeed());
+	c->Message(CC_Default, "Spawn Group: %i  Grid: %i", GetSp2(), GetGrid());
+	c->Message(CC_Default, "EmoteID: %i Attack Speed: %i", GetEmoteID(), GetAttackTimer());
+	QueryLoot(c);
 }

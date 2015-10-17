@@ -101,7 +101,16 @@ void WorldServer::OnConnected() {
 
 	pack = new ServerPacket(ServerOP_SetConnectInfo, sizeof(ServerConnectInfo));
 	ServerConnectInfo* sci = (ServerConnectInfo*) pack->pBuffer;
+	auto config = ZoneConfig::get();
 	sci->port = ZoneConfig::get()->ZonePort;
+	if(config->WorldAddress.length() > 0) {
+		strn0cpy(sci->address, config->WorldAddress.c_str(), 250);
+	}
+
+	if(config->LocalAddress.length() > 0) {
+		strn0cpy(sci->local_address, config->LocalAddress.c_str(), 250);
+	}
+
 	SendPacket(pack);
 	safe_delete(pack);
 
@@ -413,9 +422,7 @@ void WorldServer::Process() {
 			if (zst->adminname[0] != 0)
 				std::cout << "Zone bootup by " << zst->adminname << std::endl;
 
-			if (!(Zone::Bootup(zst->zoneid, zst->instanceid, zst->makestatic))) {
-				SendChannelMessage(0, 0, 10, 0, 0, "%s:%i Zone::Bootup failed: %s", net.GetZoneAddress(), net.GetZonePort(), database.GetZoneName(zst->zoneid));
-			}
+			Zone::Bootup(zst->zoneid, zst->instanceid, zst->makestatic);
 			break;
 		}
 		case ServerOP_ZoneIncClient: {
@@ -436,8 +443,6 @@ void WorldServer::Process() {
 				if ((Zone::Bootup(szic->zoneid, szic->instanceid))) {
 					zone->AddAuth(szic);
 				}
-				else
-					SendEmoteMessage(0, 0, 100, 0, "%s:%i Zone::Bootup failed: %s (%i)", net.GetZoneAddress(), net.GetZonePort(), database.GetZoneName(szic->zoneid, true), szic->zoneid);
 			}
 			break;
 		}
@@ -447,7 +452,7 @@ void WorldServer::Process() {
 			printf("Zoning %s to %s(%u) - %u\n", client != nullptr ? client->GetCleanName() : "Unknown", szp->zone, database.GetZoneID(szp->zone), szp->instance_id);
 			if (client != 0) {
 				if (strcasecmp(szp->adminname, szp->name) == 0)
-					client->Message(0, "Zoning to: %s", szp->zone);
+					client->Message(CC_Default, "Zoning to: %s", szp->zone);
 				//If #hideme is on, prevent being summoned by a lower GM.
 				else if (client->GetAnon() == 1 && client->Admin() > szp->adminrank)
 				{
@@ -644,30 +649,6 @@ void WorldServer::Process() {
 		case ServerOP_ZoneReboot: {
 			std::cout << "Got Server Requested Zone reboot" << std::endl;
 			ServerZoneReboot_Struct* zb = (ServerZoneReboot_Struct*) pack->pBuffer;
-		//	printf("%i\n",zb->zoneid);
-			struct in_addr	in;
-			in.s_addr = GetIP();
-#ifdef _WINDOWS
-			char buffer[200];
-			snprintf(buffer,200,". %s %i %s",zb->ip2, zb->port, inet_ntoa(in));
-			if(zb->zoneid != 0) {
-				snprintf(buffer,200,"%s %s %i %s",database.GetZoneName(zb->zoneid),zb->ip2, zb->port ,inet_ntoa(in));
-				std::cout << "executing: " << buffer;
-				ShellExecute(0,"Open",net.GetZoneFileName(), buffer, 0, SW_SHOWDEFAULT);
-			}
-			else
-			{
-				std::cout << "executing: " << net.GetZoneFileName() << " " << buffer;
-				ShellExecute(0,"Open",net.GetZoneFileName(), buffer, 0, SW_SHOWDEFAULT);
-			}
-#else
-			char buffer[5];
-			snprintf(buffer,5,"%i",zb->port); //just to be sure that it will work on linux
-			if(zb->zoneid != 0)
-				execl(net.GetZoneFileName(),net.GetZoneFileName(),database.GetZoneName(zb->zoneid),zb->ip2, buffer,inet_ntoa(in), nullptr);
-			else
-				execl(net.GetZoneFileName(),net.GetZoneFileName(),".",zb->ip2, buffer,inet_ntoa(in), nullptr);
-#endif
 			break;
 		}
 		case ServerOP_SyncWorldTime: {
@@ -1289,10 +1270,7 @@ void WorldServer::Process() {
 			ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
 			Client* client = entity_list.GetClientByName(s->grantname);
 			if(client) {
-				if(s->permission == 1)
-					client->consent_list.push_back(s->ownername);
-				else
-					client->consent_list.remove(s->ownername);
+				client->Consent(s->permission, s->ownername);
 
 				EQApplicationPacket* outapp = new EQApplicationPacket(OP_ConsentResponse, sizeof(ConsentResponse_Struct));
 				ConsentResponse_Struct* crs = (ConsentResponse_Struct*)outapp->pBuffer;
@@ -1326,9 +1304,21 @@ void WorldServer::Process() {
 		}
 		case ServerOP_Consent_Response: {
 			ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
-			Client* client = entity_list.GetClientByName(s->ownername);
-			if(client) {
-				client->Message_StringID(CC_Default, s->message_string_id);
+			Client* owner = entity_list.GetClientByName(s->ownername);
+			Client* grant = entity_list.GetClientByName(s->grantname);
+
+			if(owner && s->message_string_id == CONSENT_GIVEN)
+			{
+				owner->Message_StringID(CC_Default, s->message_string_id, s->grantname);
+			}
+			else if(grant && s->message_string_id == CONSENT_BEEN_DENIED)
+			{
+				grant->Consent(0, s->ownername);
+				grant->Message_StringID(CC_Default, s->message_string_id, s->ownername);
+			}
+			else if(owner)
+			{
+				owner->Message_StringID(CC_Default, s->message_string_id);
 			}
 			break;
 		}
@@ -1615,6 +1605,51 @@ void WorldServer::Process() {
 			
 			break;
 		}*/
+
+		case ServerOP_ChangeSharedMem:
+		{
+			std::string hotfix_name = std::string((char*)pack->pBuffer);
+			Log.Out(Logs::General, Logs::Zone_Server, "Loading items");
+			if(!database.LoadItems(hotfix_name)) {
+				Log.Out(Logs::General, Logs::Error, "Loading items FAILED!");
+			}
+
+			Log.Out(Logs::General, Logs::Zone_Server, "Loading npc faction lists");
+			if(!database.LoadNPCFactionLists(hotfix_name)) {
+				Log.Out(Logs::General, Logs::Error, "Loading npcs faction lists FAILED!");
+			}
+
+			Log.Out(Logs::General, Logs::Zone_Server, "Loading loot tables");
+			if(!database.LoadLoot(hotfix_name)) {
+				Log.Out(Logs::General, Logs::Error, "Loading loot FAILED!");
+			}
+
+			Log.Out(Logs::General, Logs::Zone_Server, "Loading skill caps");
+			if(!database.LoadSkillCaps(std::string(hotfix_name))) {
+				Log.Out(Logs::General, Logs::Error, "Loading skill caps FAILED!");
+			}
+
+			Log.Out(Logs::General, Logs::Zone_Server, "Loading spells");
+			if(!database.LoadSpells(hotfix_name, &SPDAT_RECORDS, &spells)) {
+				Log.Out(Logs::General, Logs::Error, "Loading spells FAILED!");
+			}
+
+			Log.Out(Logs::General, Logs::Zone_Server, "Loading base data");
+			if(!database.LoadBaseData(hotfix_name)) {
+				Log.Out(Logs::General, Logs::Error, "Loading base data FAILED!");
+			}
+			break;
+		}
+		case ServerOP_ReloadSkills: 
+		{
+			if(zone)
+			{
+				zone->skill_difficulty.clear();
+				zone->LoadSkillDifficulty();
+				break;
+			}
+		}
+
 		default: {
 			std::cout << " Unknown ZSopcode:" << (int)pack->opcode;
 			std::cout << " size:" << pack->size << std::endl;

@@ -104,6 +104,7 @@
 #define DUP_LORE					290		//Duplicate lore items are not allowed.
 #define TGB_ON						293		//Target other group buff is *ON*.
 #define TGB_OFF						294		//Target other group buff is *OFF*.
+#define TARGET_NOT_FOUND2			303		//I don't see anyone by that name around here...
 #define TRADESKILL_NOCOMBINE		334		//You cannot combine these items in this container type!
 #define TRADESKILL_FAILED			336		//You lacked the skills to fashion the items together.
 #define TRADESKILL_TRIVIAL			338		//You can no longer advance your skill from making this item.
@@ -120,7 +121,8 @@
 #define MEND_FAIL					352		//You have failed to mend your wounds.
 #define LOOT_LORE_ERROR				371		//You cannot loot this Lore Item. You already have one.
 #define PICK_LORE					379		//You cannot pick up a lore item you already possess.
-#define CONSENT_DENIED				390		//You do not have consent to summon that corpse.
+#define	CORPSE_TOO_FAR				389		//The corpse is too far away to summon.
+#define CONSENT_NONE				390		//You do not have consent to summon that corpse.
 #define DISCIPLINE_RDY				393		//You are ready to use a new discipline now.
 #define CONSENT_INVALID_NAME		397		//Not a valid consent name.
 #define CONSENT_NPC					398		//You cannot consent NPC\'s.
@@ -145,6 +147,7 @@
 #define SUMMONING_CORPSE_OTHER		430		//Summoning %1's corpse.
 #define MISSING_SPELL_COMP_ITEM		433		//You are missing %1.
 #define OTHER_HIT_NONMELEE			434		//%1 was hit by non-melee for %2 points of damage.
+#define PET_SPELL_WORN_OFF			435		//Your pet's %1 spell has worn off.
 #define SPELL_WORN_OFF_OF			436		//Your %1 spell has worn off of %2.
 #define SPELL_WORN_OFF				437		//Your %1 spell has worn off.
 #define PET_TAUNTING				438		//Taunting attacker, Master.
@@ -187,17 +190,47 @@
 #define OTHER_REGAIN_CAST			1033	//%1 regains concentration and continues casting.
 #define GENERIC_SHOUT				1034	//%1 shouts '%2'
 #define GENERIC_EMOTE				1036	//%1 %2
+#define BEGIN_GATE					1038	//%1 begins to cast the gate spell.
 #define OTHER_CRIT_HEAL				1039	//%1 performs an exceptional heal! (%2)
 #define OTHER_CRIT_BLAST			1040	//%1 delivers a critical blast! (%2)
 #define NPC_ENRAGE_START			1042	//%1 has become ENRAGED.
 #define NPC_ENRAGE_END				1043	//%1 is no longer enraged.
 #define NPC_RAMPAGE					1044	//%1 goes on a RAMPAGE!
 #define NPC_FLURRY					1045	//%1 executes a FLURRY of attacks on %2!
+#define DISCIPLINE_AGRESSIVE		1048	//%1 assumes an aggressive fighting style.
+#define DISCIPLINE_PRECISION		1049	//%1 assumes a highly precise fighting style.
+#define DISCIPLINE_DEFENSIVE		1050	//%1 assumes a defensive fighting style.
+#define DISCIPLINE_EVASIVE			1051	//%1 assumes an evasive fighting style.
+#define DISCIPLINE_SILENTFIST		1052	//%1's fist clenches in silent but deadly fury.
+#define DISCIPLINE_ASHENHAND		1053	//%1's fist clenches with fatal fervor.
+#define DISCIPLINE_SILENTFIST_IKSAR	1054	//%1's tail twitches in silent but deadly fury.
+#define DISCIPLINE_FURIOUS			1055	//%1's face becomes twisted with fury.
+#define DISCIPLINE_STONESTANCE		1056	//%1's feet become one with the earth.
+#define DISCIPLINE_THUNDERKICK		1057	//%1's feet glow with mystical power.
+#define DISCIPLINE_FORTITUDE		1058	//%1 becomes untouchable.
+#define DISCIPLINE_FELLSTRIKE		1059	//%1's muscles bulge with force of will.
+#define DISCIPLINE_NIMBLE			1060	//%1's reflexes become sharpened by concentrated efforts.
+#define DISCIPLINE_CHARGE			1061	//%1 feels unstoppable!
+#define DISCIPLINE_MIGHTYSTRIKE		1062	//%1 feels like a killing machine!
+#define DISCIPLINE_HUNDREDFIST		1063	//%1 assumes an intimidating demeanor.
+#define DISCIPLINE_KINESTHETICS		1064	//%1 arms feel alive with mystical energy.
+#define DISCIPLINE_HOLYFORGE		1065	//%1's weapon is bathed in a holy light.
+#define DISCIPLINE_SANCTIFICATION	1066	//A sanctifying aura surrounds %1.
+#define DISCIPLINE_TRUESHOT			1067	//%1's bow crackles with natural energy.
+#define DISCIPLINE_WPNSLD_MALE		1068	//%1 deftly twirls his weapon(s).
+#define DISCIPLINE_WPNSLD_FEMALE	1069	//%1 deftly twirls her weapon(s).
+#define DISCIPLINE_WPNSLD_MONSTER	1070	//%1 deftly twirls its weapon(s).
+#define DISCIPLINE_UNHOLYAURA		1071	//An unholy aura envelops %1.
+#define DISCIPLINE_LEECHCURSE		1072	//%1's weapon pulsates with an eerie blue light.
+#define DISCIPLINE_DEFTDANCE		1073	//%1 prances about nimbly.
+#define DISCIPLINE_PURETONE			1074	//%1's voice becomes perfectly melodius.
+#define DISCIPLINE_RESISTANT		1075	//%1 has become more resistant.
 #define DISCIPLINE_FEARLESS			1076	//%1 becomes fearless.
 #define DUEL_FINISHED				1088	//dont know text
 #define EATING_MESSAGE				1091	//Chomp, chomp, chomp... %1 takes a bite from a %2.
 #define DRINKING_MESSAGE			1093	//Glug, glug, glug... %1 takes a drink from a %2.
 #define SUCCESSFUL_TAUNT			1095	//I'll teach you to interfere with me %3.
+#define NO_NEED_FOR_ITEM			1105	//I have no need for this item %3, you can have it back.
 #define PET_SIT_STRING				1130	//Changing position, Master.
 #define PET_CALMING					1131	//Sorry, Master..calming down.
 #define PET_FOLLOWING				1132	//Following you, Master.
@@ -232,6 +265,10 @@
 #define WONT_SELL_DEEDS4			1169 	//Get out of here now!
 #define WONT_SELL_DEEDS5			1170 	//I am tolerant by nature..but infidels like you push me past my limit..get out!
 #define WONT_SELL_DEEDS6			1171 	//I cannot abide you or your actions against all that is right..BE GONE!
+#define BEG_FAIL1					1192	//You have the audacity to beg from me??!
+#define PP_FAIL						1193	//Stop Thief! <%3>
+#define BEG_FAIL2					1194	//I Despise beggars, they are not fit to live.
+#define BEG_SUCCESS					1195	//Here %3 take this and LEAVE ME ALONE!
 #define AA_POINT					1197	//point
 #define AA_POINTS					1215	//points
 #define SPELL_FIZZLE_OTHER			1218	//%1's spell fizzles!
@@ -240,6 +277,15 @@
 #define CORPSE_DECAY_NOW			1227	//This corpse is waiting to expire.
 #define CORPSE_ITEM_LOST			1228	//Your items will no longer stay with you when you respawn on death. You will now need to return to your corpse for your items.
 #define CORPSE_EXP_LOST				1229	//You will now lose experience when you die.
+#define FLICKERS_PALE_LIGHT			1230	//Your %1 flickers with a pale light.
+#define PULSES_WITH_LIGHT			1231	//Your %1 pulses with light as your vision sharpens.
+#define FEEDS_WITH_POWER			1232	//Your %1 feeds you with power.
+#define POWER_DRAIN_INTO			1233	//You feel your power drain into your %1.
+#define SEEMS_DRAINED				1234	//Your %1 seems drained of power.
+#define ALIVE_WITH_POWER			1235	//Your %1 feels alive with power.
+#define SPARKLES					1236	//Your %1 sparkles.
+#define GROWS_DIM					1237	//Your %1 grows dim.
+#define BEGINS_TO_SHINE				1238	//Your %1 begins to shine.
 #define SURNAME_REJECTED			1374	//Your new surname was rejected. Please try a different name.
 #define DUEL_DECLINE				1383	//%1 has declined your challenge to duel to the death.
 #define DUEL_ACCEPTED				1384	//%1 has already accepted a duel with someone else.
@@ -248,6 +294,8 @@
 #define REZZ_ALREADY_PENDING		1379	//You were unable to restore the corpse to life, but you may have success with a later attempt.
 #define IN_USE						1406	//Someone else is using that. Try again later.
 #define DUEL_FLED					1408	//%1 has defeated %2 in a duel to the death! %3 has fled like a cowardly dog!
+#define CONSENT_GIVEN				1427	//You have given %1 permission to drag your corpse.
+#define CONSENT_DENIED				1428	//You have denied %1 permission to drag your corpse.
 #define MEMBER_OF_YOUR_GUILD		1429
 #define OFFICER_OF_YOUR_GUILD		1430
 #define LEADER_OF_YOUR_GUILD		1431
@@ -261,6 +309,7 @@
 #define PLAYER_CHARMED				1461	//You lose control of yourself!
 #define TRADER_BUSY					1468	//That Trader is currently with a customer. Please wait until their transaction is finished.
 #define SENSE_CORPSE_DIRECTION		1563	//You sense a corpse in this direction.
+#define CONSENT_BEEN_DENIED			2103	//You have been denied permission to drag %1's corpse.
 #define QUEUED_TELL					2458	//[queued]
 #define QUEUE_TELL_FULL				2459	//[zoing and queue is full]
 #define SUSPEND_MINION_UNSUSPEND	3267	//%1 tells you, 'I live again...'
@@ -300,7 +349,6 @@
 #define DISCIPLINE_REUSE_MSG2		5808	//You can use the ability %1 again in %2 minute(s) %3 seconds.
 #define FAILED_TAUNT				5811	//You have failed to taunt your target.
 #define PHYSICAL_RESIST_FAIL		5817	//Your target avoided your %1 ability.
-#define AA_NO_TARGET				5825	//You must first select a target for this ability!
 #define FORAGE_MASTERY				6012	//Your forage mastery has enabled you to find something else!
 #define GUILD_BANK_CANNOT_DEPOSIT	6097	// Cannot deposit this item. Containers must be empty, and only one of each LORE and no NO TRADE or TEMPORARY items may be deposited.
 #define GUILD_BANK_FULL				6098	// There is no more room in the Guild Bank.
@@ -313,29 +361,11 @@
 #define DOORS_NO_PICK				7564	//You must have a lock pick in your inventory to do this.
 #define CURRENT_SPELL_EFFECTS		8757	//%1's current spell effects:
 #define BUFF_MINUTES_REMAINING		8799	//%1 (%2 minutes remaining)
-#define FEAR_TOO_HIGH				9035	//Your target is too high of a level for your fear spell.
-#define SLOW_MOSTLY_SUCCESSFUL		9029	//Your spell was mostly successful.
-#define SLOW_PARTIALLY_SUCCESSFUL	9030	// Your spell was partially successful.
-#define SLOW_SLIGHTLY_SUCCESSFUL	9031	//Your spell was slightly successful.
-#define SPELL_OPPOSITE_EFFECT		9032	//Your spell may have had the opposite effect of what you desired.
-#define YOU_HEAL					9068	//You have healed %1 for %2 points of damage.
-#define HIT_NON_MELEE				9073	//%1 hit %2 for %3 points of non-melee damage.
-#define SHAKE_OFF_STUN				9077
-#define STRIKETHROUGH_STRING		9078	//You strike through your opponent's defenses!
-#define SPELL_REFLECT				9082	//%1's spell has been reflected by %2.
-#define NEW_SPELLS_AVAIL			9149	//You have new spells available to you. Check the merchants near your guild master.
-#define SNEAK_RESTRICT				9240	//You can not use this ability because you have not been hidden for long enough.
-#define PET_NOW_FOCUSING			9254	//Focusing on one target, Master.
-#define PET_NOT_FOCUSING			9263	//No longer focusing on one target, Master.
-#define PET_NOT_CASTING				9264	//Not casting spells, Master.
-#define PET_CASTING					9291	//Casting spells normally, Master.
-#define NO_CAST_IN_COMBAT			9190	//You can not cast this spell while in combat.
-#define NO_CAST_OUT_OF_COMBAT		9191	//You can not cast this spell while out of combat.
-#define NO_ABILITY_IN_COMBAT		9192	//You can not use this ability while in combat.
-#define NO_ABILITY_OUT_OF_COMBAT	9194	//You can not use this ability while out of combat.
 #define AE_RAMPAGE					11015	//%1 goes on a WILD RAMPAGE!
 #define FACE_ACCEPTED				12028	//Facial features accepted.
+#define ABORTED_SCRIBING_SPELL		12044   //Aborting scribing of spell.
 #define SPELL_LEVEL_TO_LOW			12048	//You will have to achieve level %1 before you can scribe the %2.
+#define MERCHANT_BUSY_TELL			12069	//%1 tells you, 'I'm busy with another customer now. Please come back later.'
 #define ATTACKFAILED				12158	//%1 try to %2 %3, but %4!
 #define HIT_STRING					12183	//hit
 #define CRUSH_STRING				12191	//crush
@@ -353,10 +383,15 @@
 #define GROUP_INVITEE_NOT_FOUND		12268	//You must target a player or use /invite <name> to invite someone to your group.
 #define GROUP_INVITEE_SELF			12270	//12270 You cannot invite yourself.
 #define	CAMP_ABANDON				12290	//You abandon your preparations to camp.
+#define TALKING_TO_SELF				12323	//Talking to yourself again?
 #define NOT_IN_CONTROL				12368	//You do not have control of yourself right now.
+#define STEAL_FROM_SELF				12409	//You can't seem to steal from yourself for some reason...
+#define STEAL_CORPSES				12406	//You must target a player to steal from first.  You may not steal from corpses.
+#define STEAL_PLAYERS				12410	//You may not steal from a person who does not follow the ways of chaos....
+#define STEAL_OUTSIDE_LEVEL			12413	//You can only steal from others in your level range.
 #define TOO_DISTRACTED				12440   //You are too distracted to cast a spell now!
 #define ALREADY_CASTING				12442	//You are already casting a spell!
-#define ABORTED_SCRIBING_SPELL		12044   //Aborting scribing of spell.
+#define SHIMMERS_BRIEFLY			12444	//Your %1 shimmers briefly.
 #define SENSE_CORPSE_NOT_NAME		12446	//You don't sense any corpses of that name.
 #define SENSE_CORPSE_NONE			12447	//You don't sense any corpses.
 #define SCREECH_BUFF_BLOCK			12448	//Your immunity buff protected you from the spell %1!
@@ -381,6 +416,7 @@
 #define DIVINE_AURA_NO_ATK			12695	//You can't attack while invulnerable!
 #define TRY_ATTACKING_SOMEONE		12696	//Try attacking someone other than yourself, it's more productive.
 #define BACKSTAB_WEAPON				12874	//You need a piercing weapon as your primary weapon in order to backstab
+#define DROPPED_ITEM				12904	//There was no room in your inventory, and the item has dropped to the ground.
 #define MORE_SKILLED_THAN_I			12931	//%1 tells you, 'You are more skilled than I! What could I possibly teach you?'
 #define SURNAME_EXISTS				12939	//You already have a surname. Operation failed.
 #define SURNAME_LEVEL				12940	//You can only submit a surname upon reaching the 20th level. Operation failed.

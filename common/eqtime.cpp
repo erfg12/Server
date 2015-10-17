@@ -32,6 +32,8 @@
 
 #define EQT_VERSION 1000
 
+#pragma warning( disable : 4244 )
+
 //Constructor
 //Input: Starting EQ Time, Starting Real Time.
 EQTime::EQTime(TimeOfDay_Struct start_eq, time_t start_real)

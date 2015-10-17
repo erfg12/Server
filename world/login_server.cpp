@@ -122,7 +122,7 @@ bool LoginServer::Process() {
 
 				if(Config->Locked == true)
 				{
-					if((status == 0 || status < 80) && (status != -2 || status != -1))
+					if(status < 80 && status > -1)
 						utwrs->response = 0;
 					if(status >= 80)
 						utwrs->response = 1;
@@ -139,6 +139,19 @@ bool LoginServer::Process() {
 					utwrs->response = -1;
 				if(status == -2)
 					utwrs->response = -2;
+
+				if (utwrs->response == 1)
+				{
+					// active account checks
+					if (RuleI(World, AccountSessionLimit) >= 0 && status < (RuleI(World, ExemptAccountLimitStatus)) && (RuleI(World, ExemptAccountLimitStatus) != -1) && client_list.CheckAccountActive(id))
+						utwrs->response = -4;
+				}
+				if (utwrs->response == 1)
+				{
+					// ip limit checks
+					if (RuleI(World, MaxClientsPerIP) >= 0 && !client_list.CheckIPLimit(id, utwr->ip, status))
+						utwrs->response = -5;
+				}
 
 				utwrs->worldid = utwr->worldid;
 				SendPacket(outpack);
@@ -210,7 +223,6 @@ bool LoginServer::InitLoginServer() {
 }
 
 bool LoginServer::Connect() {
-	char tmp[25];
 
 	char errbuf[TCPConnection_ErrorBufferSize];
 	if ((LoginServerIP = ResolveIP(LoginServerAddress, errbuf)) == 0) {
@@ -298,9 +310,9 @@ void LoginServer::SendStatus() {
 	if (WorldConfig::get()->Locked)
 		lss->status = -2;
 	else if (numzones <= 0)
-		lss->status = -2;
+		lss->status = -1;
 	else
-		lss->status = numplayers;
+		lss->status = numplayers > 0 ? numplayers : 0;
 
 	lss->num_zones = numzones;
 	lss->num_players = numplayers;

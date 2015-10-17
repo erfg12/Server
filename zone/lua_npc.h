@@ -117,6 +117,16 @@ public:
 	void MerchantCloseShop();
 	void SetMerchantProbability(uint8 amt);
 	uint8 GetMerchantProbability();
+	void AddQuestLoot(int itemid);
+	void AddQuestLoot(int itemid, int charges);
+	void AddPetLoot(int itemid);
+	void AddPetLoot(int itemid, int charges);
+	bool GetQuestLoot(int itemid);
+	bool HasQuestLoot();
+	void DeleteQuestLoot();
+	void DeleteQuestLoot(int itemid1, int itemid2, int itemid3, int itemid4);
+	bool QuestLootCount(int itemid1, int itemid2, int itemid3, int itemid4);
+	bool CanTalk();
 };
 
 #endif

@@ -21,15 +21,21 @@
 #include "login_structures.h"
 #include <stdlib.h>
 
+#pragma warning( disable : 4996 4267 )
+
 extern ErrorLog *server_log;
 extern LoginServer server;
 extern bool run_server;
+extern Database db;
 
 ServerManager::ServerManager()
 {
 	char error_buffer[TCPConnection_ErrorBufferSize];
 
-	int listen_port = atoi(server.config->GetVariable("options", "listen_port").c_str());
+	server_log->Log(log_debug, "ServerManager Entered.");
+	server_log->Trace("ServerManager Got listen_port value from db.");
+
+	int listen_port = atoul(db.LoadServerSettings("options", "listen_port").c_str());
 	tcps = new EmuTCPServer(listen_port, true);
 	if(tcps->Open(listen_port, error_buffer))
 	{
@@ -157,7 +163,7 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 		{
 			packet_size += servername.size() + 1 + (*iter)->GetLocalIP().size() + 1 + sizeof(ServerListServerFlags_Struct);
 		}
-		else if(client_ip.find(server.options.GetLocalNetwork()) != string::npos)
+		else if (client_ip.find(db.LoadServerSettings("options", "local_network").c_str()) != string::npos)
 		{
 			packet_size += servername.size() + 1 + (*iter)->GetLocalIP().size() + 1 + sizeof(ServerListServerFlags_Struct);
 		}
@@ -176,7 +182,16 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 	if (c->GetClientVersion() == cv_tri)
 		ServerList_Trilogy_Struct *sl = (ServerList_Trilogy_Struct*)outapp->pBuffer;
 	sl->numservers = server_count;
-	//sl->showusercount = 0;
+
+	uint8 showcount = 0x0;
+	if (db.CheckExtraSettings("pop_count"))
+	{
+		if (db.LoadServerSettings("options", "pop_count") == "1")
+		{
+			showcount = 0xFF;
+		}
+	}
+	sl->showusercount = showcount;
 
 	unsigned char *data_ptr = outapp->pBuffer;
 	if (c->GetClientVersion() == cv_tri)
@@ -207,7 +222,7 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 			memcpy(data_ptr, (*iter)->GetLocalIP().c_str(), (*iter)->GetLocalIP().size());
 			data_ptr += ((*iter)->GetLocalIP().size() + 1);
 		}
-		else if(client_ip.find(server.options.GetLocalNetwork()) != string::npos)
+		else if (client_ip.find(db.LoadServerSettings("options", "local_network").c_str()) != string::npos)
 		{
 			memcpy(data_ptr, (*iter)->GetLocalIP().c_str(), (*iter)->GetLocalIP().size());
 			data_ptr += ((*iter)->GetLocalIP().size() + 1);
@@ -219,22 +234,17 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 		}
 		
 		ServerListServerFlags_Struct* slsf = (ServerListServerFlags_Struct*)data_ptr;
+
+		// bit 0x1 is set name green - higher bits set language
 		slsf->greenname = 0;
-		switch((*iter)->GetServerListID())
+		if (db.GetWorldPreferredStatus((*iter)->GetRuntimeID()))
 		{
-		case 1:
-		case 2:
-			{
-				slsf->greenname = 1;
-				break;
-			}
-		default:
-			{
-				slsf->greenname = 0;
-				break;
-			}
+			slsf->greenname = 1;
 		}
-		slsf->usercount = (*iter)->GetPlayersOnline();
+
+		slsf->flags = 0x1;
+		slsf->worldid = (*iter)->GetRuntimeID();
+		slsf->usercount = (*iter)->GetStatus();
 		data_ptr += sizeof(ServerListServerFlags_Struct);
 		++iter;
 	}
@@ -242,7 +252,7 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 	return outapp;
 }
 
-void ServerManager::SendOldUserToWorldRequest(const char* server_id, unsigned int client_account_id)
+void ServerManager::SendOldUserToWorldRequest(const char* server_id, unsigned int client_account_id, uint32 ip)
 {
 	list<WorldServer*>::iterator iter = world_servers.begin();
 	bool found = false;
@@ -252,12 +262,16 @@ void ServerManager::SendOldUserToWorldRequest(const char* server_id, unsigned in
 		{
 			ServerPacket *outapp = new ServerPacket(ServerOP_UsertoWorldReq, sizeof(UsertoWorldRequest_Struct));
 			UsertoWorldRequest_Struct *utwr = (UsertoWorldRequest_Struct*)outapp->pBuffer;
-			utwr->worldid = (*iter)->GetServerListID();
+
+			//utwr->worldid = (*iter)->GetServerListID(); //This pulls preffered status instead of actual ID? That does not seem right.
+			utwr->worldid = (*iter)->GetRuntimeID();
+
 			utwr->lsaccountid = client_account_id;
+			utwr->ip = ip;
 			(*iter)->GetConnection()->SendPacket(outapp);
 			found = true;
 
-			if(server.options.IsDumpInPacketsOn())
+			if (server_log->DumpIn())
 			{
 				DumpPacket(outapp);
 			}
@@ -265,13 +279,8 @@ void ServerManager::SendOldUserToWorldRequest(const char* server_id, unsigned in
 		}
 		++iter;
 	}
-
-	if(!found && server.options.IsTraceOn())
-	{
-		server_log->Log(log_client_error, "Client requested a user to world but supplied an invalid id of %s.", server_id);
-	}
+	server_log->Trace("Client requested a user to world but supplied an invalid id.");
 }
-
 
 bool ServerManager::ServerExists(string l_name, string s_name, WorldServer *ignore)
 {

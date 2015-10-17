@@ -33,12 +33,16 @@ enum eqLogType
 	log_debug,
 	log_error,
 	log_database,
+	log_database_trace,
+	log_database_error,
 	log_network,
 	log_network_trace,
 	log_network_error,
 	log_world,
+	log_world_trace,
 	log_world_error,
 	log_client,
+	log_client_trace,
 	log_client_error,
 	_log_largest_type
 };
@@ -59,6 +63,31 @@ public:
 	* Closes the file and destroys the mutex.
 	*/
 	~ErrorLog();
+
+	/**
+	* Shortcut for Trace, cleaner in the code.
+	*/
+	void Trace(const char *message, ...);
+
+	/**
+	* Shortcut for Trace and Packet Logging, cleaner in the code.
+	*/
+	void TracePacket(const char *packetlog, size_t size, ...);
+
+	/**
+	* Shortcut for World Trace, cleaner in the code.
+	*/
+	void WorldTrace(const char *message, ...);
+
+	/**
+	* Shortcut for Dump_Packets_In, cleaner in the code.
+	*/
+	bool DumpIn();
+
+	/**
+	* Shortcut for Dump_Packets_Out, cleaner in the code.
+	*/
+	bool DumpOut();
 
 	/**
 	* Writes to the log system a variable message.

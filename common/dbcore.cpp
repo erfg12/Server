@@ -29,6 +29,8 @@
 	#define DEBUG_MYSQL_QUERIES 0
 #endif
 
+#pragma warning( disable : 4267 )
+
 DBcore::DBcore() {
 	mysql_init(&mysql);
 	pHost = 0;

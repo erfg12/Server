@@ -50,12 +50,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <cstdlib>
 #include <cstring>
 
+#pragma warning( disable : 4244 4267 4715 )
+
 #ifdef SOCKETS_NAMESPACE
 namespace SOCKETS_NAMESPACE {
 #endif
-
-
-
 
 HTTPSocket::HTTPSocket(uint32 ID, SOCKET in_socket, uint32 irIP, uint16 irPort)
 :TCPConnection(ID,in_socket,irIP,irPort)
@@ -66,7 +65,6 @@ HTTPSocket::HTTPSocket(uint32 ID, SOCKET in_socket, uint32 irIP, uint16 irPort)
 ,m_response(false)
 {
 }
-
 
 HTTPSocket::~HTTPSocket()
 {

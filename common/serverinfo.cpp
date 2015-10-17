@@ -19,10 +19,12 @@
 // I'm not sure quite how to get this exact information in *nix, hopefully someone can fill that in
 // -T7g
 // Implement preliminary support for *nix variants
-// misanthropicfiend
+// misanthropic fiend
 
 #ifdef _WINDOWS
 #include <windows.h>
+
+#pragma warning( disable : 4996 )
 
 char Ver_name[100];
 DWORD Ver_build, Ver_min, Ver_maj, Ver_pid;

@@ -63,7 +63,9 @@ Commands:
 	list [catname]
 	set (cat) (rule) (value)
 	values [catname] -> show the values of all rules in the specified category/
-*/
+	*/
+
+#pragma warning( disable : 4244 4267 )
 
 const char *RuleManager::s_categoryNames[_CatCount+1] = {
 	#define RULE_CATEGORY(catname) \

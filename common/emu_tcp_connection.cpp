@@ -43,6 +43,7 @@ tremendously.
 #define TCPN_LOG_RAW_DATA_OUT	0
 #define TCPN_LOG_RAW_DATA_IN	0
 
+#pragma warning( disable : 4267 )
 
 //server side case
 EmuTCPConnection::EmuTCPConnection(uint32 ID, EmuTCPServer* iServer, SOCKET in_socket, uint32 irIP, uint16 irPort, bool iOldFormat)
@@ -474,12 +475,15 @@ void EmuTCPConnection::SendNetErrorPacket(const char* reason) {
 	#endif
 	ServerPacket* pack = new ServerPacket(0);
 	pack->size = 1;
-	if (reason)
+	if (reason != nullptr)
 		pack->size += strlen(reason) + 1;
 	pack->pBuffer = new uchar[pack->size];
 	memset(pack->pBuffer, 0, pack->size);
 	pack->pBuffer[0] = 255;
-	strcpy((char*) &pack->pBuffer[1], reason);
+	if (reason != nullptr)
+		strcpy((char*) &pack->pBuffer[1], reason);
+	else
+		strcpy((char*)&pack->pBuffer[1], "unknown");
 	SendPacket(pack);
 	safe_delete(pack);
 }
@@ -519,7 +523,18 @@ bool EmuTCPConnection::ProcessReceivedData(char* errbuf) {
 }
 
 
-
+/*
+C28182	Dereferencing a copy of a null pointer	Dereferencing NULL pointer.
+'recvbuf' contains the same NULL value as 'size' did.
+common	emu_tcp_connection.cpp										537
+'size' is equal to 7												531
+Enter this branch, (assume 'recvbuf!=0')							534
+Enter this loop, (assume '((recvbuf_used-base))>=size')				536
+Skip this branch, (assume 'size>=524288' is false)					540
+Skip this branch, (assume '((recvbuf_used-base))>=size' is false)	549
+Continue this loop, (assume '((recvbuf_used-base))>=size')			536
+'size' is dereferenced, but may still be NULL						537
+*/
 bool EmuTCPConnection::ProcessReceivedDataAsPackets(char* errbuf) {
 	if (errbuf)
 		errbuf[0] = 0;

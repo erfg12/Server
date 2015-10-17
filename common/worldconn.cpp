@@ -25,6 +25,8 @@
 #include "md5.h"
 #include "servertalk.h"
 
+#pragma warning( disable : 4267 )
+
 WorldConnection::WorldConnection(EmuTCPConnection::ePacketMode mode, const char *password)
 : m_password(password)
 {

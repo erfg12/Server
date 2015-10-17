@@ -31,8 +31,6 @@ uint16 EmuConstants::InventoryMapSize(int16 map) {
 		return MAP_POSSESSIONS_SIZE;
 	case MapBank:
 		return MAP_BANK_SIZE;
-	case MapSharedBank:
-		return MAP_SHARED_BANK_SIZE;
 	case MapTrade:
 		return MAP_TRADE_SIZE;
 	case MapWorld:
@@ -55,8 +53,6 @@ uint16 EmuConstants::InventoryMapSize(int16 map) {
 		return MAP_VIEW_MOD_PC_SIZE;
 	case MapViewMODBank:
 		return MAP_VIEW_MOD_BANK_SIZE;
-	case MapViewMODSharedBank:
-		return MAP_VIEW_MOD_SHARED_BANK_SIZE;
 	case MapViewMODLimbo:
 		return MAP_VIEW_MOD_LIMBO_SIZE;
 	case MapAltStorage:
@@ -89,8 +85,6 @@ std::string EmuConstants::InventoryMapName(int16 map) {
 		return "Possessions";
 	case MapBank:
 		return "Bank";
-	case MapSharedBank:
-		return "Shared Bank";
 	case MapTrade:
 		return "Trade";
 	case MapWorld:
@@ -119,8 +113,6 @@ std::string EmuConstants::InventoryMapName(int16 map) {
 		return "View MOD PC";
 	case MapViewMODBank:
 		return "View MOD Bank";
-	case MapViewMODSharedBank:
-		return "View MOD Shared Bank";
 	case MapViewMODLimbo:
 		return "View MOD Limbo";
 	case MapAltStorage:
@@ -296,16 +288,6 @@ int EmuConstants::ServerToPerlSlot(int server_slot) { // set r/s
 			//if (perl_slot < legacy::SLOT_BANK_BAGS_BEGIN || perl_slot > legacy::SLOT_BANK_BAGS_END)
 			//	perl_slot = legacy::INVALID_INDEX;
 		}
-		else if (server_slot >= EmuConstants::SHARED_BANK_BEGIN && server_slot <= EmuConstants::SHARED_BANK_END) {
-			perl_slot = server_slot;// + legacy::SLOT_SHARED_BANK_BEGIN - EmuConstants::SHARED_BANK_BEGIN;
-			//if (perl_slot < legacy::SLOT_SHARED_BANK_BEGIN || perl_slot > legacy::SLOT_SHARED_BANK_END)
-			//	perl_slot = legacy::INVALID_INDEX;
-		}
-		else if (server_slot >= EmuConstants::SHARED_BANK_BAGS_BEGIN && server_slot <= EmuConstants::SHARED_BANK_BAGS_END) {
-			perl_slot = server_slot;// + legacy::SLOT_SHARED_BANK_BAGS_BEGIN - EmuConstants::SHARED_BANK_BAGS_BEGIN;
-			//if (perl_slot < legacy::SLOT_SHARED_BANK_BAGS_BEGIN || perl_slot > legacy::SLOT_SHARED_BANK_BAGS_END)
-			//	perl_slot = legacy::INVALID_INDEX;
-		}
 		else if (server_slot >= EmuConstants::TRADE_BEGIN && server_slot <= EmuConstants::TRADE_END) {
 			perl_slot = server_slot;// + legacy::SLOT_TRADE_BEGIN - EmuConstants::TRADE_BEGIN;
 			//if (perl_slot < legacy::SLOT_TRADE_BEGIN || perl_slot > legacy::SLOT_TRADE_END)
@@ -381,16 +363,6 @@ int EmuConstants::PerlToServerSlot(int perl_slot) { // set r/s
 		else if (perl_slot >= legacy::SLOT_BANK_BAGS_BEGIN && perl_slot <= legacy::SLOT_BANK_BAGS_END) {
 			server_slot = perl_slot;// + EmuConstants::BANK_BAGS_BEGIN - legacy::SLOT_BANK_BAGS_BEGIN;
 			//if (server_slot < EmuConstants::BANK_BAGS_BEGIN || server_slot > EmuConstants::BANK_BAGS_END)
-			//	server_slot = INVALID_INDEX;
-		}
-		else if (perl_slot >= legacy::SLOT_SHARED_BANK_BEGIN && perl_slot <= legacy::SLOT_SHARED_BANK_END) {
-			server_slot = perl_slot;// + EmuConstants::SHARED_BANK_BEGIN - legacy::SLOT_SHARED_BANK_BEGIN;
-			//if (server_slot < EmuConstants::SHARED_BANK_BEGIN || server_slot > EmuConstants::SHARED_BANK_END)
-			//	server_slot = INVALID_INDEX;
-		}
-		else if (perl_slot >= legacy::SLOT_SHARED_BANK_BAGS_BEGIN && perl_slot <= legacy::SLOT_SHARED_BANK_BAGS_END) {
-			server_slot = perl_slot;// + EmuConstants::SHARED_BANK_BAGS_BEGIN - legacy::SLOT_SHARED_BANK_BAGS_END;
-			//if (server_slot < EmuConstants::SHARED_BANK_BAGS_BEGIN || server_slot > EmuConstants::SHARED_BANK_BAGS_END)
 			//	server_slot = INVALID_INDEX;
 		}
 		else if (perl_slot >= legacy::SLOT_TRADE_BEGIN && perl_slot <= legacy::SLOT_TRADE_END) {
@@ -527,7 +499,7 @@ uint16 EQLimits::InventoryMapSize(int16 map, uint32 version) {
 /*NPC*/			NOT_USED,
 /*Pet*/			NOT_USED
 		},
-		{ // local[MapSharedBank]
+		{ // local[MapUnused]
 /*Unknown*/		NOT_USED,
 /*Trilogy*/		NOT_USED,
 /*Mac*/			NOT_USED,
@@ -662,7 +634,7 @@ uint16 EQLimits::InventoryMapSize(int16 map, uint32 version) {
 /*NPC*/			0,
 /*Pet*/			0
 		},
-		{ // local[MapViewMODSharedBank]
+		{ // local[MapViewMODUnused]
 /*Unknown*/		NOT_USED,
 /*Trilogy*/		0,
 /*Mac*/			0,

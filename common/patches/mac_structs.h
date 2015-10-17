@@ -75,7 +75,7 @@ struct ServerZoneEntry_Struct
 	/*0184*/    uint16  equipment[9]; // Array elements correspond to struct equipment above
 	/*0202*/	uint16	unknown; //Probably part of equipment
 	/*0204*/	Color_Struct equipcolors[9]; // Array elements correspond to struct equipment_colors above
-	/*0240*/	uint32	texture;	// Texture (0xFF=Player - See list of textures for more)
+	/*0240*/	uint32	bodytexture;	// Texture (0xFF=Player - See list of textures for more)
 	/*0244*/	float	size;
 	/*0248*/	float	width;
 	/*0252*/	float	length;
@@ -210,13 +210,6 @@ struct Action_Struct
 	/*34*/	uint16  unknown34;
 };
 
-struct ManaChange_Struct
-{
-	/*00*/	uint16 new_mana;	// Comment:  New Mana AMount
-	/*02*/	uint16 spell_id;	// Comment:  Last Spell Cast
-	/*04*/
-};
-
 struct BeginCast_Struct
 {
 	/*000*/	uint16	caster_id;		// Comment: Unknown -> needs confirming -> ID of Spell Caster? 
@@ -291,10 +284,8 @@ struct Spawn_Struct
 	/*0007*/	int16	y_pos;				// Y Position
 	/*0009*/	int16	x_pos;				// X Position
 	/*0011*/	int16	z_pos;				// Z Position
-	/*0013*/	int32	deltaY:10,			// Velocity Y
-						spacer1:1,			// Placeholder
-						deltaZ:10,			// Velocity Z
-						spacer2:1,			// ***Placeholder
+	/*0013*/	int32	deltaY:11,			// Velocity Y
+						deltaZ:11,			// Velocity Z
 						deltaX:10;			// Velocity X
 	/*0017*/	uint8	void1;
 	/*0018*/	uint16	petOwnerId;		// Id of pet owner (0 if not a pet)
@@ -330,7 +321,7 @@ struct Spawn_Struct
 	/*0098*/	uint8	LD;					// 0=NotLD, 1=LD
 	/*0099*/	uint8	GM;					// 0=NotGM, 1=GM
 	/*0100*/	uint8	flymode;				
-	/*0101*/	uint8	texture;
+	/*0101*/	uint8	bodytexture;
 	/*0102*/	uint8	helm; 
 	/*0103*/	uint8	face;		
 	/*0104*/	uint16	equipment[9];		// Equipment worn: 0=helm, 1=chest, 2=arm, 3=bracer, 4=hand, 5=leg, 6=boot, 7=melee1, 8=melee2
@@ -496,7 +487,7 @@ struct Item_Struct
 	/*0176*/ int8      NoDrop;          // Nodrop flag 1=normal, 0=nodrop, -1=??
 	/*0177*/ uint8     Size;            // Size of item
 	/*0178*/ int16     ItemClass;
-	/*0180*/ int16	   ID;         // Unique Item number confirmed to be signed.
+	/*0180*/ int16	   ID;				// Record number. Confirmed to be signed.
 	/*0182*/ uint16    Icon;         // Icon Number
 	/*0184*/ int16     equipSlot;       // Current slot location of item
 	/*0186*/ uint8     unknown0186[2];   // Client dump has equipSlot/location as a short so this is still unknown
@@ -506,7 +497,7 @@ struct Item_Struct
 	/*0200*/ float	   cur_y;
 	/*0204*/ float     cur_z;
 	/*0208*/ float     heading;
-	/*0212*/ uint32	   inv_refnum; 
+	/*0212*/ uint32	   inv_refnum;  // Unique serial. This is required by apply poison. We're just sending slot for now, in the future a serial system will be needed. 
 	/*0216*/ int16	   log; 
 	/*0218*/ int16     loot_log;
 	/*0220*/ uint16    avatar_level;  //Usually 01, sometimes seen as FFFF, once as 0.
@@ -633,6 +624,27 @@ struct TradeItemsPacket_Struct
 	/*005*/	struct Item_Struct	item;
 	/*000*/	uint8 unknown1[5];
 	/*000*/	
+};
+
+struct PickPocket_Struct 
+{
+// Size 18
+    uint16 to;
+    uint16 from;
+    uint16 myskill;
+    uint16 type; // -1 you are being picked, 0 failed , 1 = plat, 2 = gold, 3 = silver, 4 = copper, 5 = item
+    uint32 coin;
+    uint8 data[6];
+};
+
+struct PickPocketItemPacket_Struct 
+{
+    uint16 to;
+    uint16 from;
+    uint16 myskill;
+    uint16 type; // -1 you are being picked, 0 failed , 1 = plat, 2 = gold, 3 = silver, 4 = copper, 5 = item
+    uint32 coin;
+	struct Item_Struct	item;
 };
 
 struct MerchantItems_Struct
@@ -1087,7 +1099,6 @@ struct PlayerProfile_Struct
 	#define pp_containerinv_size 80
 	#define pp_cursorbaginventory_size 10
 	#define pp_bank_inv_size 8
-	#define pp_bank_cont_inv_size 80
 	/* ***************** */
 	/*0000*/	uint32  checksum;		    // Checksum
 	/*0004*/	uint8	unknown0004[2];		// ***Placeholder
@@ -1103,8 +1114,8 @@ struct PlayerProfile_Struct
 	/*0149*/	char	levelchar[3];		// ***Placeholder
 	/*0152*/	uint32	exp;				// Current Experience
 	/*0156*/	uint16	points;				// Players Points
-	/*0158*/	uint16	mana;				// Player Mana
-	/*0160*/	uint16	cur_hp;				// Player Health
+	/*0158*/	int16	mana;				// Player Mana
+	/*0160*/	int16	cur_hp;				// Player Health
 	/*0162*/	uint16	status;				
 	/*0164*/	uint16	STR;				// Player Strength
 	/*0166*/	uint16	STA;				// Player Stamina
@@ -1116,15 +1127,15 @@ struct PlayerProfile_Struct
 	/*0178*/	uint8	oldface;               //
 	/*0179*/    int8    EquipType[9];       // i think its the visible parts of the body armor
 	/*0188*/    int32   EquipColor[9];      //
-	/*0224*/	uint16	inventory[30];		// Player Inventory Item Numbers
+	/*0224*/	int16	inventory[pp_inventory_size];		// Player Inventory Item Numbers
 	/*0284*/	uint8	languages[26];		// Player Languages
 	/*0310*/	uint8	unknown0310[6];		// ***Placeholder
-	/*0316*/	struct	OldItemProperties_Struct	invItemProprieties[30];	// These correlate with inventory[30]
+	/*0316*/	struct	OldItemProperties_Struct	invItemProperties[pp_inventory_size];	// These correlate with inventory[30]
 	/*0616*/	struct	OldSpellBuff_Struct	buffs[15];	// Player Buffs Currently On
-	/*0766*/	uint16	containerinv[pp_containerinv_size];	// Player Items In "Bags" -- If a bag is in slot 0, this is where the bag's items are
-	/*0926*/	uint16   cursorbaginventory[10];
-	/*0946*/	struct	OldItemProperties_Struct	bagItemProprieties[pp_containerinv_size];	// Just like InvItemProperties
-	/*1746*/    struct  OldItemProperties_Struct	cursorItemProprieties[10];	  //just like invitemprops[]
+	/*0766*/	int16	containerinv[pp_containerinv_size];	
+	/*0926*/	int16   cursorbaginventory[pp_cursorbaginventory_size]; // If a bag is in slot 0, this is where the bag's items are
+	/*0946*/	struct	OldItemProperties_Struct	bagItemProperties[pp_containerinv_size];	// Just like InvItemProperties
+	/*1746*/    struct  OldItemProperties_Struct	cursorItemProperties[pp_cursorbaginventory_size];	  //just like invitemprops[]
 	/*1846*/	int16	spell_book[256];	// Player spells scribed in their book
 	/*2358*/	uint8	unknown2374[512];	// 0xFF
 	/*2870*/	int16	mem_spells[8];	// Player spells memorized
@@ -1166,8 +1177,8 @@ struct PlayerProfile_Struct
 	/*3244*/	float	width;
 	/*3248*/	float   length;
 	/*3252*/	float   view_height;
-	/*3256*/    char    boat[16];
-	/*3272*/    uint8   unknown[76];
+	/*3256*/    char    boat[32];
+	/*3280*/    uint8   unknown[60];
 	/*3348*/	uint8	autosplit;
 	/*3349*/	uint8	unknown3449[43];
 	/*3392*/	uint8	expansions;			//Effects features such as /disc, AA, raid
@@ -1179,11 +1190,11 @@ struct PlayerProfile_Struct
 	/*3824*/	float	bind_x[5];
 	/*3844*/	float	bind_z[5];
 	/*3864*/	float	bind_heading[5];
-	/*3884*/	OldItemProperties_Struct	bankinvitemproperties[8];
-	/*3964*/	OldItemProperties_Struct	bankbagitemproperties[80];
+	/*3884*/	OldItemProperties_Struct	bankinvitemproperties[pp_bank_inv_size];
+	/*3964*/	OldItemProperties_Struct	bankbagitemproperties[pp_containerinv_size];
 	/*4764*/	uint32	login_time;
-	/*4768*/	uint16	bank_inv[8];		// Player Bank Inventory Item Numbers
-	/*4784*/	uint16	bank_cont_inv[80];	// Player Bank Inventory Item Numbers (Bags)
+	/*4768*/	int16	bank_inv[pp_bank_inv_size];		// Player Bank Inventory Item Numbers
+	/*4784*/	int16	bank_cont_inv[pp_containerinv_size];	// Player Bank Inventory Item Numbers (Bags)
 	/*4944*/	uint16	deity;		// ***Placeholder
 	/*4946*/	uint16	guild_id;			// Player Guild ID Number
 	/*4948*/	uint32  birthday;
@@ -1318,27 +1329,6 @@ struct	ItemViewRequest_Struct
 	/*000*/int16	item_id;
 	/*002*/char	item_name[64];
 	/*066*/
-};
-
-/*_MAC_NET_MSG_rpServer, size: 244*/
-struct LogServer_Struct
-{
-	/*000*/	uint32	enable_FV; //Is FV ruleset?
-	/*004*/	uint32	enable_pvp; //Is a Zek-era server?
-	/*008*/	uint32	auto_identify; //Dunno, keep 0
-	/*012*/	uint32	NameGen;	// Name generator enabled?
-	/*016*/	uint32	Gibberish;	// Disables chat if enabled.
-	/*020*/	uint32	test_server;
-	/*024*/	uint32	Locale;
-	/*028*/	uint32	ProfanityFilter;
-	/*032*/	char	worldshortname[32]; //ServerName on disasm
-	/*064*/	uint8	unknown064[32]; //  loggingServerPassword
-	/*096*/	char	unknown096[16];	// 'pacman' on live
-	/*112*/	char	unknown112[16];	// '64.37,148,36' on live
-	/*126*/	uint8	unknown128[48];
-	/*176*/	uint32	unknown176;
-	/*180*/	char	unknown180[64];	// 'eqdataexceptions@mail.station.sony.com' on live
-	/*244*/
 };
 
 /* _MAC_NET_MSG_reward_MacMsg, OP_Sound, Size: 48 */

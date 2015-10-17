@@ -179,6 +179,10 @@ ProcLauncher::ProcRef ProcLauncher::Launch(Spec *&to_launch) {
 		args += *cur;
 	}
 
+	/*
+	C6335	Leaking process handle	Leaking process information handle 'it->proc_info.hProcess'.
+	common	proc_launcher.cpp	182
+	*/
 	bFuncRetn = CreateProcess(it->program.c_str(),
 		const_cast<char *>(args.c_str()), // command line
 		nullptr, // process security attributes

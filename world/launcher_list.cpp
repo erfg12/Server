@@ -59,7 +59,14 @@ void LauncherList::Process() {
 		LauncherLink *l = *cur;
 		if(!l->Process()) {
 			//launcher has died before it identified itself.
-			Log.Out(Logs::Detail, Logs::World_Server, "Removing pending launcher %d", l->GetID());
+			if (l != nullptr)
+			{
+				Log.Out(Logs::Detail, Logs::World_Server, "Removing pending launcher %d", l->GetID());
+			}
+			else
+			{
+				Log.Out(Logs::Detail, Logs::World_Server, "Removing pending launcher with no known ID");
+			}
 			cur = m_pendingLaunchers.erase(cur);
 			delete l;
 		} else if(l->HasName()) {

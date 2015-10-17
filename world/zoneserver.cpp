@@ -55,6 +55,7 @@ ZoneServer::ZoneServer(EmuTCPConnection* itcpc)
 	instanceID = 0;
 
 	memset(clientaddress, 0, sizeof(clientaddress));
+	memset(clientlocaladdress, 0, sizeof(clientlocaladdress));
 	clientport = 0;
 	BootingUp = false;
 	authenticated = false;
@@ -450,7 +451,7 @@ bool ZoneServer::Process() {
 					}
 					ClientListEntry* cle = client_list.FindCharacter(scm->deliverto);
 					if (cle == 0 || cle->Online() < CLE_Status_Zoning ||
-							(cle->TellsOff() && ((cle->Anon() == 1 && scm->fromadmin < cle->Admin()) || scm->fromadmin < 80))) {
+							(cle->TellsOff() && (scm->fromadmin < cle->Admin() || scm->fromadmin < 80))) {
 						if (!scm->noreply) {
 							ClientListEntry* sender = client_list.FindCharacter(scm->from);
 							if (!sender || !sender->Server())
@@ -558,7 +559,7 @@ bool ZoneServer::Process() {
 				ServerConnectInfo* sci = (ServerConnectInfo*) pack->pBuffer;
 
 				if (!sci->port) {
-					clientport=zoneserver_list.GetAvailableZonePort();
+					clientport = zoneserver_list.GetAvailableZonePort();
 
 					ServerPacket p(ServerOP_SetConnectInfo, sizeof(ServerConnectInfo));
 					memset(p.pBuffer,0,sizeof(ServerConnectInfo));
@@ -567,8 +568,18 @@ bool ZoneServer::Process() {
 					SendPacket(&p);
 					Log.Out(Logs::Detail, Logs::World_Server,"Auto zone port configuration. Telling zone to use port %d",clientport);
 				} else {
-					clientport=sci->port;
-					Log.Out(Logs::Detail, Logs::World_Server,"Zone specified port %d, must be a previously allocated zone reconnecting.",clientport);
+					clientport = sci->port;
+					Log.Out(Logs::Detail, Logs::World_Server,"Zone specified port %d.",clientport);
+				}
+
+				if(sci->address[0]) {
+					strn0cpy(clientaddress, sci->address, 250);
+					Log.Out(Logs::Detail, Logs::World_Server, "Zone specified address %s.", sci->address);
+				}
+
+				if(sci->local_address[0]) {
+					strn0cpy(clientlocaladdress, sci->local_address, 250);
+					Log.Out(Logs::Detail, Logs::World_Server, "Zone specified local address %s.", sci->address);
 				}
 
 			}
@@ -1005,80 +1016,69 @@ bool ZoneServer::Process() {
 				}
 				break;
 			}
-			case ServerOP_Consent: {
+			case ServerOP_Consent: 
+			{
 				// Message string id's likely to be used here are:
+				// CONSENT_GIVEN = 1427
 				// CONSENT_YOURSELF = 399
 				// CONSENT_INVALID_NAME = 397
 				// TARGET_NOT_FOUND = 101
 				ZoneServer* zs;
 				ServerOP_Consent_Struct* s = (ServerOP_Consent_Struct*)pack->pBuffer;
 				ClientListEntry* cle = client_list.FindCharacter(s->grantname);
-				if(cle) {
-					if(cle->instance() != 0)
+				if(cle) 
+				{
+					zs = zoneserver_list.FindByZoneID(cle->zone());
+					if(zs) 
 					{
-						zs = zoneserver_list.FindByInstanceID(cle->instance());
-						if(zs) {
-							if(zs->SendPacket(pack)) {
-								Log.Out(Logs::Detail, Logs::World_Server, "Sent consent packet from player %s to player %s in zone %u.", s->ownername, s->grantname, cle->instance());
-							}
-							else {
-								Log.Out(Logs::Detail, Logs::World_Server, "Unable to locate zone record for instance id %u in zoneserver list for ServerOP_Consent operation.", s->instance_id);
-							}
-						}
-						else
+						if(zs->SendPacket(pack)) 
 						{
-							auto pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
-							ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
-							strcpy(scs->grantname, s->grantname);
-							strcpy(scs->ownername, s->ownername);
-							scs->permission = s->permission;
-							scs->zone_id = s->zone_id;
-							scs->instance_id = s->instance_id;
-							scs->message_string_id = 101;
-							zs = zoneserver_list.FindByInstanceID(s->instance_id);
-							if(zs) {
-								if(!zs->SendPacket(pack))
-									Log.Out(Logs::Detail, Logs::World_Server, "Unable to send consent response back to player %s in instance %u.", s->ownername, zs->GetInstanceID());
+							ClientListEntry* cle_reply = client_list.FindCharacter(s->ownername);
+							if(cle_reply)
+							{
+								auto reply = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
+								ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)reply->pBuffer;
+								strcpy(scs->grantname, s->grantname);
+								strcpy(scs->ownername, s->ownername);
+								scs->permission = s->permission;
+								scs->zone_id = s->zone_id;
+								scs->message_string_id = 1427;
+								zs = zoneserver_list.FindByZoneID(cle_reply->zone());
+								if(zs)
+									zs->SendPacket(reply);
 							}
-							else {
-								Log.Out(Logs::Detail, Logs::World_Server, "Unable to locate zone record for instance id %u in zoneserver list for ServerOP_Consent_Response operation.", s->instance_id);
-							}
-							safe_delete(pack);
+							Log.Out(Logs::Detail, Logs::World_Server, "Sent consent packet from player %s to player %s in zone %u.", s->ownername, s->grantname, cle->zone());
+						}
+						else 
+						{
+							Log.Out(Logs::Detail, Logs::World_Server, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent operation.", s->zone_id);
 						}
 					}
-					else
+					else 
 					{
-						zs = zoneserver_list.FindByZoneID(cle->zone());
-						if(zs) {
-							if(zs->SendPacket(pack)) {
-								Log.Out(Logs::Detail, Logs::World_Server, "Sent consent packet from player %s to player %s in zone %u.", s->ownername, s->grantname, cle->zone());
-							}
-							else {
-								Log.Out(Logs::Detail, Logs::World_Server, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent operation.", s->zone_id);
-							}
+						// send target not found back to requester
+						auto pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
+						ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
+						strcpy(scs->grantname, s->grantname);
+						strcpy(scs->ownername, s->ownername);
+						scs->permission = s->permission;
+						scs->zone_id = s->zone_id;
+						scs->message_string_id = 101;
+						zs = zoneserver_list.FindByZoneID(s->zone_id);
+						if(zs) 
+						{
+							if(!zs->SendPacket(pack))
+								Log.Out(Logs::Detail, Logs::World_Server, "Unable to send consent response back to player %s in zone %s.", s->ownername, zs->GetZoneName());
 						}
-						else {
-							// send target not found back to requester
-							auto pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
-							ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
-							strcpy(scs->grantname, s->grantname);
-							strcpy(scs->ownername, s->ownername);
-							scs->permission = s->permission;
-							scs->zone_id = s->zone_id;
-							scs->message_string_id = 101;
-							zs = zoneserver_list.FindByZoneID(s->zone_id);
-							if(zs) {
-								if(!zs->SendPacket(pack))
-									Log.Out(Logs::Detail, Logs::World_Server, "Unable to send consent response back to player %s in zone %s.", s->ownername, zs->GetZoneName());
-							}
-							else {
-								Log.Out(Logs::Detail, Logs::World_Server, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent_Response operation.", s->zone_id);
-							}
-							safe_delete(pack);
+						else 
+						{
+							Log.Out(Logs::Detail, Logs::World_Server, "Unable to locate zone record for zone id %u in zoneserver list for ServerOP_Consent_Response operation.", s->zone_id);
 						}
+						safe_delete(pack);
 					}
 				}
-				else {
+				else 
+				{
 					// send target not found back to requester
 					auto pack = new ServerPacket(ServerOP_Consent_Response, sizeof(ServerOP_Consent_Struct));
 					ServerOP_Consent_Struct* scs = (ServerOP_Consent_Struct*)pack->pBuffer;
@@ -1236,6 +1236,23 @@ bool ZoneServer::Process() {
 				}
 				break;
 			}
+			case ServerOP_ChangeSharedMem: {
+				std::string hotfix_name = std::string((char*)pack->pBuffer);
+
+				Log.Out(Logs::General, Logs::World_Server, "Loading items...");
+				if(!database.LoadItems(hotfix_name)) {
+					Log.Out(Logs::General, Logs::World_Server, "Error: Could not load item data. But ignoring");
+				}
+
+				Log.Out(Logs::General, Logs::World_Server, "Loading skill caps...");
+				if(!database.LoadSkillCaps(hotfix_name)) {
+					Log.Out(Logs::General, Logs::World_Server, "Error: Could not load skill cap data. But ignoring");
+				}
+
+				zoneserver_list.SendPacket(pack);
+				break;
+			}
+
 			case ServerOP_RequestTellQueue:
 			{
 				ServerRequestTellQueue_Struct* rtq = (ServerRequestTellQueue_Struct*) pack->pBuffer;
@@ -1244,6 +1261,10 @@ bool ZoneServer::Process() {
 					break;
 
 				cle->ProcessTellQueue();
+				break;
+			}
+			case ServerOP_ReloadSkills: {
+				zoneserver_list.SendPacket(pack);
 				break;
 			}
 			default:

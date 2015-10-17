@@ -2461,67 +2461,6 @@ XS(XS_Client_UnscribeSpellAll)
 	XSRETURN_EMPTY;
 }
 
-XS(XS_Client_UntrainDisc); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_UntrainDisc)
-{
-	dXSARGS;
-	if (items < 2 || items > 3)
-		Perl_croak(aTHX_ "Usage: Client::UntrainDisc(THIS, slot, update_client= true)");
-	{
-		Client *		THIS;
-		int		slot = (int)SvIV(ST(1));
-		bool		update_client;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		if (items < 3)
-			update_client = true;
-		else {
-			update_client = (bool)SvTRUE(ST(2));
-		}
-
-		THIS->UntrainDisc(slot, update_client);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Client_UntrainDiscAll); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_UntrainDiscAll)
-{
-	dXSARGS;
-	if (items < 1 || items > 2)
-		Perl_croak(aTHX_ "Usage: Client::UntrainDiscAll(THIS, update_client= true)");
-	{
-		Client *		THIS;
-		bool		update_client;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		if (items < 2)
-			update_client = true;
-		else {
-			update_client = (bool)SvTRUE(ST(1));
-		}
-
-		THIS->UntrainDiscAll(update_client);
-	}
-	XSRETURN_EMPTY;
-}
-
 XS(XS_Client_IsSitting); /* prototype to pass -Wmissing-prototypes */
 XS(XS_Client_IsSitting)
 {
@@ -3026,7 +2965,7 @@ XS(XS_Client_BreakInvis)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		THIS->BreakInvis();
+		THIS->CommonBreakInvisible();
 	}
 	XSRETURN_EMPTY;
 }
@@ -3459,12 +3398,11 @@ XS(XS_Client_UseDiscipline)
 {
 	dXSARGS;
 	if (items != 3)
-		Perl_croak(aTHX_ "Usage: Client::UseDiscipline(THIS, spell_id, target)");
+		Perl_croak(aTHX_ "Usage: Client::UseDiscipline(THIS, spell_id)");
 	{
 		Client *		THIS;
 		bool		RETVAL;
 		uint32		spell_id = (uint32)SvUV(ST(1));
-		uint32		target = (uint32)SvUV(ST(2));
 
 		if (sv_derived_from(ST(0), "Client")) {
 			IV tmp = SvIV((SV*)SvRV(ST(0)));
@@ -3475,7 +3413,7 @@ XS(XS_Client_UseDiscipline)
 		if(THIS == nullptr)
 			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
 
-		RETVAL = THIS->UseDiscipline(spell_id, target);
+		RETVAL = THIS->UseDiscipline(spell_id);
 		ST(0) = boolSV(RETVAL);
 		sv_2mortal(ST(0));
 	}
@@ -3613,29 +3551,6 @@ XS(XS_Client_SendZoneFlagInfo)
 			Perl_croak(aTHX_ "to is nullptr, avoiding crash.");
 
 		THIS->SendZoneFlagInfo(to);
-	}
-	XSRETURN_EMPTY;
-}
-
-XS(XS_Client_LoadZoneFlags); /* prototype to pass -Wmissing-prototypes */
-XS(XS_Client_LoadZoneFlags)
-{
-	dXSARGS;
-	if (items != 1)
-		Perl_croak(aTHX_ "Usage: Client::LoadZoneFlags(THIS)");
-	{
-		Client *		THIS;
-
-		if (sv_derived_from(ST(0), "Client")) {
-			IV tmp = SvIV((SV*)SvRV(ST(0)));
-			THIS = INT2PTR(Client *,tmp);
-		}
-		else
-			Perl_croak(aTHX_ "THIS is not of type Client");
-		if(THIS == nullptr)
-			Perl_croak(aTHX_ "THIS is nullptr, avoiding crash.");
-
-		THIS->LoadZoneFlags();
 	}
 	XSRETURN_EMPTY;
 }
@@ -5181,8 +5096,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "ScribeSpell"), XS_Client_ScribeSpell, file, "$$$;$");
 		newXSproto(strcpy(buf, "UnscribeSpell"), XS_Client_UnscribeSpell, file, "$$;$");
 		newXSproto(strcpy(buf, "UnscribeSpellAll"), XS_Client_UnscribeSpellAll, file, "$;$");
-		newXSproto(strcpy(buf, "UntrainDisc"), XS_Client_UntrainDisc, file, "$$;$");
-		newXSproto(strcpy(buf, "UntrainDiscAll"), XS_Client_UntrainDiscAll, file, "$;$");
 		newXSproto(strcpy(buf, "IsSitting"), XS_Client_IsSitting, file, "$");
 		newXSproto(strcpy(buf, "IsBecomeNPC"), XS_Client_IsBecomeNPC, file, "$");
 		newXSproto(strcpy(buf, "GetBecomeNPCLevel"), XS_Client_GetBecomeNPCLevel, file, "$");
@@ -5224,7 +5137,6 @@ XS(boot_Client)
 		newXSproto(strcpy(buf, "ClearZoneFlag"), XS_Client_ClearZoneFlag, file, "$$");
 		newXSproto(strcpy(buf, "HasZoneFlag"), XS_Client_HasZoneFlag, file, "$$");
 		newXSproto(strcpy(buf, "SendZoneFlagInfo"), XS_Client_SendZoneFlagInfo, file, "$$");
-		newXSproto(strcpy(buf, "LoadZoneFlags"), XS_Client_LoadZoneFlags, file, "$");
 		newXSproto(strcpy(buf, "SetAATitle"), XS_Client_SetAATitle, file, "$$;$");
 		newXSproto(strcpy(buf, "GetClientVersion"), XS_Client_GetClientVersion, file, "$");
 		newXSproto(strcpy(buf, "GetClientVersionBit"), XS_Client_GetClientVersionBit, file, "$");

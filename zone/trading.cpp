@@ -826,6 +826,7 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 	else if(tradingWith && tradingWith->IsNPC()) {
 		QSPlayerLogHandin_Struct* qs_audit = nullptr;
 		bool qs_log = false;
+		NPC* npc = tradingWith->CastToNPC();
 
 		// QS code
 		if(RuleB(QueryServ, PlayerLogTrades) && event_entry && event_details) {
@@ -906,33 +907,72 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 			}
 
 			const Item_Struct* item = inst->GetItem();
-			if(item && quest_npc == false) {
-				// if it was not a NO DROP or Attuned item (or if a GM is trading), let the NPC have it
-				if(GetGM() || (item->NoDrop != 0 && inst->IsInstNoDrop() == false)) {
+			if(item && quest_npc == false) 
+			{
+				// if it was not a NO DROP or Attuned item (or if a GM is trading), let the pet have it
+				if(GetGM() || npc->IsPet())
+				{
 					// pets need to look inside bags and try to equip items found there
-					if(item->ItemClass == ItemClassContainer && item->BagSlots > 0) {
-						for(int16 bslot = SUB_BEGIN; bslot < item->BagSlots; bslot++) {
+					if(item->ItemClass == ItemClassContainer && item->BagSlots > 0) 
+					{
+						for(int16 bslot = SUB_BEGIN; bslot < item->BagSlots; bslot++) 
+						{
 							const ItemInst* baginst = inst->GetItem(bslot);
 							if (baginst) {
 								const Item_Struct* bagitem = baginst->GetItem();
-								if (bagitem && (GetGM() || (bagitem->NoDrop != 0 && baginst->IsInstNoDrop() == false))) {
-									tradingWith->CastToNPC()->AddLootDrop(bagitem, &tradingWith->CastToNPC()->itemlist,
-										baginst->GetCharges(), 1, 127, true, true);
+								if (bagitem && (GetGM() || npc->IsPet()))
+								{
+									if(GetGM())
+									{
+										npc->AddLootDrop(bagitem, &npc->itemlist,baginst->GetCharges(), 1, 127, true, true);
+									}
+									// Destroy duplicate and nodrop items on charmed pets.
+									else if(bagitem->NoDrop != 0 && baginst->IsInstNoDrop() == false && 
+										(!npc->IsCharmed() || (npc->IsCharmed() && npc->CountQuestItem(bagitem->ID) == 0)))
+									{
+										npc->AddPetLoot(bagitem->ID, baginst->GetCharges());
+									}
 								}
-								else if (RuleB(NPC, ReturnNonQuestNoDropItems)) {
-									PushItemOnCursor(*baginst, true);
+								else if (RuleB(NPC, ReturnNonQuestItems)) 
+								{
+									SummonItem(baginst->GetID(), baginst->GetCharges(), false, MainQuest);
+									if(npc->CanTalk())
+										npc->Say_StringID(NO_NEED_FOR_ITEM, GetName());
+								}
+								else
+								{
+									if(bagitem->NoDrop != 0 && baginst->IsInstNoDrop() == false && npc->CountQuestItem(bagitem->ID) == 0)
+									{
+										npc->AddQuestLoot(bagitem->ID, baginst->GetCharges());
+									}
 								}
 							}
 						}
 					}
-
-					tradingWith->CastToNPC()->AddLootDrop(item, &tradingWith->CastToNPC()->itemlist,
-						inst->GetCharges(), 1, 127, true, true);
+					if(GetGM())
+					{
+						npc->AddLootDrop(item, &npc->itemlist,inst->GetCharges(), 1, 127, true, true);
+					}
+					// Destroy duplicate and nodrop items on charmed pets.
+					else if(item->NoDrop != 0 && inst->IsInstNoDrop() == false && 
+						(!npc->IsCharmed() || (npc->IsCharmed() && npc->CountQuestItem(item->ID) == 0)))
+					{
+						npc->AddPetLoot(item->ID, inst->GetCharges());
+					}
 				}
-				// Return NO DROP and Attuned items being handed into a non-quest NPC if the rule is true
-				else if (RuleB(NPC, ReturnNonQuestNoDropItems)) {
-					PushItemOnCursor(*inst, true);
+				// Return items being handed into a non-quest NPC if the rule is true
+				else if (RuleB(NPC, ReturnNonQuestItems)) 
+				{
 					DeleteItemInInventory(i);
+					SummonItem(inst->GetID(), inst->GetCharges(), false, MainQuest);
+					if(npc->CanTalk())
+						npc->Say_StringID(NO_NEED_FOR_ITEM, GetName());
+				}
+				// Add items to loottable without equipping and mark as quest.
+				else
+				{
+					if(GetGM() || (item->NoDrop != 0 && inst->IsInstNoDrop() == false && npc->CountQuestItem(item->ID) == 0))
+						npc->AddQuestLoot(item->ID, inst->GetCharges());
 				}
 			}
 		}
@@ -951,10 +991,6 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 		snprintf(temp1, 100, "platinum.%d", tradingWith->GetNPCTypeID());
 		snprintf(temp2, 100, "%u", trade->pp);
 		parse->AddVar(temp1, temp2); 
-
-		if(tradingWith->GetAppearance() != eaDead) {
-			tradingWith->FaceTarget(this);
-		}
 
 		ItemInst *insts[4] = { 0 };
 		for(int i = EmuConstants::TRADE_BEGIN; i <= EmuConstants::TRADE_NPC_END; ++i) {
@@ -1090,9 +1126,7 @@ void Client::Trader_EndTrader() {
 		if(Customer && gis) 
 		{
 			Customer->Message(CC_Red, "The Trader is no longer open for business");
-			EQApplicationPacket empty(OP_ShopEndConfirm);
-			Customer->QueuePacket(&empty);
-			Customer->Save();
+			Customer->SendMerchantEnd();
 		}
 	}
 

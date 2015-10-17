@@ -38,7 +38,7 @@ extern EntityList entity_list;
 
 // Loading object from database
 Object::Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& object, const ItemInst* inst)
- : respawn_timer(0), decay_timer(RuleI(Groundspawns, DecayTime))
+ : respawn_timer(0), decay_timer(RuleI(Groundspawns, DecayTime)), random_timer(0)
 {
 
 	user = nullptr;
@@ -60,6 +60,7 @@ Object::Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& object,
 		decay_timer.Disable();
 	}
 	respawn_timer.Disable();
+	random_timer.Disable();
 
 	// Set drop_id to zero - it will be set when added to zone with SetID()
 	m_data.drop_id = 0;
@@ -67,7 +68,7 @@ Object::Object(uint32 id, uint32 type, uint32 icon, const Object_Struct& object,
 
 //creating a re-ocurring ground spawn.
 Object::Object(const ItemInst* inst, char* name,float max_x,float min_x,float max_y,float min_y,float z,float heading,uint32 respawntimer)
- : respawn_timer(respawntimer), decay_timer(RuleI(Groundspawns, DecayTime))
+ : respawn_timer(respawntimer), decay_timer(RuleI(Groundspawns, DecayTime)), random_timer(respawntimer)
 {
 
 	user = nullptr;
@@ -89,13 +90,17 @@ Object::Object(const ItemInst* inst, char* name,float max_x,float min_x,float ma
 	m_data.z = z;
 	m_data.zone_id = zone->GetZoneID();
 	respawn_timer.Disable();
+	if(!RuleB(Groundspawns, RandomSpawn) || m_min_x == m_max_x || m_min_y == m_max_y)
+		random_timer.Disable();
+	else
+		random_timer.Start();
 	strcpy(m_data.object_name, name);
 	RandomSpawn(false);
 }
 
 // Loading object from client dropping item on ground
 Object::Object(Client* client, const ItemInst* inst)
- : respawn_timer(0), decay_timer(RuleI(Groundspawns, DecayTime))
+ : respawn_timer(0), decay_timer(RuleI(Groundspawns, DecayTime)), random_timer(0)
 {
 	user = nullptr;
 	last_user = nullptr;
@@ -117,6 +122,7 @@ Object::Object(Client* client, const ItemInst* inst)
 
 	decay_timer.Start();
 	respawn_timer.Disable();
+	random_timer.Disable();
 
 	// Set object name
 	if (inst) {
@@ -144,7 +150,7 @@ Object::Object(Client* client, const ItemInst* inst)
 }
 
 Object::Object(const ItemInst *inst, float x, float y, float z, float heading, uint32 decay_time)
- : respawn_timer(0), decay_timer(decay_time)
+ : respawn_timer(0), decay_timer(decay_time), random_timer(0)
 {
 	user = nullptr;
 	last_user = nullptr;
@@ -168,6 +174,7 @@ Object::Object(const ItemInst *inst, float x, float y, float z, float heading, u
 		decay_timer.Start();
 
 	respawn_timer.Disable();
+	random_timer.Disable();
 
 	// Set object name
 	if (inst) {
@@ -195,7 +202,7 @@ Object::Object(const ItemInst *inst, float x, float y, float z, float heading, u
 }
 
 Object::Object(const char *model, float x, float y, float z, float heading, uint8 type, uint32 decay_time)
- : respawn_timer(0), decay_timer(decay_time)
+ : respawn_timer(0), decay_timer(decay_time), random_timer(0)
 {
 	user = nullptr;
 	last_user = nullptr;
@@ -221,6 +228,7 @@ Object::Object(const char *model, float x, float y, float z, float heading, uint
 		decay_timer.Start();
 
 	respawn_timer.Disable();
+	random_timer.Disable();
 
 	if(model)
 		strcpy(m_data.object_name, model);
@@ -394,11 +402,22 @@ bool Object::Process(){
 		return false;
 	}
 
-	if(m_ground_spawn && respawn_timer.Check()){
-		RandomSpawn(true);
-		// We only want to check groundspawns that randomly spawn.
-		if(!RuleB(Groundspawns, RandomSpawn) || m_min_x == m_max_x || m_min_y == m_max_y)
-			respawn_timer.Disable();
+	if(m_ground_spawn) {
+		if (respawn_timer.Enabled()) {
+			// respawn_timer is enabled if item was picked up, and waiting to respawn
+			if (respawn_timer.Check()){
+				// when random_timer is enabled, RandomSpawn() will send a despawn packet
+				bool rand_respawn = random_timer.Enabled();
+				random_timer.Disable();
+				RandomSpawn(true);
+				respawn_timer.Disable();
+				// re-start random_timer if it was running
+				if (rand_respawn)
+					random_timer.Start();
+			}
+		} else if (random_timer.Check()) {
+			RandomSpawn(true);
+		}
 	}
 	return true;
 }
@@ -409,13 +428,13 @@ void Object::RandomSpawn(bool send_packet) {
 
 	m_data.x = zone->random.Real(m_min_x, m_max_x);
 	m_data.y = zone->random.Real(m_min_y, m_max_y);
-	respawn_timer.Disable();
-	respawn_timer.Start();
 
 	if(send_packet) {
-		EQApplicationPacket app1;
-		CreateDeSpawnPacket(&app1);
-		entity_list.QueueClients(nullptr, &app1, true);
+		if (random_timer.Enabled()) {
+			EQApplicationPacket app1;
+			CreateDeSpawnPacket(&app1);
+			entity_list.QueueClients(nullptr, &app1, true);
+		}
 		EQApplicationPacket app2;
 		CreateSpawnPacket(&app2);
 		entity_list.QueueClients(nullptr, &app2, true);

@@ -312,7 +312,7 @@ OUT(OP_ManaChange, ManaChange_Struct);
 //alt:OUTz(OP_ManaChange);		//takes on at least two lengths
 OUT(OP_MemorizeSpell, MemorizeSpell_Struct);
 OUT(OP_MoveItem, MoveItem_Struct);
-OUT(OP_PickPocket, sPickPocket_Struct);
+OUT(OP_PickPocket, PickPocket_Struct);
 OUT(OP_RequestDuel, Duel_Struct);
 OUT(OP_ShopPlayerBuy, Merchant_Sell_Struct);
 OUT(OP_ShopPlayerSell, Merchant_Purchase_Struct);

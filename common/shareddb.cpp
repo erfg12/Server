@@ -20,30 +20,19 @@
 #include "faction.h"
 #include "features.h"
 
+#pragma warning( disable : 4305 4309 4244 4800 )
+
 SharedDatabase::SharedDatabase()
-: Database(), skill_caps_mmf(nullptr), items_mmf(nullptr), items_hash(nullptr), faction_mmf(nullptr), faction_hash(nullptr),
-	loot_table_mmf(nullptr), loot_table_hash(nullptr), loot_drop_mmf(nullptr), loot_drop_hash(nullptr), base_data_mmf(nullptr)
+: Database()
 {
 }
 
 SharedDatabase::SharedDatabase(const char* host, const char* user, const char* passwd, const char* database, uint32 port)
-: Database(host, user, passwd, database, port), skill_caps_mmf(nullptr), items_mmf(nullptr), items_hash(nullptr),
-	faction_mmf(nullptr), faction_hash(nullptr), loot_table_mmf(nullptr), loot_table_hash(nullptr), loot_drop_mmf(nullptr),
-	loot_drop_hash(nullptr), base_data_mmf(nullptr)
+: Database(host, user, passwd, database, port)
 {
 }
 
 SharedDatabase::~SharedDatabase() {
-	safe_delete(skill_caps_mmf);
-	safe_delete(items_mmf);
-	safe_delete(items_hash);
-	safe_delete(faction_mmf);
-	safe_delete(faction_hash);
-	safe_delete(loot_table_mmf);
-	safe_delete(loot_drop_mmf);
-	safe_delete(loot_table_hash);
-	safe_delete(loot_drop_hash);
-	safe_delete(base_data_mmf);
 }
 
 bool SharedDatabase::SetHideMe(uint32 account_id, uint8 hideme)
@@ -84,6 +73,39 @@ bool SharedDatabase::SetGMSpeed(uint32 account_id, uint8 gmspeed)
 	return true;
 }
 
+bool SharedDatabase::SetGMInvul(uint32 account_id, bool gminvul)
+{
+	std::string query = StringFormat("UPDATE account SET gminvul = %i WHERE id = %i", gminvul, account_id);
+	auto results = QueryDatabase(query);
+	if (!results.Success()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool SharedDatabase::SetGMFlymode(uint32 account_id, uint8 flymode)
+{
+	std::string query = StringFormat("UPDATE account SET flymode = %i WHERE id = %i", flymode, account_id);
+	auto results = QueryDatabase(query);
+	if (!results.Success()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool SharedDatabase::SetGMIgnoreTells(uint32 account_id, uint8 ignoretells)
+{
+	std::string query = StringFormat("UPDATE account SET ignore_tells = %i WHERE id = %i", ignoretells, account_id);
+	auto results = QueryDatabase(query);
+	if (!results.Success()) {
+		return false;
+	}
+
+	return true;
+}
+
 uint32 SharedDatabase::GetTotalTimeEntitledOnAccount(uint32 AccountID) {
 	uint32 EntitledTime = 0;
 	std::string query = StringFormat("SELECT `time_played` FROM `character_data` WHERE `account_id` = %u", AccountID);
@@ -97,58 +119,29 @@ uint32 SharedDatabase::GetTotalTimeEntitledOnAccount(uint32 AccountID) {
 bool SharedDatabase::SaveCursor(uint32 char_id, std::list<ItemInst*>::const_iterator &start, std::list<ItemInst*>::const_iterator &end)
 {
 	// Delete cursor items
-	std::string query = StringFormat("DELETE FROM inventory WHERE charid = %i "
-                                    "AND ((slotid >= 8000 AND slotid <= 8999) "
+	std::string query = StringFormat("DELETE FROM character_inventory WHERE id = %i "
+                                    "AND ((slotid >= %i AND slotid <= %i) "
                                     "OR slotid = %i OR (slotid >= %i AND slotid <= %i) )",
-                                    char_id, MainCursor,
-                                    EmuConstants::CURSOR_BAG_BEGIN, EmuConstants::CURSOR_BAG_END);
+                                    char_id, EmuConstants::CURSOR_QUEUE_BEGIN, EmuConstants::CURSOR_QUEUE_END, 
+									MainCursor, EmuConstants::CURSOR_BAG_BEGIN, EmuConstants::CURSOR_BAG_END);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
         std::cout << "Clearing cursor failed: " << results.ErrorMessage() << std::endl;
         return false;
     }
 
-    int i = 8000;
+    int i = EmuConstants::CURSOR_QUEUE_BEGIN;
     for(auto it = start; it != end; ++it, i++) {
         ItemInst *inst = *it;
-		int16 use_slot = (i == 8000) ? MainCursor : i;
+		int16 use_slot = (i == EmuConstants::CURSOR_QUEUE_BEGIN) ? MainCursor : i;
+		if(inst)
+			Log.Out(Logs::Moderate, Logs::Inventory, "SaveCursor: Attempting to save item %s for char %d in slot %d", inst->GetItem()->Name, char_id, use_slot);
+		else
+			Log.Out(Logs::Moderate, Logs::Inventory, "SaveCursor: No inst found. This is either an error, or we've reached the end of the list.");
 		if (!SaveInventory(char_id, inst, use_slot)) {
 			return false;
 		}
     }
-	return true;
-}
-
-bool SharedDatabase::VerifyInventory(uint32 account_id, int16 slot_id, const ItemInst* inst)
-{
-	// Delete cursor items
-	std::string query = StringFormat("SELECT itemid, charges FROM sharedbank "
-                                    "WHERE acctid = %d AND slotid = %d",
-                                    account_id, slot_id);
-    auto results = QueryDatabase(query);
-	if (!results.Success()) {
-		//returning true is less harmful in the face of a query error
-		return true;
-	}
-
-	if (results.RowCount() == 0)
-        return false;
-
-	auto row = results.begin();
-
-    int16 id = atoi(row[0]);
-    int8 charges = atoi(row[1]);
-
-    int8 expect_charges = 0;
-
-    if(inst->GetCharges() >= 0)
-        expect_charges = inst->GetCharges();
-    else
-        expect_charges = 0x7FFF;
-
-    if(id != inst->GetItem()->ID || charges != expect_charges)
-        return false;
-
 	return true;
 }
 
@@ -169,8 +162,8 @@ bool SharedDatabase::UpdateInventorySlot(uint32 char_id, const ItemInst* inst, i
 		charges = 0x7FFF;
 
 	// Update/Insert item
-	std::string query = StringFormat("REPLACE INTO inventory "
-		"(charid, slotid, itemid, charges, instnodrop, custom_data, color)"
+	std::string query = StringFormat("REPLACE INTO character_inventory "
+		"(id, slotid, itemid, charges, instnodrop, custom_data, color)"
 		" VALUES(%lu,%lu,%lu,%lu,%lu,'%s',%lu)",
 		(unsigned long)char_id, (unsigned long)slot_id, (unsigned long)inst->GetItem()->ID,
 		(unsigned long)charges, (unsigned long)(inst->IsInstNoDrop() ? 1 : 0),
@@ -191,44 +184,10 @@ bool SharedDatabase::UpdateInventorySlot(uint32 char_id, const ItemInst* inst, i
 	return true;
 }
 
-bool SharedDatabase::UpdateSharedBankSlot(uint32 char_id, const ItemInst* inst, int16 slot_id)
-{
-	// need to check 'inst' argument for valid pointer
-
-// Update/Insert item
-    uint32 account_id = GetAccountIDByChar(char_id);
-    uint16 charges = 0;
-    if(inst->GetCharges() >= 0)
-        charges = inst->GetCharges();
-    else
-        charges = 0x7FFF;
-
-    std::string query = StringFormat("REPLACE INTO sharedbank "
-                                    "(acctid, slotid, itemid, charges, custom_data) "
-                                    "VALUES( %lu, %lu, %lu, %lu, '%s')",
-                                    (unsigned long)account_id, (unsigned long)slot_id, (unsigned long)inst->GetItem()->ID,
-                                    (unsigned long)charges, inst->GetCustomDataString().c_str());
-    auto results = QueryDatabase(query);
-
-    // Save bag contents, if slot supports bag contents
-	if (inst->IsType(ItemClassContainer) && Inventory::SupportsContainers(slot_id)) {
-		for (uint8 idx = SUB_BEGIN; idx < EmuConstants::ITEM_CONTAINER_SIZE; idx++) {
-			const ItemInst* baginst = inst->GetItem(idx);
-			SaveInventory(char_id, baginst, Inventory::CalcSlotId(slot_id, idx));
-		}
-	}
-
-    if (!results.Success()) {
-        return false;
-    }
-
-	return true;
-}
-
 bool SharedDatabase::DeleteInventorySlot(uint32 char_id, int16 slot_id) {
 
 	// Delete item
-	std::string query = StringFormat("DELETE FROM inventory WHERE charid = %i AND slotid = %i", char_id, slot_id);
+	std::string query = StringFormat("DELETE FROM character_inventory WHERE id = %i AND slotid = %i", char_id, slot_id);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
         return false;
@@ -239,7 +198,7 @@ bool SharedDatabase::DeleteInventorySlot(uint32 char_id, int16 slot_id) {
         return true;
 
     int16 base_slot_id = Inventory::CalcSlotId(slot_id, SUB_BEGIN);
-    query = StringFormat("DELETE FROM inventory WHERE charid = %i AND slotid >= %i AND slotid < %i",
+    query = StringFormat("DELETE FROM character_inventory WHERE id = %i AND slotid >= %i AND slotid < %i",
                         char_id, base_slot_id, (base_slot_id+10));
     results = QueryDatabase(query);
     if (!results.Success()) {
@@ -248,60 +207,6 @@ bool SharedDatabase::DeleteInventorySlot(uint32 char_id, int16 slot_id) {
 
     // @merth: need to delete augments here
     return true;
-}
-
-bool SharedDatabase::DeleteSharedBankSlot(uint32 char_id, int16 slot_id) {
-
-    // Delete item
-	uint32 account_id = GetAccountIDByChar(char_id);
-	std::string query = StringFormat("DELETE FROM sharedbank WHERE acctid=%i AND slotid=%i", account_id, slot_id);
-    auto results = QueryDatabase(query);
-    if (!results.Success()) {
-        return false;
-    }
-
-	// Delete bag slots, if need be
-	if (!Inventory::SupportsContainers(slot_id))
-        return true;
-
-    int16 base_slot_id = Inventory::CalcSlotId(slot_id, SUB_BEGIN);
-    query = StringFormat("DELETE FROM sharedbank WHERE acctid = %i "
-                        "AND slotid >= %i AND slotid < %i",
-                        account_id, base_slot_id, (base_slot_id+10));
-    results = QueryDatabase(query);
-    if (!results.Success()) {
-        return false;
-    }
-
-    // @merth: need to delete augments here
-    return true;
-}
-
-
-int32 SharedDatabase::GetSharedPlatinum(uint32 account_id)
-{
-	std::string query = StringFormat("SELECT sharedplat FROM account WHERE id = '%i'", account_id);
-    auto results = QueryDatabase(query);
-    if (!results.Success()) {
-		return false;
-    }
-
-    if (results.RowCount() != 1)
-        return 0;
-
-	auto row = results.begin();
-
-	return atoi(row[0]);
-}
-
-bool SharedDatabase::SetSharedPlatinum(uint32 account_id, int32 amount_to_add) {
-	std::string query = StringFormat("UPDATE account SET sharedplat = sharedplat + %i WHERE id = %i", amount_to_add, account_id);
-	auto results = QueryDatabase(query);
-	if (!results.Success()) {
-		return false;
-	}
-
-	return true;
 }
 
 bool SharedDatabase::SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, uint32 si_race, uint32 si_class, uint32 si_deity, uint32 si_current_zone, char* si_name, int admin_level) {
@@ -339,91 +244,11 @@ bool SharedDatabase::SetStartingItems(PlayerProfile_Struct* pp, Inventory* inv, 
 	return true;
 }
 
-
-// Retrieve shared bank inventory based on either account or character
-bool SharedDatabase::GetSharedBank(uint32 id, Inventory* inv, bool is_charid) {
-	std::string query;
-
-	if (is_charid)
-		query = StringFormat("SELECT sb.slotid, sb.itemid, sb.charges, sb.custom_data "
-                            "FROM sharedbank sb INNER JOIN character_data ch "
-                            "ON ch.account_id=sb.acctid WHERE ch.id = %i", id);
-	else
-		query = StringFormat("SELECT slotid, itemid, charges, custom_data "
-                            "FROM sharedbank WHERE acctid=%i", id);
-    auto results = QueryDatabase(query);
-    if (!results.Success()) {
-        Log.Out(Logs::General, Logs::Error, "Database::GetSharedBank(uint32 account_id): %s", results.ErrorMessage().c_str());
-        return false;
-    }
-
-    for (auto row = results.begin(); row != results.end(); ++row) {
-        int16 slot_id	= (int16)atoi(row[0]);
-		uint32 item_id	= (uint32)atoi(row[1]);
-		int8 charges	= (int8)atoi(row[2]);
-
-        const Item_Struct* item = GetItem(item_id);
-
-        if (!item) {
-            Log.Out(Logs::General, Logs::Error,
-					"Warning: %s %i has an invalid item_id %i in inventory slot %i",
-					((is_charid==true) ? "charid" : "acctid"), id, item_id, slot_id);
-            continue;
-        }
-
-        int16 put_slot_id = INVALID_INDEX;
-
-        ItemInst* inst = CreateBaseItem(item, charges);
-
-		if(!row[3])
-            continue;
-
-        std::string data_str(row[3]);
-        std::string idAsString;
-        std::string value;
-        bool use_id = true;
-
-        for(int i = 0; i < data_str.length(); ++i) {
-            if(data_str[i] == '^') {
-                if(!use_id) {
-                    inst->SetCustomData(idAsString, value);
-                    idAsString.clear();
-                    value.clear();
-                }
-                use_id = !use_id;
-                continue;
-            }
-
-            char v = data_str[i];
-            if(use_id)
-                idAsString.push_back(v);
-            else
-                value.push_back(v);
-        }
-
-        put_slot_id = inv->PutItem(slot_id, *inst);
-        safe_delete(inst);
-
-        // Save ptr to item in inventory
-        if (put_slot_id != INVALID_INDEX)
-            continue;
-
-        Log.Out(Logs::General, Logs::Error, "Warning: Invalid slot_id for item in shared bank inventory: %s=%i, item_id=%i, slot_id=%i",
-                                            ((is_charid==true)? "charid": "acctid"), id, item_id, slot_id);
-
-        if (is_charid)
-            SaveInventory(id, nullptr, slot_id);
-	}
-
-	return true;
-}
-
-
 // Overloaded: Retrieve character inventory based on character id
 bool SharedDatabase::GetInventory(uint32 char_id, Inventory* inv) {
 	// Retrieve character inventory
 	std::string query = StringFormat("SELECT slotid, itemid, charges, color, instnodrop, custom_data "
-                                    "FROM inventory WHERE charid = %i ORDER BY slotid", char_id);
+                                    "FROM character_inventory WHERE id = %i ORDER BY slotid", char_id);
     auto results = QueryDatabase(query);
     if (!results.Success()) {
             Log.Out(Logs::General, Logs::Error, "If you got an error related to the 'instnodrop' field, run the following SQL Queries:\nalter table inventory add instnodrop tinyint(1) unsigned default 0 not null;\n");
@@ -478,7 +303,7 @@ bool SharedDatabase::GetInventory(uint32 char_id, Inventory* inv) {
             }
         }
 
-		if (instnodrop || (((slot_id >= EmuConstants::EQUIPMENT_BEGIN && slot_id <= EmuConstants::EQUIPMENT_END)) && inst->GetItem()->Attuneable))
+		if (instnodrop)
 			inst->SetInstNoDrop(true);
 
         if (color > 0)
@@ -489,7 +314,7 @@ bool SharedDatabase::GetInventory(uint32 char_id, Inventory* inv) {
         else
             inst->SetCharges(charges);
 
-        if (slot_id >= 8000 && slot_id <= 8999)
+        if (slot_id >= EmuConstants::CURSOR_QUEUE_BEGIN && slot_id <= EmuConstants::CURSOR_QUEUE_END)
             put_slot_id = inv->PushCursor(*inst);
         else if (slot_id >= 3110 && slot_id <= 3179) {
             // Admins: please report any occurrences of this error
@@ -506,16 +331,15 @@ bool SharedDatabase::GetInventory(uint32 char_id, Inventory* inv) {
         }
     }
 
-    // Retrieve shared inventory
-	return GetSharedBank(char_id, inv, true);
+	return true;
 }
 
 // Overloaded: Retrieve character inventory based on account_id and character name
 bool SharedDatabase::GetInventory(uint32 account_id, char* name, Inventory* inv) {
 	// Retrieve character inventory
-	std::string query = StringFormat("SELECT slotid, itemid, charges, color, instnodrop, custom_data "
-                                    "FROM inventory INNER JOIN character_data ch "
-                                    "ON ch.id = charid WHERE ch.name = '%s' AND ch.account_id = %i ORDER BY slotid",
+	std::string query = StringFormat("SELECT ci.slotid, ci.itemid, ci.charges, ci.color, ci.instnodrop, ci.custom_data "
+                                    "FROM character_inventory ci INNER JOIN character_data ch "
+                                    "ON ch.id = ci.id WHERE ch.name = '%s' AND ch.account_id = %i ORDER BY ci.slotid",
                                     name, account_id);
     auto results = QueryDatabase(query);
     if (!results.Success()){
@@ -575,7 +399,7 @@ bool SharedDatabase::GetInventory(uint32 account_id, char* name, Inventory* inv)
 
         inst->SetCharges(charges);
 
-        if (slot_id>=8000 && slot_id <= 8999)
+        if (slot_id>=EmuConstants::CURSOR_QUEUE_BEGIN && slot_id <= EmuConstants::CURSOR_QUEUE_END)
             put_slot_id = inv->PushCursor(*inst);
         else
             put_slot_id = inv->PutItem(slot_id, *inst);
@@ -588,8 +412,7 @@ bool SharedDatabase::GetInventory(uint32 account_id, char* name, Inventory* inv)
 
     }
 
-    // Retrieve shared inventory
-	return GetSharedBank(account_id, inv, false);
+	return true;
 }
 
 
@@ -615,28 +438,15 @@ void SharedDatabase::GetItemsCount(int32 &item_count, uint32 &max_id) {
 		item_count = atoi(row[1]);
 }
 
-bool SharedDatabase::LoadItems() {
-	if(items_mmf) {
-		return true;
-	}
+bool SharedDatabase::LoadItems(const std::string &prefix) {
+	items_mmf.reset(nullptr);
 
 	try {
 		EQEmu::IPCMutex mutex("items");
 		mutex.Lock();
-		items_mmf = new EQEmu::MemoryMappedFile("shared/items");
-
-		int32 items = -1;
-		uint32 max_item = 0;
-		GetItemsCount(items, max_item);
-		if(items == -1) {
-			EQ_EXCEPT("SharedDatabase", "Database returned no result");
-		}
-		uint32 size = static_cast<uint32>(EQEmu::FixedMemoryHashSet<Item_Struct>::estimated_size(items, max_item));
-		if(items_mmf->Size() != size) {
-			EQ_EXCEPT("SharedDatabase", "Couldn't load items because items_mmf->Size() != size");
-		}
-
-		items_hash = new EQEmu::FixedMemoryHashSet<Item_Struct>(reinterpret_cast<uint8*>(items_mmf->Get()), size);
+		std::string file_name = std::string("shared/") + prefix + std::string("items");
+		items_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name));
+		items_hash = std::unique_ptr<EQEmu::FixedMemoryHashSet<Item_Struct>>(new EQEmu::FixedMemoryHashSet<Item_Struct>(reinterpret_cast<uint8*>(items_mmf->Get()), items_mmf->Size()));
 		mutex.Unlock();
 	} catch(std::exception& ex) {
 		Log.Out(Logs::General, Logs::Error, "Error Loading Items: %s", ex.what());
@@ -660,12 +470,6 @@ void SharedDatabase::LoadItems(void *data, uint32 size, int32 items, uint32 max_
 	if(GetVariable("disablenodrop", ndbuffer, 4)) {
 		if(ndbuffer[0] == '1' && ndbuffer[1] == '\0') {
 			disableNoDrop = true;
-		}
-	}
-	bool disableLoreGroup = false;
-	if(GetVariable("disablelore", ndbuffer, 4)) {
-		if(ndbuffer[0] == '1' && ndbuffer[1] == '\0') {
-			disableLoreGroup = true;
 		}
 	}
 	bool disableNoTransfer = false;
@@ -749,17 +553,7 @@ void SharedDatabase::LoadItems(void *data, uint32 size, int32 items, uint32 max_
 		item.SellRate = (float)atof(row[ItemField::sellrate]);
 		//item.Unk059 = (uint32)atoul(row[ItemField::UNK059]);
 		item.CastTime = (uint32)atoul(row[ItemField::casttime]);
-		item.EliteMaterial = (uint32)atoul(row[ItemField::elitematerial]);
 		item.ProcRate = (int32)atoi(row[ItemField::procrate]);
-		item.CombatEffects = (int8)atoi(row[ItemField::combateffects]);
-		item.Shielding = (int8)atoi(row[ItemField::shielding]);
-		item.StunResist = (int8)atoi(row[ItemField::stunresist]);
-		item.StrikeThrough = (int8)atoi(row[ItemField::strikethrough]);
-		item.ExtraDmgSkill = (uint32)atoul(row[ItemField::extradmgskill]);
-		item.ExtraDmgAmt = (uint32)atoul(row[ItemField::extradmgamt]);
-		item.SpellShield = (int8)atoi(row[ItemField::spellshield]);
-		item.Avoidance = (int8)atoi(row[ItemField::avoidance]);
-		item.Accuracy = (int8)atoi(row[ItemField::accuracy]);
 		item.CharmFileID = (uint32)atoul(row[ItemField::charmfileid]);
 		item.FactionMod1 = (int32)atoul(row[ItemField::factionmod1]);
 		item.FactionMod2 = (int32)atoul(row[ItemField::factionmod2]);
@@ -777,30 +571,10 @@ void SharedDatabase::LoadItems(void *data, uint32 size, int32 items, uint32 max_
 		item.Book = (uint8)atoi(row[ItemField::book]);
 		item.BookType = (uint32)atoul(row[ItemField::booktype]);
 		strcpy(item.Filename, row[ItemField::filename]);
-		item.BaneDmgRaceAmt = (uint32)atoul(row[ItemField::banedmgraceamt]);
-		item.AugRestrict = (uint32)atoul(row[ItemField::augrestrict]);
-		item.LoreGroup = disableLoreGroup ? (uint8)atoi("0") : atoi(row[ItemField::loregroup]);
-		item.LoreFlag = item.LoreGroup != 0;
-		item.PendingLoreFlag = (atoi(row[ItemField::pendingloreflag]) == 0) ? false : true;
-		item.ArtifactFlag = (atoi(row[ItemField::artifactflag]) == 0) ? false : true;
-		item.SummonedFlag = (atoi(row[ItemField::summonedflag]) == 0) ? false : true;
-		item.Favor = (uint32)atoul(row[ItemField::favor]);
 		item.FVNoDrop = (atoi(row[ItemField::fvnodrop]) == 0) ? false : true;
-		item.Endur = (uint32)atoul(row[ItemField::endur]);
-		item.DotShielding = (uint32)atoul(row[ItemField::dotshielding]);
-		item.Attack = (uint32)atoul(row[ItemField::attack]);
-		item.Regen = (uint32)atoul(row[ItemField::regen]);
-		item.ManaRegen = (uint32)atoul(row[ItemField::manaregen]);
-		item.EnduranceRegen = (uint32)atoul(row[ItemField::enduranceregen]);
-		item.Haste = (uint32)atoul(row[ItemField::haste]);
-		item.DamageShield = (uint32)atoul(row[ItemField::damageshield]);
 		item.RecastDelay = (uint32)atoul(row[ItemField::recastdelay]);
 		item.RecastType = (uint32)atoul(row[ItemField::recasttype]);
-		item.GuildFavor = (uint32)atoul(row[ItemField::guildfavor]);
-		item.AugDistiller = (uint32)atoul(row[ItemField::augdistiller]);
-		item.Attuneable = (atoi(row[ItemField::attuneable]) == 0) ? false : true;
 		item.NoPet = (atoi(row[ItemField::nopet]) == 0) ? false : true;
-		item.PointType = (uint32)atoul(row[ItemField::pointtype]);
 		item.StackSize = (uint16)atoi(row[ItemField::stacksize]);
 		item.NoTransfer = disableNoTransfer ? false : (atoi(row[ItemField::notransfer]) == 0) ? false : true;
 		item.Stackable = (atoi(row[ItemField::stackable]) == 3) ? false : true;
@@ -831,34 +605,8 @@ void SharedDatabase::LoadItems(void *data, uint32 size, int32 items, uint32 max_
 		item.Bard.Level = (uint8)atoul(row[ItemField::bardlevel]);
 		item.Bard.Level2 = (uint8)atoul(row[ItemField::bardlevel2]);
 		item.QuestItemFlag = (atoi(row[ItemField::questitemflag]) == 0) ? false : true;
-		item.SVCorruption = (int32)atoi(row[ItemField::svcorruption]);
-		item.Purity = (uint32)atoul(row[ItemField::purity]);
-		item.BackstabDmg = (uint32)atoul(row[ItemField::damage]);
-		item.DSMitigation = (uint32)atoul(row[ItemField::dsmitigation]);
-		item.HeroicStr = (int32)atoi(row[ItemField::heroic_str]);
-		item.HeroicInt = (int32)atoi(row[ItemField::heroic_int]);
-		item.HeroicWis = (int32)atoi(row[ItemField::heroic_wis]);
-		item.HeroicAgi = (int32)atoi(row[ItemField::heroic_agi]);
-		item.HeroicDex = (int32)atoi(row[ItemField::heroic_dex]);
-		item.HeroicSta = (int32)atoi(row[ItemField::heroic_sta]);
-		item.HeroicCha = (int32)atoi(row[ItemField::heroic_cha]);
-		item.HeroicMR = (int32)atoi(row[ItemField::heroic_mr]);
-		item.HeroicFR = (int32)atoi(row[ItemField::heroic_fr]);
-		item.HeroicCR = (int32)atoi(row[ItemField::heroic_cr]);
-		item.HeroicDR = (int32)atoi(row[ItemField::heroic_dr]);
-		item.HeroicPR = (int32)atoi(row[ItemField::heroic_pr]);
-		item.HeroicSVCorrup = (int32)atoi(row[ItemField::heroic_svcorrup]);
-		item.HealAmt = (int32)atoi(row[ItemField::healamt]);
-		item.SpellDmg = (int32)atoi(row[ItemField::spelldmg]);
-		item.ScriptFileID = (uint32)atoul(row[ItemField::scriptfileid]);
-		item.ExpendableArrow = (uint16)atoul(row[ItemField::expendablearrow]);
-		item.Clairvoyance = (uint32)atoul(row[ItemField::clairvoyance]);
-		strcpy(item.ClickName, row[ItemField::clickname]);
-		strcpy(item.ProcName, row[ItemField::procname]);
-		strcpy(item.WornName, row[ItemField::wornname]);
-		strcpy(item.FocusName, row[ItemField::focusname]);
-		strcpy(item.ScrollName, row[ItemField::scrollname]);
 		item.GMFlag = (int8)atoi(row[ItemField::gmflag]);
+		item.Soulbound = (int8)atoi(row[ItemField::soulbound]);
 
         try {
             hash.insert(item.ID, item);
@@ -1007,27 +755,16 @@ void SharedDatabase::LoadNPCFactionLists(void *data, uint32 size, uint32 list_co
 
 }
 
-bool SharedDatabase::LoadNPCFactionLists() {
-	if(faction_hash) {
-		return true;
-	}
+bool SharedDatabase::LoadNPCFactionLists(const std::string &prefix) {
+	faction_mmf.reset(nullptr);
+	faction_hash.reset(nullptr);
 
 	try {
 		EQEmu::IPCMutex mutex("faction");
 		mutex.Lock();
-		faction_mmf = new EQEmu::MemoryMappedFile("shared/faction");
-
-		uint32 list_count = 0;
-		uint32 max_lists = 0;
-		GetFactionListInfo(list_count, max_lists);
-		uint32 size = static_cast<uint32>(EQEmu::FixedMemoryHashSet<NPCFactionList>::estimated_size(
-			list_count, max_lists));
-
-		if(faction_mmf->Size() != size) {
-			EQ_EXCEPT("SharedDatabase", "Couldn't load npc factions because faction_mmf->Size() != size");
-		}
-
-		faction_hash = new EQEmu::FixedMemoryHashSet<NPCFactionList>(reinterpret_cast<uint8*>(faction_mmf->Get()), size);
+		std::string file_name = std::string("shared/") + prefix + std::string("faction");
+		faction_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name));
+		faction_hash = std::unique_ptr<EQEmu::FixedMemoryHashSet<NPCFactionList>>(new EQEmu::FixedMemoryHashSet<NPCFactionList>(reinterpret_cast<uint8*>(faction_mmf->Get()), faction_mmf->Size()));
 		mutex.Unlock();
 	} catch(std::exception& ex) {
 		Log.Out(Logs::General, Logs::Error, "Error Loading npc factions: %s", ex.what());
@@ -1091,7 +828,7 @@ ItemInst* SharedDatabase::CreateBaseItem(const Item_Struct* item, int16 charges)
 			return nullptr;
 		}
 
-		if(item->CharmFileID != 0 || (item->LoreGroup >= 1000 && item->LoreGroup != -1)) {
+		if(item->CharmFileID != 0) {
 			inst->Initialize(this);
 		}
 	}
@@ -1171,9 +908,8 @@ bool SharedDatabase::GetCommandSettings(std::map<std::string,uint8> &commands) {
     return true;
 }
 
-bool SharedDatabase::LoadSkillCaps() {
-	if(skill_caps_mmf)
-		return true;
+bool SharedDatabase::LoadSkillCaps(const std::string &prefix) {
+	skill_caps_mmf.reset(nullptr);
 
 	uint32 class_count = PLAYER_CLASS_COUNT;
 	uint32 skill_count = HIGHEST_SKILL + 1;
@@ -1183,11 +919,8 @@ bool SharedDatabase::LoadSkillCaps() {
 	try {
 		EQEmu::IPCMutex mutex("skill_caps");
 		mutex.Lock();
-		skill_caps_mmf = new EQEmu::MemoryMappedFile("shared/skill_caps");
-		if(skill_caps_mmf->Size() != size) {
-			EQ_EXCEPT("SharedDatabase", "Unable to load skill caps: skill_caps_mmf->Size() != size");
-		}
-
+		std::string file_name = std::string("shared/") + prefix + std::string("skill_caps");
+		skill_caps_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name));
 		mutex.Unlock();
 	} catch(std::exception &ex) {
 		Log.Out(Logs::General, Logs::Error, "Error loading skill caps: %s", ex.what());
@@ -1319,10 +1052,6 @@ void SharedDatabase::LoadDamageShieldTypes(SPDat_Spell_Struct* sp, int32 iMaxSpe
 
 }
 
-const EvolveInfo* SharedDatabase::GetEvolveInfo(uint32 loregroup) {
-	return nullptr;	// nothing here for now... database and/or sharemem pulls later
-}
-
 int SharedDatabase::GetMaxSpellID() {
 	std::string query = "SELECT MAX(id) FROM spells_new";
 	auto results = QueryDatabase(query);
@@ -1335,8 +1064,29 @@ int SharedDatabase::GetMaxSpellID() {
 	return atoi(row[0]);
 }
 
+bool SharedDatabase::LoadSpells(const std::string &prefix, int32 *records, const SPDat_Spell_Struct **sp) {
+	spells_mmf.reset(nullptr);
+
+	try {
+		EQEmu::IPCMutex mutex("spells");
+		mutex.Lock();
+	
+		std::string file_name = std::string("shared/") + prefix + std::string("spells");
+		spells_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name));
+		*records = *reinterpret_cast<uint32*>(spells_mmf->Get());
+		*sp = reinterpret_cast<const SPDat_Spell_Struct*>((char*)spells_mmf->Get() + 4);
+		mutex.Unlock();
+	}
+	catch(std::exception& ex) {
+		Log.Out(Logs::General, Logs::Error, "Error Loading Spells: %s", ex.what());
+		return false;
+	}
+	return true;
+}
+
 void SharedDatabase::LoadSpells(void *data, int max_spells) {
-	SPDat_Spell_Struct *sp = reinterpret_cast<SPDat_Spell_Struct*>(data);
+	*(uint32*)data = max_spells;
+	SPDat_Spell_Struct *sp = reinterpret_cast<SPDat_Spell_Struct*>((char*)data + sizeof(uint32));
 
 	const std::string query = "SELECT * FROM spells_new ORDER BY id ASC";
     auto results = QueryDatabase(query);
@@ -1511,25 +1261,15 @@ int SharedDatabase::GetMaxBaseDataLevel() {
 	return atoi(row[0]);
 }
 
-bool SharedDatabase::LoadBaseData() {
-	if(base_data_mmf) {
-		return true;
-	}
+bool SharedDatabase::LoadBaseData(const std::string &prefix) {
+	base_data_mmf.reset(nullptr);
 
 	try {
 		EQEmu::IPCMutex mutex("base_data");
 		mutex.Lock();
-		base_data_mmf = new EQEmu::MemoryMappedFile("shared/base_data");
 
-		int size = 16 * (GetMaxBaseDataLevel() + 1) * sizeof(BaseDataStruct);
-		if(size == 0) {
-			EQ_EXCEPT("SharedDatabase", "Base Data size is zero");
-		}
-
-		if(base_data_mmf->Size() != size) {
-			EQ_EXCEPT("SharedDatabase", "Couldn't load base data because base_data_mmf->Size() != size");
-		}
-
+		std::string file_name = std::string("shared/") + prefix + std::string("base_data");
+		base_data_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name));
 		mutex.Unlock();
 	} catch(std::exception& ex) {
 		Log.Out(Logs::General, Logs::Error, "Error Loading Base Data: %s", ex.what());
@@ -1585,7 +1325,6 @@ void SharedDatabase::LoadBaseData(void *data, int max_level) {
 		bd->mana_factor = atof(row[8]);
 		bd->endurance_factor = atof(row[9]);
     }
-
 }
 
 const BaseDataStruct* SharedDatabase::GetBaseData(int lvl, int cl) {
@@ -1666,8 +1405,8 @@ void SharedDatabase::LoadLootTables(void *data, uint32 size) {
 
 	const std::string query = "SELECT loottable.id, loottable.mincash, loottable.maxcash, loottable.avgcoin, "
                             "loottable_entries.lootdrop_id, loottable_entries.multiplier, loottable_entries.droplimit, "
-                            "loottable_entries.mindrop, loottable_entries.probability FROM loottable LEFT JOIN loottable_entries "
-                            "ON loottable.id = loottable_entries.loottable_id ORDER BY id";
+                            "loottable_entries.mindrop, loottable_entries.probability, loottable_entries.multiplier_min FROM "
+							"loottable LEFT JOIN loottable_entries ON loottable.id = loottable_entries.loottable_id ORDER BY id";
     auto results = QueryDatabase(query);
     if (!results.Success()) {
         return;
@@ -1700,7 +1439,8 @@ void SharedDatabase::LoadLootTables(void *data, uint32 size) {
         lt->Entries[current_entry].multiplier = static_cast<uint8>(atoi(row[5]));
         lt->Entries[current_entry].droplimit = static_cast<uint8>(atoi(row[6]));
         lt->Entries[current_entry].mindrop = static_cast<uint8>(atoi(row[7]));
-        lt->Entries[current_entry].probability = static_cast<float>(atof(row[8]));
+		lt->Entries[current_entry].probability = static_cast<float>(atof(row[8]));
+		lt->Entries[current_entry].multiplier_min = static_cast<uint8>(atoi(row[9]));
 
         ++(lt->NumEntries);
         ++current_entry;
@@ -1711,6 +1451,11 @@ void SharedDatabase::LoadLootTables(void *data, uint32 size) {
 
 }
 
+/*
+C6262	Excessive stack usage
+Function uses '16608' bytes of stack:  exceeds /analyze:stacksize '16384'. 
+Consider moving some data to heap.	common	shareddb.cpp	1489
+*/
 void SharedDatabase::LoadLootDrops(void *data, uint32 size) {
 
 	EQEmu::FixedMemoryVariableHashSet<LootDrop_Struct> hash(reinterpret_cast<uint8*>(data), size);
@@ -1759,21 +1504,23 @@ void SharedDatabase::LoadLootDrops(void *data, uint32 size) {
 
 }
 
-bool SharedDatabase::LoadLoot() {
-	if(loot_table_mmf || loot_drop_mmf)
-		return true;
+bool SharedDatabase::LoadLoot(const std::string &prefix) {
+	loot_table_mmf.reset(nullptr);
+	loot_drop_mmf.reset(nullptr);
 
 	try {
 		EQEmu::IPCMutex mutex("loot");
 		mutex.Lock();
-		loot_table_mmf = new EQEmu::MemoryMappedFile("shared/loot_table");
-		loot_table_hash = new EQEmu::FixedMemoryVariableHashSet<LootTable_Struct>(
+		std::string file_name_lt = std::string("shared/") + prefix + std::string("loot_table");
+		loot_table_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name_lt));
+		loot_table_hash = std::unique_ptr<EQEmu::FixedMemoryVariableHashSet<LootTable_Struct>>(new EQEmu::FixedMemoryVariableHashSet<LootTable_Struct>(
 			reinterpret_cast<uint8*>(loot_table_mmf->Get()),
-			loot_table_mmf->Size());
-		loot_drop_mmf = new EQEmu::MemoryMappedFile("shared/loot_drop");
-		loot_drop_hash = new EQEmu::FixedMemoryVariableHashSet<LootDrop_Struct>(
+			loot_table_mmf->Size()));
+		std::string file_name_ld = std::string("shared/") + prefix + std::string("loot_drop");
+		loot_drop_mmf = std::unique_ptr<EQEmu::MemoryMappedFile>(new EQEmu::MemoryMappedFile(file_name_ld));
+		loot_drop_hash = std::unique_ptr<EQEmu::FixedMemoryVariableHashSet<LootDrop_Struct>>(new EQEmu::FixedMemoryVariableHashSet<LootDrop_Struct>(
 			reinterpret_cast<uint8*>(loot_drop_mmf->Get()),
-			loot_drop_mmf->Size());
+			loot_drop_mmf->Size()));
 		mutex.Unlock();
 	} catch(std::exception &ex) {
 		Log.Out(Logs::General, Logs::Error, "Error loading loot: %s", ex.what());

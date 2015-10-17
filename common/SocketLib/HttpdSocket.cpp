@@ -41,6 +41,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <cstring>
 
 #define DEB(x)
+
+#pragma warning( disable : 4267 )
+
 /*
 #define DEB(x) { \
 	FILE *fil = fopen("httpdlog","at"); \
