@@ -137,7 +137,7 @@ namespace Trilogy {
 		__packet->pBuffer = new unsigned char[__packet->size]; 
 		EnterWorld_Struct *emu = (EnterWorld_Struct*) __packet->pBuffer;
 		structs::EnterWorld_Struct *eq = (structs::EnterWorld_Struct *) __eq_buffer;
-		strn0cpy(emu->name, eq->charname, 64);
+		strn0cpy(emu->name, eq->charname, 30);
 		FINISH_DIRECT_DECODE();
 	}
 
