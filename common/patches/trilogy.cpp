@@ -365,7 +365,7 @@ namespace Trilogy {
 			OUT(buffs[r].duration);
 		}
 		OUT_str(name);
-		strcpy(eq->Surname, emu->last_name);
+		strncpy(eq->Surname, emu->last_name, 20);
 		OUT(guild_id);
 		OUT(pvp);
 		OUT(anon);
@@ -395,15 +395,15 @@ namespace Trilogy {
 		eq->eqbackground = 0;
 
 
-		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
+		Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
 
-		CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::PlayerProfile_Struct)-4);
+		CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::PlayerProfile_Struct));
 		EQApplicationPacket* outapp = new EQApplicationPacket();
 		outapp->SetOpcode(OP_PlayerProfile);
 		outapp->pBuffer = new uchar[10000];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, sizeof(structs::PlayerProfile_Struct), outapp->pBuffer, 10000);
-		EncryptProfilePacket(outapp->pBuffer, outapp->size);
-		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes compressed", outapp->size);
+		EncryptOldProfilePacket(outapp->pBuffer, outapp->size);
+		Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes compressed", outapp->size);
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
 		delete __packet;
@@ -477,7 +477,6 @@ namespace Trilogy {
 		OUT(gravity);
 		OUT(time_type);
 		OUT(sky);
-		OUT(zone_exp_multiplier);
 		OUT(safe_y);
 		OUT(safe_x);
 		OUT(safe_z);
@@ -485,12 +484,7 @@ namespace Trilogy {
 		eq->underworld=emu->underworld;
 		OUT(minclip);
 		OUT(maxclip);
-		OUT(skylock);
 		OUT(timezone);
-		OUT_array(snow_chance, 4);
-		OUT_array(snow_duration, 4);
-		OUT_array(rain_chance, 4);
-		OUT_array(rain_duration, 4);
 		FINISH_ENCODE();	
 	}
 

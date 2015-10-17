@@ -33,12 +33,12 @@ void EncryptProfilePacket(EQApplicationPacket* app) {
 
 void EncryptOldProfilePacket(uchar* pBuffer, uint32 size)
 {
-	int32* data=(int32*)pBuffer;
-	int32 crypt = 0x65e7;
-	int32 next_crypt;
+	uint32* data=(uint32*)pBuffer;
+	uint32 crypt = 0x65e7;
+	uint32 next_crypt;
 	uint32 len = size;
 
-	int32 swap = data[0];
+	uint32 swap = data[0];
 	data[0] = data[len/8];
 	data[len/8] = swap;
 
