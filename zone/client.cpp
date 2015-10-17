@@ -5064,8 +5064,8 @@ void Client::SendClientVersion()
 		std::string string;
 		if(GetClientVersion() == EQClientEvolution)
 			string = "Evolution";
-		if(GetClientVersion() == EQClientUnused)
-			string = "Unused";
+		if(GetClientVersion() == EQClientTrilogy)
+			string = "Trilogy";
 		else
 			string = "Unknown";
 

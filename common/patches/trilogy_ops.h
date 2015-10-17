@@ -119,7 +119,6 @@ E(OP_Assist);
 
 //Below are invalid opcodes ONLY
 E(OP_Unknown);
-E(OP_DisciplineUpdate);
 E(OP_RaidJoin);
 E(OP_SendAAStats);
 #undef E

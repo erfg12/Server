@@ -3090,7 +3090,7 @@ void EntityList::OpenDoorsNear(NPC *who)
 	}
 }
 
-void EntityList::OpenDoorsNearCoords(NPC *who, glm::vec4 position)
+void EntityList::OpenDoorsNearCoords(NPC *who, const glm::vec4& position)
 {
 
 	for (auto it = door_list.begin();it != door_list.end(); ++it) {

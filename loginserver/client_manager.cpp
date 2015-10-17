@@ -49,26 +49,6 @@ ClientManager::ClientManager()
 		server_log->Log(log_error, "ClientManager fatal error: couldn't open Old stream.");
 		run_server = false;
 	}
-
-	//Trilogy
-	int trilogy_port = atoi(server.config->GetVariable("Trilogy", "port").c_str());
-	trilogy_stream = new EQStreamFactory(OldStream, trilogy_port);
-	trilogy_ops = new RegularOpcodeManager;
-	if (!trilogy_ops->LoadOpcodes(server.config->GetVariable("Trilogy", "opcodes").c_str()))
-	{
-		server_log->Log(log_error, "ClientManager fatal error: couldn't load opcodes for Trilogy file %s.",
-		server.config->GetVariable("Trilogy", "opcodes").c_str());
-		run_server = false;
-	}
-	if (trilogy_stream->Open())
-	{
-		server_log->Log(log_network, "ClientManager listening on Trilogy stream.");
-	}
-	else
-	{
-		server_log->Log(log_error, "ClientManager fatal error: couldn't open Trilogy stream.");
-		run_server = false;
-	}
 }
 
 ClientManager::~ClientManager()
@@ -81,16 +61,6 @@ ClientManager::~ClientManager()
 	if(old_ops)
 	{
 		delete old_ops;
-	}
-
-	if (trilogy_stream)
-	{
-		trilogy_stream->Close();
-		delete trilogy_stream;
-	}
-	if (trilogy_ops)
-	{
-		delete trilogy_ops;
 	}
 }
 

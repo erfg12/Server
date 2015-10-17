@@ -266,7 +266,7 @@ namespace Trilogy {
 				eq->equipcolors[k].color = emu->player.spawn.colors[k].color;
 			}
 			eq->anim_type = 0x64;
-			eq->texture = emu->player.spawn.equip_chest2;
+			eq->texture = emu->player.spawn.bodytexture;
 			eq->helm = emu->player.spawn.helm;
 			eq->race = emu->player.spawn.race;
 			eq->GM = emu->player.spawn.gm;
@@ -402,7 +402,7 @@ namespace Trilogy {
 		outapp->SetOpcode(OP_PlayerProfile);
 		outapp->pBuffer = new uchar[10000];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, sizeof(structs::PlayerProfile_Struct), outapp->pBuffer, 10000);
-		EncryptOldProfilePacket(outapp->pBuffer, outapp->size);
+		EncryptProfilePacket(outapp->pBuffer, outapp->size);
 		//Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes compressed", outapp->size);
 		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
@@ -2266,7 +2266,7 @@ namespace Trilogy {
 			eq->guildrank = 0;
 			eq->LD=1;
 		}
-		eq->texture = emu->equip_chest2;
+		eq->texture = emu->bodytexture;
 		for(int k = 0; k < 9; k++) 
 		{
 			eq->equipment[k] = emu->equipment[k];
@@ -2318,7 +2318,6 @@ namespace Trilogy {
 		return eq;
 	}
 
-	ENCODE(OP_DisciplineUpdate) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_RaidJoin) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_SendAAStats) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_Unknown)
