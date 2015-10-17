@@ -199,8 +199,7 @@ struct ZoneServerInfo_Struct
 struct NewZone_Struct 
 {
 	/*0000*/	char	char_name[30];			// Character Name
-	/*0064*/	char	zone_short_name[15];	// Zone Short Name
-	/*0064*/	char	unknown045[5];	// Zone Short Name
+	/*0064*/	char	zone_short_name[20];	// Zone Short Name
 	/*0096*/	char	zone_long_name[180];	// Zone Long Name
 	/*0374*/	uint8	ztype;
 	/*0375*/	uint8	fog_red[4];				// Red Fog 0-255 repeated over 4 bytes (confirmed)
@@ -219,7 +218,12 @@ struct NewZone_Struct
 	/*0457*/	uint8	specialcodes[16];
 	/*0473*/	uint8	timezone;
 	/*0474*/	uint8	sky;					// Sky Type
-	/*0475*/	uint8	unknown331[9];			// Music work out positions.
+	/*0475*/	uint8   unknown0475;
+	/*0476*/	uint16  water_music;
+	/*0478*/	uint16  normal_music_day;
+	/*0480*/	uint16  normal_music_night;
+	/*0482*/	uint8	unknown0482[2];
+	/*0484*/	float	zone_exp_multiplier;	// Experience Multiplier
 	/*0488*/	float	safe_y;					// Zone Safe Y
 	/*0492*/	float	safe_x;					// Zone Safe X
 	/*0496*/	float	safe_z;					// Zone Safe Z
@@ -227,7 +231,14 @@ struct NewZone_Struct
 	/*0504*/	float	underworld;				// Underworld, min z (Not Sure?)
 	/*0508*/	float	minclip;				// Minimum View Distance
 	/*0512*/	float	maxclip;				// Maximum View DIstance
-	/*0570*/	uint8	unknown_end[32];		// ***Placeholder
+	/*0516*/	uint32	forage_novice;
+	/*0520*/	uint32	forage_medium;
+	/*0524*/	uint32	forage_advanced;
+	/*0528*/	uint32	fishing_novice;
+	/*0532*/	uint32	fishing_medium;
+	/*0536*/	uint32	fishing_advanced;
+	/*0540*/	uint32	skylock;
+				uint32  unknown_end;
 	/*0572*/
 };
 
