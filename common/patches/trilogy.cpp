@@ -243,7 +243,7 @@ namespace Trilogy {
 			int k = 0;
 			strncpy(eq->zone, emu->player.spawn.zonename,15);
 			eq->anon = emu->player.spawn.anon;
-			strncpy(eq->name, emu->player.spawn.name, 64);
+			strncpy(eq->name, emu->player.spawn.name, 30);
 			eq->deity = emu->player.spawn.deity;
 			eq->race = emu->player.spawn.race;
 			if (emu->player.spawn.race == 42 && emu->player.spawn.gender == 2)
@@ -2239,7 +2239,7 @@ namespace Trilogy {
 		eq->GM = emu->gm;
 		eq->title = emu->aaitle;
 		eq->anon = emu->anon;
-		memcpy(eq->name, emu->name, 64);
+		memcpy(eq->name, emu->name, 30);
 		eq->deity = emu->deity;
 		if (emu->race == 42 && emu->gender == 2)
 			eq->size = emu->size + 2.0f;
