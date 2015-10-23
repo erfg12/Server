@@ -35,6 +35,7 @@ void EncryptSpawnPacket(uchar* pBuffer, uint32 size);
 
 void EncryptZoneSpawnPacket(EQApplicationPacket* app);
 void EncryptZoneSpawnPacket(uchar* pBuffer, uint32 size);
+void EncryptZoneSpawnPacketOld(uchar* pBuffer, uint32 size);
 
 int DeflatePacket(const unsigned char* in_data, int in_length, unsigned char* out_data, int max_out_length);
 uint32 InflatePacket(const uchar* indata, uint32 indatalen, uchar* outdata, uint32 outdatalen, bool iQuiet = false);

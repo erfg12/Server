@@ -942,12 +942,10 @@ void Client::Handle_Connect_OP_WearChange(const EQApplicationPacket *app)
 
 void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(OldClientZoneEntry_Struct))
+	if (app->size != sizeof(ClientZoneEntry_Struct))
 		return;
-	OldClientZoneEntry_Struct *cze = (OldClientZoneEntry_Struct *)app->pBuffer;
 
-	if (strlen(cze->char_name) > 31)
-		return;
+	ClientZoneEntry_Struct *cze = (ClientZoneEntry_Struct *)app->pBuffer;
 
 	conn_state = ReceivedZoneEntry;
 
@@ -1421,16 +1419,16 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	FastQueuePacket(&outapp);
 	//_log(EQMAC__LOG, "Spawns");
 	/* Zone Spawns Packet */
-//	entity_list.SendZoneSpawnsBulk(this);
-//	entity_list.SendZoneCorpsesBulk(this);
-//	entity_list.SendZonePVPUpdates(this);	//hack until spawn struct is fixed.
-//	_log(EQMAC__LOG, "Time");
+	entity_list.SendZoneSpawnsBulk(this);
+	entity_list.SendZoneCorpsesBulk(this);
+	entity_list.SendZonePVPUpdates(this);	//hack until spawn struct is fixed.
+	//_log(EQMAC__LOG, "Time");
 	/* Time of Day packet */
-	/*outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
+	outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 	TimeOfDay_Struct* tod = (TimeOfDay_Struct*)outapp->pBuffer;
 	zone->zone_time.getEQTimeOfDay(time(0), tod);
 	outapp->priority = 6;
-	FastQueuePacket(&outapp);*/
+	FastQueuePacket(&outapp);
 
 	/* LFG packet */
 	// This tells the client who in the zone are LFG. Our own status is handled by a Connecting handle
@@ -1441,10 +1439,10 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	AK sent both individual item packets and a single bulk inventory packet on zonein
 	The client requires cursor items to be sent in Handle_Connect_OP_SendExpZonein, should all items be moved there as well?
 	*/
-/*	if (loaditems) {  //Dont load if a length error occurs 
+	if (loaditems) {  //Dont load if a length error occurs 
 		BulkSendItems();
 		BulkSendInventoryItems();
-	}*/
+	}
 	
 	/*
 	Weather Packet

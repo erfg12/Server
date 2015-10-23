@@ -375,37 +375,27 @@ struct ClientTarget_Struct
 
 struct Spawn_Struct
 {
-	/*0000*/	uint32  random_dontuse;
+	/*0000*/	uint32	unknown_start;
+	/*0028*/	float	size;
+	/*0032*/	float	walkspeed;
+	/*0036*/	float	runspeed;
+	/*0040*/	Color_Struct	equipcolors[9];
 	/*0004*/	uint8	accel;
 	/*0005*/	uint8	heading;			// Current Heading
 	/*0006*/	uint8	deltaHeading;		// Delta Heading
 	/*0007*/	int16	y_pos;				// Y Position
 	/*0009*/	int16	x_pos;				// X Position
 	/*0011*/	int16	z_pos;				// Z Position
-	/*0013*/	int32	deltaY:10,			// Velocity Y
-						spacer1:1,			// Placeholder
-						deltaZ:10,			// Velocity Z
-						spacer2:1,			// ***Placeholder
-						deltaX:10;			// Velocity X
-	/*0017*/	uint8	void1;
-	/*0018*/	uint16	petOwnerId;		// Id of pet owner (0 if not a pet)
-	/*0020*/	uint8	animation;
-	/*0021*/    uint8	haircolor; 
-	/*0022*/	uint8	beardcolor;	
-	/*0023*/	uint8	eyecolor1; 
-	/*0024*/	uint8	eyecolor2; 
-	/*0025*/	uint8	hairstyle; 
-	/*0026*/	uint8	beard;
-	/*0027*/    uint8   title; //0xff
-	/*0028*/	float	size;
-	/*0032*/	float	walkspeed;
-	/*0036*/	float	runspeed;
-	/*0040*/	Color_Struct	equipcolors[9];
+	/*0013*/	int32	deltaY : 11,			// Velocity Y
+						deltaZ : 11,			// Velocity Z
+						deltaX : 10;			// Velocity X
+				uint8 unknownk;
 	/*0076*/	uint16	spawn_id;			// Id of new spawn
 	/*0078*/	uint16	bodytype;			// 65 is disarmable trap, 66 and 67 are invis triggers/traps
+	/*0018*/	uint16	petOwnerId;		// Id of pet owner (0 if not a pet)
 	/*0080*/	int16	cur_hp;				// Current hp's of Spawn
 	/*0082*/	uint16	GuildID;			// GuildID - previously Current hp's of Spawn
-	/*0084*/	uint16	race;				// Race
+	/*0084*/	uint8	race;				// Race
 	/*0086*/	uint8	NPC;				// NPC type: 0=Player, 1=NPC, 2=Player Corpse, 3=Monster Corpse, 4=???, 5=Unknown Spawn,10=Self
 	/*0087*/	uint8	class_;				// Class
 	/*0088*/	uint8	gender;				// Gender Flag, 0 = Male, 1 = Female, 2 = Other
@@ -421,16 +411,16 @@ struct Spawn_Struct
 	/*0098*/	uint8	LD;					// 0=NotLD, 1=LD
 	/*0099*/	uint8	GM;					// 0=NotGM, 1=GM
 	/*0100*/	uint8	flymode;				
-	/*0101*/	uint8	texture;
+	/*0101*/	uint8	bodytexture;
 	/*0102*/	uint8	helm; 
 	/*0103*/	uint8	face;		
-	/*0104*/	uint16	equipment[9];		// Equipment worn: 0=helm, 1=chest, 2=arm, 3=bracer, 4=hand, 5=leg, 6=boot, 7=melee1, 8=melee2
-	/*0122*/	int16	guildrank;			// ***Placeholder
-	/*0124*/	uint16	deity;				// Deity.
-	/*0126*/	uint8	temporaryPet;			
-	/*0127*/	char	name[64];			// Name of spawn (len is 30 or less)
-	/*0191*/	char	Surname[32];		// Last Name of player
-	/*0223*/	uint8	void_;		
+	/*0104*/	uint8	equipment[9];		// Equipment worn: 0=helm, 1=chest, 2=arm, 3=bracer, 4=hand, 5=leg, 6=boot, 7=melee1, 8=melee2
+	/*0127*/	char	name[30];			// Name of spawn (len is 30 or less)
+	/*0191*/	char	Surname[20];		// Last Name of player	
+	/*0122*/	int8	guildrank;			// ***Placeholder
+	/*0124*/	int8	unknown161;				// unknown
+	/*0162*/	int8	deity;
+	/*0127*/	uint8	unknown_end[11];
 	/*0224*/
 };
 
@@ -450,8 +440,8 @@ struct DeleteSpawn_Struct
 //New ChannelMessage_Struct struct
 struct ChannelMessage_Struct
 {
-	/*000*/	char	targetname[64];		// Tell recipient
-	/*064*/	char	sender[64];			// The senders name (len might be wrong)
+	/*000*/	char	targetname[30];		// Tell recipient
+	/*064*/	char	sender[30];			// The senders name (len might be wrong)
 	/*128*/	uint16	language;			// Language
 	/*130*/	uint16	chan_num;			// Channel
 	/*132*/	uint16	cm_unknown4;		// ***Placeholder
@@ -600,7 +590,7 @@ struct Charm_Struct
 #define ZONE_ERROR_NOEXPERIENCE -7
 struct ZoneChange_Struct
 {
-	/*000*/	char	char_name[64];     // Character Name
+	/*000*/	char	char_name[30];     // Character Name
 	/*064*/	uint16	zoneID;
 	/*066*/ uint16  zone_reason;
 	/*068*/ uint16  unknown[2];
@@ -662,18 +652,16 @@ struct Death_Struct
 
 struct SpawnPositionUpdate_Struct
 {
-	/*0000*/ uint16  spawn_id;               // Id of spawn to update
-	/*0002*/ uint8   anim_type; // ??
-	/*0003*/ uint8	 heading;                // Heading
-	/*0004*/ int8    delta_heading;          // Heading Change
-	/*0005*/ int16   x_pos;                  // New X position of spawn
-	/*0007*/ int16   y_pos;                  // New Y position of spawn
-	/*0009*/ int16   z_pos;                  // New Z position of spawn
-	/*0011*/ uint32  delta_y:10,             // Y Velocity
-						spacer1:1,              // ***Placeholder
-						delta_z:10,             // Z Velocity
-						spacer2:1,              // ***Placeholder
-						delta_x:10;             // Z Velocity
+	/*0000*/ uint16	spawn_id;               // Id of spawn to update
+	/*0002*/ uint8	anim_type; // ??
+	/*0003*/ uint8	heading;                // Heading
+	/*0004*/ int8	delta_heading;          // Heading Change
+	/*0005*/ int16	y_pos;                  // New X position of spawn
+	/*0007*/ int16	x_pos;                  // New Y position of spawn
+	/*0009*/ int16	z_pos;                  // New Z position of spawn
+	/*0011*/ uint32	delta_y : 11,             // Y Velocity
+					delta_z : 11,             // Z Velocity
+					delta_x : 10;             // Z Velocity
 	/*015*/
 };
 

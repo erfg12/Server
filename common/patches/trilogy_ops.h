@@ -15,9 +15,6 @@ D(OP_EnterWorld)
 D(OP_ChannelMessage)
 E(OP_ChannelMessage)
 E(OP_SpecialMesg)
-E(OP_ClientUpdate)
-D(OP_ClientUpdate)
-E(OP_MobUpdate)
 D(OP_TargetCommand)
 D(OP_TargetMouse)
 D(OP_CharacterCreate)
@@ -116,7 +113,7 @@ E(OP_FaceChange);
 D(OP_FaceChange);
 D(OP_Assist);
 E(OP_Assist);
-
+D(OP_ZoneEntry);
 //Below are invalid opcodes ONLY
 E(OP_Unknown);
 E(OP_RaidJoin);

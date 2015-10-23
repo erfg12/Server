@@ -1320,7 +1320,7 @@ void EntityList::SendZoneSpawnsBulk(Client *client)
 {
 	NewSpawn_Struct ns;
 	Mob *spawn;
-	uint32 maxspawns = 100;
+	uint32 maxspawns = 64;
 
 	if (maxspawns > mob_list.size())
 		maxspawns = mob_list.size();

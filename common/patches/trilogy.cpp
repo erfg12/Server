@@ -212,14 +212,13 @@ namespace Trilogy {
 		FINISH_ENCODE();	
 	}
 
-	/*DECODE(OP_ZoneEntry) 
+	DECODE(OP_ZoneEntry) 
 	{
-		SETUP_DIRECT_DECODE(ClientZoneEntry_Struct, structs::ClientZoneEntry_Struct);
-
-		OUT_str(char_name);
+		SETUP_DIRECT_DECODE(ClientZoneEntry_Struct, structs::ClientZoneEntry_Struct)
+		strn0cpy(emu->char_name, eq->char_name, 30);
 
 		FINISH_DIRECT_DECODE();
-	}*/
+	}
 
 	ENCODE(OP_ZoneEntry)
 	{ 
@@ -503,8 +502,8 @@ namespace Trilogy {
 		__packet->size = len; 
 		memset(__packet->pBuffer, 0, len); 
 		structs::ChannelMessage_Struct *eq = (structs::ChannelMessage_Struct *) __packet->pBuffer; 
-		strncpy(eq->targetname, emu->targetname, 64);
-		strncpy(eq->sender, emu->sender, 64);
+		strncpy(eq->targetname, emu->targetname, 30);
+		strncpy(eq->sender, emu->sender, 30);
 		eq->language = emu->language;
 		eq->chan_num = emu->chan_num;
 		eq->skill_in_language = emu->skill_in_language;
@@ -542,105 +541,12 @@ namespace Trilogy {
 		__packet->pBuffer = new unsigned char[len];
 		MEMSET_IN(ChannelMessage_Struct);
 		ChannelMessage_Struct *emu = (ChannelMessage_Struct *) __packet->pBuffer;
-		strncpy(emu->targetname, eq->targetname, 64);
-		strncpy(emu->sender, eq->targetname, 64);
+		strncpy(emu->targetname, eq->targetname, 30);
+		strncpy(emu->sender, eq->targetname, 30);
 		emu->language = eq->language;
 		emu->chan_num = eq->chan_num;
 		emu->skill_in_language = eq->skill_in_language;
 		strcpy(emu->message, eq->message);
-	}
-
-	ENCODE(OP_MobUpdate)
-	{
-		//consume the packet
-		EQApplicationPacket *in = *p;
-		*p = nullptr;
-
-		//store away the emu struct
-		unsigned char *__emu_buffer = in->pBuffer;
-		SpawnPositionUpdate_Struct *emu = (SpawnPositionUpdate_Struct *) __emu_buffer;
-
-		EQApplicationPacket* app = new EQApplicationPacket(OP_MobUpdate,sizeof(structs::SpawnPositionUpdates_Struct) + sizeof(structs::SpawnPositionUpdate_Struct));
-		structs::SpawnPositionUpdates_Struct* spu = (structs::SpawnPositionUpdates_Struct*)app->pBuffer;
-	
-		spu->num_updates = 1;
-		float anim_type = (float)emu->anim_type / 37.0f;
-		spu->spawn_update[0].anim_type = (uint8)emu->anim_type;
-		spu->spawn_update[0].delta_heading = (uint8)emu->delta_heading;
-		spu->spawn_update[0].delta_x = (uint32)emu->delta_x;
-		spu->spawn_update[0].delta_y = (uint32)emu->delta_y;
-		spu->spawn_update[0].delta_z = (uint32)emu->delta_z;
-		spu->spawn_update[0].spawn_id = emu->spawn_id;
-		spu->spawn_update[0].x_pos = (int16)emu->y_pos;
-		spu->spawn_update[0].y_pos = (int16)emu->x_pos;
-		spu->spawn_update[0].z_pos = (int16)emu->z_pos*10;
-		spu->spawn_update[0].heading = (int8)emu->heading;
-		spu->spawn_update[0].anim_type = anim_type * 7;
-		dest->FastQueuePacket(&app);
-
-		delete[] __emu_buffer;
-	}
-
-	ENCODE(OP_ClientUpdate)
-	{
-		SETUP_DIRECT_ENCODE(SpawnPositionUpdate_Struct, structs::SpawnPositionUpdate_Struct);
-		OUT(spawn_id);
-		if(emu->y_pos >= 0)
-			eq->x_pos = int16(emu->y_pos + 0.5);
-		else
-			eq->x_pos = int16(emu->y_pos - 0.5);
-		if(emu->x_pos >= 0)
-			eq->y_pos = int16(emu->x_pos + 0.5);
-		else
-			eq->y_pos = int16(emu->x_pos - 0.5);
-		if(emu->z_pos >= 0)
-			eq->z_pos = int16(emu->z_pos + 0.5)*10;
-		else
-			eq->z_pos = int16(emu->z_pos - 0.5)*10;
-		/*OUT(delta_x);
-		OUT(delta_y);
-		OUT(delta_z);
-		if(emu->delta_heading >= 0)
-			eq->delta_heading = uint8(emu->delta_heading + 0.5);
-		else
-			eq->delta_heading = uint8(emu->delta_heading - 0.5);*/
-		eq->delta_x = 0;
-		eq->delta_y = 0;
-		eq->delta_z = 0;
-		eq->delta_heading = 0;
-		eq->anim_type = (uint8)emu->anim_type;
-		eq->heading = (uint8)emu->heading;
-		FINISH_ENCODE();
-	}
-
-	DECODE(OP_ClientUpdate)
-	{
-		SETUP_DIRECT_DECODE(SpawnPositionUpdate_Struct, structs::SpawnPositionUpdate_Struct);
-		IN(spawn_id);
-	//	IN(sequence);
-		if(eq->y_pos >= 0)
-			emu->x_pos = int16(eq->y_pos + 0.5);
-		else
-			emu->x_pos = int16(eq->y_pos - 0.5);
-		if(eq->x_pos >= 0)
-			emu->y_pos = int16(eq->x_pos + 0.5);
-		else
-			emu->y_pos = int16(eq->x_pos - 0.5);
-		if(eq->z_pos >= 0)
-			emu->z_pos = int16(eq->z_pos + 0.5)/10;
-		else
-			emu->z_pos = int16(eq->z_pos - 0.5)/10;
-		emu->heading = (uint8)eq->heading;
-		/*emu->delta_x = 0;
-		emu->delta_y = 0;
-		emu->delta_z = 0;
-		emu->delta_heading = 0;*/
-		IN(delta_x);
-		IN(delta_y);
-		IN(delta_z);
-		emu->delta_heading = (uint8)eq->delta_heading;
-		IN(anim_type);
-		FINISH_DIRECT_DECODE();
 	}
 
 	DECODE(OP_TargetMouse)
@@ -708,15 +614,19 @@ namespace Trilogy {
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
+
+		Log.Out(Logs::Detail, Logs::Netcode, "Got %i", sizeof(structs::Spawn_Struct));
+
+
 		//store away the emu struct
 		unsigned char *__emu_buffer = in->pBuffer;
-		Spawn_Struct *emu = (Spawn_Struct *) __emu_buffer;
+		Spawn_Struct *emu = (Spawn_Struct *)__emu_buffer;
 
 		//determine and verify length
 		int entrycount = in->size / sizeof(Spawn_Struct);
-		if(entrycount == 0 || (in->size % sizeof(Spawn_Struct)) != 0) 
+		if (entrycount == 0 || (in->size % sizeof(Spawn_Struct)) != 0)
 		{
-		//	_log(NET__STRUCTS, "Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(Spawn_Struct));
+			Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Wrong size on outbound %s: Got %d, expected multiple of %d", opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(Spawn_Struct));
 			delete in;
 			return;
 		}
@@ -731,36 +641,37 @@ namespace Trilogy {
 		memset(out->pBuffer, 0, out->size);
 
 		//do the transform...
-		for(int r = 0; r < entrycount; r++, eq++, emu++) 
+		for (int r = 0; r < entrycount; r++, eq++, emu++)
 		{
 
-			struct structs::Spawn_Struct* spawns = TrilogySpawns(emu,0);
-			memcpy(eq,spawns,sizeof(structs::Spawn_Struct));
+			struct structs::Spawn_Struct* spawns = TrilogySpawns(emu, 0);
+			memcpy(eq, spawns, sizeof(structs::Spawn_Struct));
 			safe_delete(spawns);
 
 		}
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
 		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)*entrycount];
 		outapp->size = DeflatePacket((unsigned char*)out->pBuffer, out->size, outapp->pBuffer, sizeof(structs::Spawn_Struct)*entrycount);
-		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
+		EncryptZoneSpawnPacketOld(outapp->pBuffer, outapp->size);
 		delete[] __emu_buffer;
 		delete out;
 		dest->FastQueuePacket(&outapp, ack_req);
 
 	}
 
-	ENCODE(OP_NewSpawn) 
+	ENCODE(OP_NewSpawn)
 	{
 		SETUP_DIRECT_ENCODE(Spawn_Struct, structs::Spawn_Struct);
 
-		struct structs::Spawn_Struct* spawns = TrilogySpawns(emu,1);
-		memcpy(eq,spawns,sizeof(structs::Spawn_Struct));
+		struct structs::Spawn_Struct* spawns = TrilogySpawns(emu, 0);
+		memcpy(eq, spawns, sizeof(structs::Spawn_Struct));
 		safe_delete(spawns);
 
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(structs::Spawn_Struct));
+
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct) * 1);
 		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, __packet->size, outapp->pBuffer, sizeof(structs::Spawn_Struct));
-		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
+		EncryptZoneSpawnPacketOld(outapp->pBuffer, outapp->size);
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete[] __emu_buffer;
 		safe_delete(__packet);
@@ -2220,48 +2131,47 @@ namespace Trilogy {
 	structs::Spawn_Struct* TrilogySpawns(struct Spawn_Struct* emu, int type) 
 	{
 
-		if(sizeof(emu) == 0)
+		if (sizeof(emu) == 0)
 			return 0;
 
-		structs::Spawn_Struct *eq = new struct structs::Spawn_Struct;
-		memset(eq,0,sizeof(structs::Spawn_Struct));
+		structs::Spawn_Struct *eq = new structs::Spawn_Struct;
+		memset(eq, 0, sizeof(structs::Spawn_Struct));
 
-		if(type == 0)
+		if (type == 0)
 			eq->deltaHeading = emu->deltaHeading;
-		if(type == 1)
+		if (type == 1)
 			eq->deltaHeading = 0;
 		eq->GM = emu->gm;
-		eq->title = emu->aaitle;
 		eq->anon = emu->anon;
 		memcpy(eq->name, emu->name, 30);
 		eq->deity = emu->deity;
-		if (emu->race == 42 && emu->gender == 2)
-			eq->size = emu->size + 2.0f;
+		if ((emu->race == 42 || emu->race == 120) && emu->gender == 2)
+			eq->size = emu->size + 4.0f;
 		else
 			eq->size = emu->size;
 		eq->NPC = emu->NPC;
 		eq->invis = emu->invis;
-		//eq->sneaking = 0;
+		eq->sneaking = 0;
 		eq->cur_hp = emu->curHp;
 		eq->x_pos = (int16)emu->x;
 		eq->y_pos = (int16)emu->y;
-		eq->animation = emu->animation;
-		eq->z_pos = (int16)emu->z*10;
+		eq->anim_type = 0x64;
+		eq->z_pos = (int16)emu->z;
 		eq->deltaY = 0;
 		eq->deltaX = 0;
 		eq->heading = (uint8)emu->heading;
 		eq->deltaZ = 0;
-		eq->anim_type = 0x64;
 		eq->level = emu->level;
 		eq->petOwnerId = emu->petOwnerId;
 		eq->guildrank = emu->guildrank;
-		if(emu->NPC == 1)
+		if (emu->NPC == 1)
 		{
 			eq->guildrank = 0;
-			eq->LD=1;
+			eq->LD = 1;
 		}
-		eq->texture = emu->bodytexture;
-		for(int k = 0; k < 9; k++) 
+
+		eq->bodytexture = emu->bodytexture;
+		for (int k = 0; k < 9; k++)
 		{
 			eq->equipment[k] = emu->equipment[k];
 			eq->equipcolors[k].color = emu->colors[k].color;
@@ -2269,40 +2179,33 @@ namespace Trilogy {
 		eq->runspeed = emu->runspeed;
 		eq->AFK = emu->afk;
 		eq->GuildID = emu->guildID;
-		if(eq->GuildID == 0)
+		if (eq->GuildID == 0)
 			eq->GuildID = 0xFFFF;
 		eq->helm = emu->helm;
 		if (emu->race >= 209 && emu->race <= 212)
 		{
 			eq->race = 75;
 			if (emu->race == 210)
-				eq->texture = 3;
+				eq->bodytexture = 3;
 			else if (emu->race == 211)
-				eq->texture = 2;
+				eq->bodytexture = 2;
 			else if (emu->race == 212)
-				eq->texture = 1;
+				eq->bodytexture = 1;
 			else
-				eq->texture = 0;
+				eq->bodytexture = 0;
 		}
-		else
-		eq->race = emu->race;
-		strncpy(eq->Surname, emu->lastName, 32);
+			eq->race = (int8)emu->race;
+		strncpy(eq->Surname, emu->lastName, 20);
 		eq->walkspeed = emu->walkspeed;
 		eq->light = emu->light;
-		if(emu->class_ > 19 && emu->class_ < 35)
-			eq->class_ = emu->class_-3;
-		else if(emu->class_ == 40)
+		if (emu->class_ > 19 && emu->class_ < 35)
+			eq->class_ = emu->class_ - 3;
+		else if (emu->class_ == 40)
 			eq->class_ = 16;
-		else if(emu->class_ == 41)
+		else if (emu->class_ == 41)
 			eq->class_ = 32;
-		else 
+		else
 			eq->class_ = emu->class_;
-		eq->haircolor = emu->haircolor;
-		eq->beardcolor = emu->beardcolor;
-		eq->eyecolor1 = emu->eyecolor1;
-		eq->eyecolor2 = emu->eyecolor2;
-		eq->hairstyle = emu->hairstyle;
-		eq->beard = emu->beard;
 		eq->face = emu->face;
 		eq->gender = emu->gender;
 		eq->bodytype = emu->bodytype;

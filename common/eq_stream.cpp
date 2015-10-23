@@ -2318,7 +2318,6 @@ void EQOldStream::SendPacketQueue(bool Block)
 		pack = (*packit);
 		if(pack != nullptr && (pack->SentCount == 0 && Timer::GetCurrentTime() >= (pack->LastSent+500)))
 		{
-			std::cout << ""; //This is really stupid... but helps packets from being discarded in high traffic scenarios
 			if (!CheckClosed() && pack->dwARQ == arsp_response + 10 && pack->dwLoopedOnce == 0) //This code checks if 10 packets have been sent since last ARSP ("we got this packet yo") response from client, and if so, tags those ten packets that haven't been verifiably recieved for a resend.
 			{
 				std::deque<EQOldPacket*>::iterator it;

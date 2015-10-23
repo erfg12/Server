@@ -947,6 +947,7 @@ struct Death_Struct
 **
 */
 
+
   struct SpawnPositionUpdate_Struct
   {
 	  /*0000*/ uint16	spawn_id;               // Id of spawn to update
