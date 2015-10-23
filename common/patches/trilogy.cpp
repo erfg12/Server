@@ -1943,78 +1943,88 @@ namespace Trilogy {
   		if(type == 0)
   		{
   			mac_pop_item->equipSlot = ServerToTrilogySlot(slot_id_in);
-			mac_pop_item->Charges = inst->GetCharges();
+			mac_pop_item->common.Charges = inst->GetCharges();
 			if(item->NoDrop == 0)
 				mac_pop_item->Price = 0; 
 			else
 				mac_pop_item->Price = item->Price;
-			mac_pop_item->SellRate = item->SellRate;
+			mac_pop_item->common.SellRate = item->SellRate;
   		}
   		else
   		{ 
-  			mac_pop_item->Charges = 1;
+  			mac_pop_item->common.Charges = 1;
   			mac_pop_item->equipSlot = inst->GetMerchantSlot();
 			if(item->NoDrop == 0)
 				mac_pop_item->Price = 0; 
 			else
 				mac_pop_item->Price = inst->GetPrice();  //This handles sellrate for us. 
-			mac_pop_item->SellRate = 1;
+			mac_pop_item->common.SellRate = 1;
 		}
   
+			// Comment: Flag value indicating type of item:
+			// Comment: 0x0000 - Readable scroll? few i've seen say "rolled up", i think they're like books
+			// Comment: 0x0031 - Normal Item - Only seen once on GM summoned food
+			// Comment: 0x0036 - Normal Item (all scribed spells, Velium proc weapons, and misc.)
+			// Comment: 0x315f - Normal Item
+			// Comment: 0x3336 - Normal Item
+			// Comment: 0x3d00 - Container, racial tradeskills? or maybe non-consuming? i dunnno, something weirdo =p
+			// Comment: 0x5400 - Container (Combine, Player made, Weight Reducing, etc...)
+			// Comment: 0x5450 - Container, plain ordinary newbie containers
+			// Comment: 0x7669 - Book item
+
 			mac_pop_item->ItemClass = item->ItemClass;
-			strcpy(mac_pop_item->Name,item->Name);
-			strcpy(mac_pop_item->Lore,item->Lore);       
-			strcpy(mac_pop_item->IDFile,item->IDFile);  
+			strn0cpy(mac_pop_item->Name,item->Name, 35);
+			strn0cpy(mac_pop_item->Lore,item->Lore, 60);       
+			strn0cpy(mac_pop_item->IDFile,item->IDFile, 6);  
 			mac_pop_item->Weight = item->Weight;      
 			mac_pop_item->NoRent = item->NoRent;         
 			mac_pop_item->NoDrop = item->NoDrop;         
 			mac_pop_item->Size = item->Size;           
 			mac_pop_item->ID = item->ID;        
 			mac_pop_item->Icon = item->Icon;       
-			mac_pop_item->Slots = item->Slots;  
-			mac_pop_item->CastTime = item->CastTime;  
-			mac_pop_item->SkillModType = item->SkillModType;
-			mac_pop_item->SkillModValue = item->SkillModValue;
-			mac_pop_item->BaneDmgRace = item->BaneDmgRace;
-			mac_pop_item->BaneDmgBody = item->BaneDmgBody;
-			mac_pop_item->BaneDmgAmt = item->BaneDmgAmt;
-			mac_pop_item->RecLevel = item->RecLevel;       
-			mac_pop_item->RecSkill = item->RecSkill;   
-			mac_pop_item->ProcRate = item->ProcRate; 
-			mac_pop_item->ElemDmgType = item->ElemDmgType; 
-			mac_pop_item->ElemDmgAmt = item->ElemDmgAmt;
-			mac_pop_item->FactionMod1 = item->FactionMod1;
-			mac_pop_item->FactionMod2 = item->FactionMod2;
-			mac_pop_item->FactionMod3 = item->FactionMod3;
-			mac_pop_item->FactionMod4 = item->FactionMod4;
-			mac_pop_item->FactionAmt1 = item->FactionAmt1;
-			mac_pop_item->FactionAmt2 = item->FactionAmt2;
-			mac_pop_item->FactionAmt3 = item->FactionAmt3;
-			mac_pop_item->FactionAmt4 = item->FactionAmt4;
-			mac_pop_item->Deity = item->Deity;
-			mac_pop_item->ReqLevel = item->ReqLevel; 
-			mac_pop_item->BardType = item->BardType;
-			mac_pop_item->BardValue = item->BardValue;
-			if(item->Focus.Effect < 0)
-				mac_pop_item->FocusEffect = 0;
-			else
-				mac_pop_item->FocusEffect = item->Focus.Effect;
+			mac_pop_item->Slots = item->Slots;
 
-			if(item->ItemClass == 1)
+			if(item->ItemClass == 2)
 			{
-				mac_pop_item->container.BagType = item->BagType; 
-				mac_pop_item->container.BagSlots = item->BagSlots;         
-				mac_pop_item->container.BagSize = item->BagSize;    
-				mac_pop_item->container.BagWR = item->BagWR; 
-			}
-			else if(item->ItemClass == 2)
-			{
-				strcpy(mac_pop_item->book.Filename,item->Filename);
+				strncpy(mac_pop_item->book.Filename,item->Filename, 15);
 				mac_pop_item->book.Book = item->Book;         
 				mac_pop_item->book.BookType = item->BookType; 
 			}
 			else
 			{
+				mac_pop_item->common.CastTime = item->CastTime;  
+				mac_pop_item->common.SkillModType = item->SkillModType;
+				mac_pop_item->common.SkillModValue = item->SkillModValue;
+				mac_pop_item->common.BaneDmgRace = item->BaneDmgRace;
+				mac_pop_item->common.BaneDmgBody = item->BaneDmgBody;
+				mac_pop_item->common.BaneDmgAmt = item->BaneDmgAmt;
+				mac_pop_item->common.RecLevel = item->RecLevel;       
+				mac_pop_item->common.RecSkill = item->RecSkill;   
+				mac_pop_item->common.ProcRate = item->ProcRate; 
+				mac_pop_item->common.ElemDmgType = item->ElemDmgType; 
+				mac_pop_item->common.ElemDmgAmt = item->ElemDmgAmt;
+				mac_pop_item->common.FactionMod1 = item->FactionMod1;
+				mac_pop_item->common.FactionMod2 = item->FactionMod2;
+				mac_pop_item->common.FactionMod3 = item->FactionMod3;
+				mac_pop_item->common.FactionMod4 = item->FactionMod4;
+				mac_pop_item->common.FactionAmt1 = item->FactionAmt1;
+				mac_pop_item->common.FactionAmt2 = item->FactionAmt2;
+				mac_pop_item->common.FactionAmt3 = item->FactionAmt3;
+				mac_pop_item->common.FactionAmt4 = item->FactionAmt4;
+				mac_pop_item->common.Deity = item->Deity;
+
+				if(item->ItemClass == 1)
+				{
+					mac_pop_item->common.container.BagType = item->BagType; 
+					mac_pop_item->common.container.BagSlots = item->BagSlots;
+					mac_pop_item->common.container.IsBagOpen = 0;
+					mac_pop_item->common.container.BagSize = item->BagSize;    
+					mac_pop_item->common.container.BagWR = item->BagWR; 
+				} else {
+					mac_pop_item->common.normal.Races = item->Races;
+					if(item->Click.Effect > 0)
+						mac_pop_item->common.normal.click_effect_type = item->Click.Type;
+				}
 			mac_pop_item->common.AStr = item->AStr;           
 			mac_pop_item->common.ASta = item->ASta;           
 			mac_pop_item->common.ACha = item->ACha;           
@@ -2030,7 +2040,7 @@ namespace Trilogy {
 			mac_pop_item->common.HP = item->HP;             
 			mac_pop_item->common.Mana = item->Mana;           
 			mac_pop_item->common.AC = item->AC;		
-			mac_pop_item->common.MaxCharges = item->MaxCharges;    
+			//mac_pop_item->MaxCharges = item->MaxCharges;    
 			mac_pop_item->common.Light = item->Light;          
 			mac_pop_item->common.Delay = item->Delay;          
 			mac_pop_item->common.Damage = item->Damage;               
@@ -2041,7 +2051,6 @@ namespace Trilogy {
 			mac_pop_item->common.Color = item->Color;    
 			//mac_pop_item->common.Faction = item->Faction;   
 			mac_pop_item->common.Classes = item->Classes;  
-			mac_pop_item->common.Races = item->Races;  
 			mac_pop_item->common.Stackable = item->Stackable_; 
 			}
 
@@ -2050,78 +2059,78 @@ namespace Trilogy {
 			if(item->Click.Effect > 0)
 			{
 				mac_pop_item->common.Effect1 = item->Click.Effect;
-				mac_pop_item->Effect2 = item->Click.Effect; 
-				mac_pop_item->EffectType2 = item->Click.Type;  
+				mac_pop_item->common.Effect2 = item->Click.Effect; 
+				mac_pop_item->common.EffectType2 = item->Click.Type;  
 				mac_pop_item->common.EffectType1 = item->Click.Type;
 				if(item->Click.Level > 0)
 				{
 					mac_pop_item->common.EffectLevel1 = item->Click.Level; 
-					mac_pop_item->EffectLevel2 = item->Click.Level;
+					mac_pop_item->common.EffectLevel2 = item->Click.Level;
 				}
 				else
 				{
 					mac_pop_item->common.EffectLevel1 = item->Click.Level2; 
-					mac_pop_item->EffectLevel2 = item->Click.Level2;  
+					mac_pop_item->common.EffectLevel2 = item->Click.Level2;  
 				}
 			}
 			else if(item->Scroll.Effect > 0)
 			{
 				mac_pop_item->common.Effect1 = item->Scroll.Effect;
-				mac_pop_item->Effect2 = item->Scroll.Effect; 
-				mac_pop_item->EffectType2 = item->Scroll.Type;  
+				mac_pop_item->common.Effect2 = item->Scroll.Effect; 
+				mac_pop_item->common.EffectType2 = item->Scroll.Type;  
 				mac_pop_item->common.EffectType1 = item->Scroll.Type;
 				if(item->Scroll.Level > 0)
 				{
 					mac_pop_item->common.EffectLevel1 = item->Scroll.Level; 
-					mac_pop_item->EffectLevel2 = item->Scroll.Level;
+					mac_pop_item->common.EffectLevel2 = item->Scroll.Level;
 				}
 				else
 				{
 					mac_pop_item->common.EffectLevel1 = item->Scroll.Level2; 
-					mac_pop_item->EffectLevel2 = item->Scroll.Level2;  
+					mac_pop_item->common.EffectLevel2 = item->Scroll.Level2;  
 				}
 			}
 			//We have some worn effect items (Lodizal Shell Shield) as proceffect in db.
 			else if(item->Proc.Effect > 0)
 			{
 				mac_pop_item->common.Effect1 = item->Proc.Effect;
-				mac_pop_item->Effect2 = item->Proc.Effect; 
+				mac_pop_item->common.Effect2 = item->Proc.Effect; 
 				if(item->Worn.Type > 0)
 				{
-					mac_pop_item->EffectType2 = item->Worn.Type;  
+					mac_pop_item->common.EffectType2 = item->Worn.Type;  
 					mac_pop_item->common.EffectType1 = item->Worn.Type;
 				}
 				else
 				{
-					mac_pop_item->EffectType2 = item->Proc.Type;  
+					mac_pop_item->common.EffectType2 = item->Proc.Type;  
 					mac_pop_item->common.EffectType1 = item->Proc.Type;
 				}
 				if(item->Proc.Level > 0)
 				{
 					mac_pop_item->common.EffectLevel1 = item->Proc.Level; 
-					mac_pop_item->EffectLevel2 = item->Proc.Level;
+					mac_pop_item->common.EffectLevel2 = item->Proc.Level;
 				}
 				else
 				{
 					mac_pop_item->common.EffectLevel1 = item->Proc.Level2; 
-					mac_pop_item->EffectLevel2 = item->Proc.Level2;  
+					mac_pop_item->common.EffectLevel2 = item->Proc.Level2;  
 				}
 			}
 			else if(item->Worn.Effect > 0)
 			{
 				mac_pop_item->common.Effect1 = item->Worn.Effect;
-				mac_pop_item->Effect2 = item->Worn.Effect; 
-				mac_pop_item->EffectType2 = item->Worn.Type;  
+				mac_pop_item->common.Effect2 = item->Worn.Effect; 
+				mac_pop_item->common.EffectType2 = item->Worn.Type;  
 				mac_pop_item->common.EffectType1 = item->Worn.Type;
 				if(item->Worn.Level > 0)
 				{
 					mac_pop_item->common.EffectLevel1 = item->Worn.Level; 
-					mac_pop_item->EffectLevel2 = item->Worn.Level;
+					mac_pop_item->common.EffectLevel2 = item->Worn.Level;
 				}
 				else
 				{
 					mac_pop_item->common.EffectLevel1 = item->Worn.Level2; 
-					mac_pop_item->EffectLevel2 = item->Worn.Level2;  
+					mac_pop_item->common.EffectLevel2 = item->Worn.Level2;  
 				}
 			}
 
@@ -2143,7 +2152,7 @@ namespace Trilogy {
 			eq->deltaHeading = 0;
 		eq->GM = emu->gm;
 		eq->anon = emu->anon;
-		memcpy(eq->name, emu->name, 30);
+		strn0cpy(eq->name, emu->name, 30);
 		eq->deity = emu->deity;
 		if ((emu->race == 42 || emu->race == 120) && emu->gender == 2)
 			eq->size = emu->size + 4.0f;
@@ -2195,7 +2204,7 @@ namespace Trilogy {
 				eq->bodytexture = 0;
 		}
 			eq->race = (int8)emu->race;
-		strncpy(eq->Surname, emu->lastName, 20);
+		strn0cpy(eq->Surname, emu->lastName, 20);
 		eq->walkspeed = emu->walkspeed;
 		eq->light = emu->light;
 		if (emu->class_ > 19 && emu->class_ < 35)
