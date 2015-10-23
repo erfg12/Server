@@ -376,52 +376,52 @@ struct ClientTarget_Struct
 struct Spawn_Struct
 {
 	/*0000*/	uint32	unknown_start;
-	/*0028*/	float	size;
-	/*0032*/	float	walkspeed;
-	/*0036*/	float	runspeed;
-	/*0040*/	Color_Struct	equipcolors[9];
-	/*0004*/	uint8	accel;
-	/*0005*/	uint8	heading;			// Current Heading
-	/*0006*/	uint8	deltaHeading;		// Delta Heading
-	/*0007*/	int16	y_pos;				// Y Position
-	/*0009*/	int16	x_pos;				// X Position
-	/*0011*/	int16	z_pos;				// Z Position
-	/*0013*/	int32	deltaY : 11,			// Velocity Y
+	/*0004*/	float	size;
+	/*0008*/	float	walkspeed;
+	/*0012*/	float	runspeed;
+	/*0016*/	Color_Struct	equipcolors[9];
+	/*0052*/	uint8	accel;
+	/*0053*/	uint8	heading;			// Current Heading
+	/*0054*/	int8	deltaHeading;		// Delta Heading
+	/*0055*/	int16	y_pos;				// Y Position
+	/*0057*/	int16	x_pos;				// X Position
+	/*0059*/	int16	z_pos;				// Z Position
+	/*0061*/	int32	deltaY : 11,			// Velocity Y
 						deltaZ : 11,			// Velocity Z
 						deltaX : 10;			// Velocity X
-				uint8 unknownk;
-	/*0076*/	uint16	spawn_id;			// Id of new spawn
-	/*0078*/	uint16	bodytype;			// 65 is disarmable trap, 66 and 67 are invis triggers/traps
-	/*0018*/	uint16	petOwnerId;		// Id of pet owner (0 if not a pet)
-	/*0080*/	int16	cur_hp;				// Current hp's of Spawn
-	/*0082*/	uint16	GuildID;			// GuildID - previously Current hp's of Spawn
-	/*0084*/	uint8	race;				// Race
-	/*0086*/	uint8	NPC;				// NPC type: 0=Player, 1=NPC, 2=Player Corpse, 3=Monster Corpse, 4=???, 5=Unknown Spawn,10=Self
-	/*0087*/	uint8	class_;				// Class
-	/*0088*/	uint8	gender;				// Gender Flag, 0 = Male, 1 = Female, 2 = Other
-	/*0089*/	uint8	level;				// Level of spawn (might be one int8)
-	/*0090*/	uint8	invis;				// 0=visable, 1=invisable
-	/*0091*/	uint8	sneaking;
-	/*0092*/	uint8	pvp;
-	/*0093*/	uint8	anim_type;
-	/*0094*/	uint8	light;				// Light emitting
-	/*0095*/	uint8	anon;				// 0=normal, 1=anon, 2=RP
-	/*0096*/	uint8	AFK;				// 0=off, 1=on
-	/*0097*/	uint8	summoned;
-	/*0098*/	uint8	LD;					// 0=NotLD, 1=LD
-	/*0099*/	uint8	GM;					// 0=NotGM, 1=GM
-	/*0100*/	uint8	flymode;				
-	/*0101*/	uint8	bodytexture;
-	/*0102*/	uint8	helm; 
-	/*0103*/	uint8	face;		
-	/*0104*/	uint8	equipment[9];		// Equipment worn: 0=helm, 1=chest, 2=arm, 3=bracer, 4=hand, 5=leg, 6=boot, 7=melee1, 8=melee2
-	/*0127*/	char	name[30];			// Name of spawn (len is 30 or less)
-	/*0191*/	char	Surname[20];		// Last Name of player	
-	/*0122*/	int8	guildrank;			// ***Placeholder
-	/*0124*/	int8	unknown161;				// unknown
-	/*0162*/	int8	deity;
-	/*0127*/	uint8	unknown_end[11];
-	/*0224*/
+	/*0065*/	uint8 unknownk;
+	/*0066*/	uint16	spawn_id;			// Id of new spawn
+	/*0068*/	uint16	bodytype;			// 65 is disarmable trap, 66 and 67 are invis triggers/traps
+	/*0070*/	uint16	petOwnerId;		// Id of pet owner (0 if not a pet)
+	/*0072*/	int16	cur_hp;				// Current hp's of Spawn
+	/*0074*/	uint16	GuildID;			// GuildID - previously Current hp's of Spawn
+	/*0076*/	uint8	race;				// Race
+	/*0077*/	uint8	NPC;				// NPC type: 0=Player, 1=NPC, 2=Player Corpse, 3=Monster Corpse, 4=???, 5=Unknown Spawn,10=Self
+	/*0078*/	uint8	class_;				// Class
+	/*0079*/	uint8	gender;				// Gender Flag, 0 = Male, 1 = Female, 2 = Other
+	/*0080*/	uint8	level;				// Level of spawn (might be one int8)
+	/*0081*/	uint8	invis;				// 0=visable, 1=invisable
+	/*0082*/	uint8	sneaking;
+	/*0083*/	uint8	pvp;
+	/*0084*/	uint8	anim_type;
+	/*0085*/	uint8	light;				// Light emitting
+	/*0086*/	uint8	anon;				// 0=normal, 1=anon, 2=RP
+	/*0087*/	uint8	AFK;				// 0=off, 1=on
+	/*0088*/	uint8	summoned;
+	/*0089*/	uint8	LD;					// 0=NotLD, 1=LD
+	/*0090*/	uint8	GM;					// 0=NotGM, 1=GM
+	/*0091*/	uint8	flymode;				
+	/*0092*/	uint8	bodytexture;
+	/*0093*/	uint8	helm; 
+	/*0094*/	uint8	face;		
+	/*0095*/	uint8	equipment[9];		// Equipment worn: 0=helm, 1=chest, 2=arm, 3=bracer, 4=hand, 5=leg, 6=boot, 7=melee1, 8=melee2
+	/*0104*/	char	name[30];			// Name of spawn (len is 30 or less)
+	/*0134*/	char	Surname[20];		// Last Name of player	
+	/*0154*/	int8	guildrank;			// ***Placeholder
+	/*0155*/	int8	unknown161;				// unknown
+	/*0156*/	int8	deity;
+	/*0157*/	uint8	unknown_end[11];
+	/*0168*/
 };
 
 struct NewSpawn_Struct
@@ -735,128 +735,130 @@ struct ExpUpdate_Struct
 	/*004*/	
 };
 
-#define ITEM_STRUCT_SIZE 360
-#define SHORT_BOOK_ITEM_STRUCT_SIZE	264
-#define SHORT_CONTAINER_ITEM_STRUCT_SIZE 276
+#define ITEM_STRUCT_SIZE 292
+#define SHORT_BOOK_ITEM_STRUCT_SIZE	208
+#define SHORT_CONTAINER_ITEM_STRUCT_SIZE 220
 struct Item_Struct
 {
-	/*0000*/ char      Name[64];        // Name of item
-	/*0064*/ char      Lore[80];        // Lore text
-	/*0144*/ char      IDFile[30];       // This is the filename of the item graphic when held/worn.
-	/*0174*/ uint8	   Weight;          // Weight of item
-	/*0175*/ int8      NoRent;          // Nosave flag 1=normal, 0=nosave, -1=spell?
-	/*0176*/ int8      NoDrop;          // Nodrop flag 1=normal, 0=nodrop, -1=??
-	/*0177*/ uint8     Size;            // Size of item
-	/*0178*/ int16     ItemClass;
-	/*0180*/ int16	   ID;         // Unique Item number confirmed to be signed.
-	/*0182*/ uint16    Icon;         // Icon Number
-	/*0184*/ int16     equipSlot;       // Current slot location of item
-	/*0186*/ uint8     unknown0186[2];   // Client dump has equipSlot/location as a short so this is still unknown
-	/*0188*/ uint32    Slots;  // Slots where this item is allowed
-	/*0192*/ int32     Price;            // Item cost in copper
-	/*0196*/ float     cur_x; //Here to 227 are named from client struct dump.
-	/*0200*/ float	   cur_y;
-	/*0204*/ float     cur_z;
-	/*0208*/ float     heading;
-	/*0212*/ uint32	   inv_refnum; 
-	/*0216*/ int16	   log; 
-	/*0218*/ int16     loot_log;
-	/*0220*/ uint16    avatar_level;  //Usually 01, sometimes seen as FFFF, once as 0.
-	/*0222*/ uint16    bottom_feed;
-	/*0224*/ uint32	   poof_item;
+	/*0000*/ char      Name[35];     // Name of item
+	/*0035*/ char      Lore[60];    // Lore text
+	/*0095*/ char      IDFile[6];	  // This is the filename of the item graphic when held/worn.
+	/*0101*/ uint16	   flag;
+	/*0103*/ int8	   unknown0103[22];
+	/*0125*/ uint8	   Weight;          // Weight of item
+	/*0126*/ int8      NoRent;          // Nosave flag 1=normal, 0=nosave, -1=spell?
+	/*0127*/ int8      NoDrop;          // Nodrop flag 1=normal, 0=nodrop, -1=??
+	/*0128*/ uint8     Size;            // Size of item
+	/*0129*/ int8      ItemClass;
+	/*0130*/ uint16	   ID;         // Unique Item number confirmed to be signed.
+	/*0132*/ uint16    Icon;         // Icon Number
+	/*0134*/ int16     equipSlot;       // Current slot location of item
+	/*0136*/ uint32    Slots;  // Slots where this item is allowed
+	/*0140*/ int32     Price;            // Item cost in copper
+	/*0144*/ float     cur_x; //Here to 227 are named from client struct dump.
+	/*0148*/ float	   cur_y;
+	/*0152*/ float     cur_z;
+	/*0156*/ float     heading;
+	/*0160*/ uint32	   inv_refnum; 
+	/*0164*/ int16	   log; 
+	/*0166*/ int16     loot_log;
+	/*0168*/ uint16    avatar_level;  //Usually 01, sometimes seen as FFFF, once as 0.
+	/*0170*/ uint16    bottom_feed;
 	union
 	{
 		struct
 		{
-			// 0228- have different meanings depending on flags
-			/*0228*/ int8      AStr;              // Strength
-			/*0229*/ int8      ASta;              // Stamina
-			/*0230*/ int8      ACha;              // Charisma
-			/*0231*/ int8      ADex;              // Dexterity
-			/*0232*/ int8      AInt;              // Intelligence
-			/*0233*/ int8      AAgi;              // Agility
-			/*0234*/ int8      AWis;              // Wisdom
-			/*0235*/ int8      MR;               // Magic Resistance
-			/*0236*/ int8      FR;               // Fire Resistance
-			/*0237*/ int8      CR;               // Cold Resistance
-			/*0238*/ int8      DR;               // Disease Resistance
-			/*0239*/ int8      PR;               // Poison Resistance
-			/*0240*/ int16     HP;               // Hitpoints
-			/*0242*/ int16     Mana;             // Mana
-			/*0244*/ int16     AC;				 // Armor Class
-			/*0246*/ uint8     MaxCharges;       // Maximum number of charges, for rechargable? (Sept 25, 2002)
-			/*0247*/ int8      GMFlag;           // GM flag 0  - normal item, -1 - gm item (Sept 25, 2002)
-			/*0248*/ uint8     Light;            // Light effect of this item
-			/*0249*/ uint8     Delay;            // Weapon Delay
-			/*0250*/ uint8     Damage;           // Weapon Damage
-			/*0251*/ int8      EffectType1;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-			/*0252*/ uint8     Range;            // Range of weapon
-			/*0253*/ uint8     ItemType;            // Skill of this weapon, refer to weaponskill chart
-			/*0254*/ int8      Magic;            // Magic flag
-			/*0255*/ int8      EffectLevel1;           // Casting level
-			/*0256*/ uint32    Material;         // Material
-			/*0260*/ uint32    Color;            // Amounts of RGB in original color
-			/*0264*/ uint16    Faction;			// Structs dumped from client has this as Faction
-			/*0266*/ uint16    Effect1;         // SpellID of special effect
-			/*0268*/ uint32    Classes;          // Classes that can use this item
-			/*0272*/ uint32    Races;            // Races that can use this item
-			/*0276*/ int8      Stackable;        //  1= stackable, 3 = normal, 0 = ? (not stackable)			
+			/*0172*/ int8      AStr;              // Strength
+			/*0173*/ int8      ASta;              // Stamina
+			/*0174*/ int8      ACha;              // Charisma
+			/*0175*/ int8      ADex;              // Dexterity
+			/*0176*/ int8      AInt;              // Intelligence
+			/*0177*/ int8      AAgi;              // Agility
+			/*0178*/ int8      AWis;              // Wisdom
+			/*0179*/ int8      MR;               // Magic Resistance
+			/*0180*/ int8      FR;               // Fire Resistance
+			/*0181*/ int8      CR;               // Cold Resistance
+			/*0182*/ int8      DR;               // Disease Resistance
+			/*0183*/ int8      PR;               // Poison Resistance
+			/*0184*/ int8      HP;               // Hitpoints
+			/*0185*/ int8      Mana;             // Mana
+			/*0186*/ int8      AC;				 // Armor Class
+			/*0187*/ uint8     Stackable;       // Maximum number of charges, for rechargable? (Sept 25, 2002)
+			/*0188*/ int8      GMFlag;           // GM flag 0  - normal item, -1 - gm item (Sept 25, 2002)
+			/*0189*/ uint8     Light;            // Light effect of this item
+			/*0190*/ uint8     Delay;            // Weapon Delay
+			/*0191*/ uint8     Damage;           // Weapon Damage
+			/*0192*/ int8      EffectType1;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
+			/*0193*/ uint8     Range;            // Range of weapon
+			/*0194*/ uint8     ItemType;            // Skill of this weapon, refer to weaponskill chart
+			/*0195*/ int8      Magic;            // Magic flag
+			/*0196*/ int8      EffectLevel1;           // Casting level
+			/*0197*/ uint8     Material;         // Material
+			/*0198*/ uint8	   unkown3f[2];
+			/*0200*/ uint32    Color;            // Amounts of RGB in original color
+			/*0204*/ uint16    Faction;			// Structs dumped from client has this as Faction
+			/*0206*/ uint16    Effect1;         // SpellID of special effect
+			/*0208*/ uint16    Classes;          // Classes that can use this item
+			/*0210*/ uint8     unkown23[2];		// Comment: ***Placeholder
+			union
+			{
+				struct							// Comment: normal non-containers
+				{
+					/*0212*/ uint16  Races;				// Comment: Races that can use this item
+					/*0214*/ uint16  unknown0214;		// Comment: ***Placeholder
+					/*0216*/ int8    click_effect_type;	// Comment: Harakiri click_effect_id seems to be used to differentiate consuming items like arrows, food etc, must be 3 for EFFECT and Spells items, if 3 then there should be click_effect_id	 
+				} normal;
+				struct
+				{
+					/*0212*/ uint8	  BagType;			//Bag type (obviously)
+					/*0213*/ uint8    BagSlots;        // number of slots in container
+					/*0214*/ int8     IsBagOpen;     // 1 if bag is open, 0 if not.
+					/*0215*/ int8     BagSize;    // Maximum size item container can hold
+					/*0216*/ uint8    BagWR; // % weight reduction of container
+				} container;
+			};
+			/*0217*/ uint8    EffectLevel2;            // Casting level
+			/*0218*/ int8     Charges;         // Number of charges (-1 = unlimited)
+			/*0279*/ int8     EffectType2;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
+			/*0280*/ uint16   Effect2;         // spellId of special effect
+			/*0282*/ int8     unknown0282; //FF
+			/*0283*/ int8     unknown0283; //FF
+			/*0284*/ uint8    unknown0284[4]; // ***Placeholder 0288
+			/*0288*/ float    SellRate;
+			/*0292*/ uint32   CastTime;        // Cast time of clicky item in miliseconds
+			/*0296*/ uint8    unknown0296[16]; // ***Placeholder
+			/*0312*/ uint16   SkillModType;
+			/*0314*/ int16    SkillModValue;
+			/*0316*/ int16    BaneDmgRace;
+			/*0318*/ int16    BaneDmgBody;
+			/*0320*/ uint8    BaneDmgAmt;
+			/*0321*/ uint8    unknown0321[3]; //title_flag
+			/*0324*/ uint8    RecLevel;         // max should be 65
+			/*0325*/ uint8    RecSkill;         // Max should be 252
+			/*0326*/ uint16   ProcRate; 
+			/*0328*/ uint8    ElemDmgType; 
+			/*0329*/ uint8    ElemDmgAmt;
+			/*0330*/ uint16   FactionMod1;
+			/*0332*/ uint16	  FactionMod2;
+			/*0334*/ uint16   FactionMod3;
+			/*0336*/ uint16	  FactionMod4;
+			/*0338*/ uint16   FactionAmt1;
+			/*0340*/ uint16	  FactionAmt2;
+			/*0342*/ uint16   FactionAmt3;
+			/*0344*/ uint16	  FactionAmt4;
+			/*0346*/ uint16	  Void346;
+			/*0348*/ uint16	  Deity;
+			/*0350*/ uint16	  unknown290;
+			/*0360*/
 		} common; 
 		struct
 		{
-			/*0228*/ int16	  BookType;	 // Type of book (scroll, note, etc)
-			/*0230*/ int8     Book;      // Are we a book
-			/*0231*/ char     Filename[30];            // Filename of book text on server
-			/*0261*/ int32    buffer1[4];    // Not used, fills out space in the packet so ShowEQ doesn't complain.
+			/*0172*/ int8     Book;      // Are we a book
+			/*0173*/ int16	  BookType;	 // Type of book (scroll, note, etc)
+			/*0175*/ char     Filename[15];            // Filename of book text on server
+			/*0190*/ int32    buffer1[102];    // Not used, fills out space in the packet so ShowEQ doesn't complain.
 		} book;
-		struct
-		{
-			/*0228*/ int32    buffer2[10];     // Not used, fills out space in the packet so ShowEQ doesn't complain.
-			/*0268*/ uint8	  BagType;			//Bag type (obviously)
-			/*0269*/ uint8    BagSlots;        // number of slots in container
-			/*0270*/ int8     IsBagOpen;     // 1 if bag is open, 0 if not.
-			/*0271*/ int8     BagSize;    // Maximum size item container can hold
-			/*0272*/ uint8    BagWR; // % weight reduction of container
-			/*0273*/ uint32   buffer3;     // Not used, fills out space in the packet so ShowEQ doesn't complain.
-		} container;
 	};
-	/*0277*/ uint8    EffectLevel2;            // Casting level
-	/*0278*/ int8     Charges;         // Number of charges (-1 = unlimited)
-	/*0279*/ int8     EffectType2;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-	/*0280*/ uint16   Effect2;         // spellId of special effect
-	/*0282*/ int8     unknown0282; //FF
-	/*0283*/ int8     unknown0283; //FF
-	/*0284*/ uint8    unknown0284[4]; // ***Placeholder 0288
-	/*0288*/ float    SellRate;
-	/*0292*/ uint32   CastTime;        // Cast time of clicky item in miliseconds
-	/*0296*/ uint8    unknown0296[16]; // ***Placeholder
-	/*0312*/ uint16   SkillModType;
-	/*0314*/ int16    SkillModValue;
-	/*0316*/ int16    BaneDmgRace;
-	/*0318*/ int16    BaneDmgBody;
-	/*0320*/ uint8    BaneDmgAmt;
-	/*0321*/ uint8    unknown0321[3]; //title_flag
-	/*0324*/ uint8    RecLevel;         // max should be 65
-	/*0325*/ uint8    RecSkill;         // Max should be 252
-	/*0326*/ uint16   ProcRate; 
-	/*0328*/ uint8    ElemDmgType; 
-	/*0329*/ uint8    ElemDmgAmt;
-	/*0330*/ uint16   FactionMod1;
-	/*0332*/ uint16	  FactionMod2;
-	/*0334*/ uint16   FactionMod3;
-	/*0336*/ uint16	  FactionMod4;
-	/*0338*/ uint16   FactionAmt1;
-	/*0340*/ uint16	  FactionAmt2;
-	/*0342*/ uint16   FactionAmt3;
-	/*0344*/ uint16	  FactionAmt4;
-	/*0346*/ uint16	  Void346;
-	/*0348*/ uint16	  Deity;
-	/*0350*/ uint16	  unknown350;
-	/*0352*/ uint16   ReqLevel; // Required level
-	/*0354*/ uint16   BardType;
-	/*0356*/ uint16	  BardValue;
-	/*0358*/ uint16   FocusEffect;  //Confirmed
-	/*0360*/	
 };
 
 struct PlayerItemsPacket_Struct
