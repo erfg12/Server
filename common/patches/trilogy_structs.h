@@ -252,37 +252,32 @@ struct MemorizeSpell_Struct
 
 struct CombatDamage_Struct
 {
-	/*000*/	uint16	target;
-	/*002*/	uint16	source;
-	/*004*/	uint8	type;
-	/*005*/	uint8   unknown;
-	/*006*/	uint16	spellid;
-	/*008*/	int32	damage;
-	/*012*/	uint8	unknown12[4];
-	/*016*/	uint32	sequence;
-	/*020*/	uint8	unknown20[4];
+	/*000*/	uint32	target; // confirmed
+	/*004*/	uint32	source; // confirmed
+	/*008*/	uint8	type; // confirmed
+	/*009*/	uint8   unknown;
+	/*010*/	uint16	spellid; // confirmed
+	/*012*/	int32	damage; // confirmed
+	/*016*/	float	force;
+	/*020*/	float	sequence;
 	/*024*/
 };
 
 struct Action_Struct
 {
-	/*00*/	uint16	target;			// Comment: Spell Targets ID 
-	/*02*/	uint16	source;			// Comment: Spell Caster ID
-	/*04*/	uint8	level;		// Comment: Spell Casters Level
-	/*05*/	uint8	unknown5;
-	/*06*/	uint8   unknown6;  //0x41
-	/*07*/	uint8	unknown7;		// Comment: Unknown -> needs confirming 
-	/*08*/	uint8	instrument_mod;
-	/*09*/	uint32  bard_focus_id; //Seriously doubt this client uses it
-	/*13*/	uint8	unknown_zero1[3];	// Comment: Unknown -> needs confirming -> (orginal comment: lol) <- lol 
-	/*16*/	uint32	sequence;			// Comment: Heading of Who? Caster or Target? Needs confirming
-	/*20*/	uint8	unknown_zero2[4];	// Comment: Unknown -> needs confirming
-	/*24*/	uint8	type;				// Comment: Unknown -> needs confirming -> Which action target or caster does maybe?
-	/*25*/	uint8	unknown28[5];			// Comment: Spell ID of the Spell being casted? Needs Confirming
-	/*30*/	uint16	spell;		// Comment: Unknown -> needs confirming
-	/*32*/	uint8	unknown32;		//0x00
-	/*33*/  uint8	buff_unknown;
-	/*34*/	uint16  unknown34;
+	/*00*/	uint32	target;				// Comment: Spell Targets ID 
+	/*04*/	uint32	source;				// Comment: Spell Caster ID
+	/*08*/	uint8	level;				// Comment: Spell Casters Level 
+	/*09*/  uint8   unknown9[3];
+	/*12*/	int32	instrument_mod;		// int8 + padding?
+	/*16*/	float	force;				// confirmed
+	/*20*/	float	sequence;			// confirmed
+	/*24*/	float	pushup_angle;		// maybe
+	/*28*/	uint8	type;				// confirmed
+	/*29*/	uint8	unknown28[3];	
+	/*32*/	uint16	spell;		// confirmed
+	/*34*/	uint8	unknown34[2];	
+	/*35*/  uint8	buff_unknown; // confirmed
 };
 
 struct InterruptCast_Struct
@@ -309,11 +304,10 @@ struct SwapSpell_Struct
 
 struct BeginCast_Struct
 {
-	/*000*/	uint16	caster_id;		// Comment: Unknown -> needs confirming -> ID of Spell Caster? 
-	/*002*/	uint16	spell_id;		// Comment: Unknown -> needs confirming -> ID of Spell being Cast?
-	/*004*/	uint16	cast_time;		// Comment: Unknown -> needs confirming -> in miliseconds?
-	/*006*/ uint16  unknown;
-	/*008*/
+	/*000*/	uint32	caster_id;		// Comment: Unknown -> needs confirming -> ID of Spell Caster? 
+	/*004*/	uint32	spell_id;		// Comment: Unknown -> needs confirming -> ID of Spell being Cast?
+	/*008*/	uint32	cast_time;		// Comment: Unknown -> needs confirming -> in miliseconds?
+	/*012*/
 };
 
 struct Buff_Struct
@@ -332,19 +326,22 @@ struct CastSpell_Struct
 {
 	/*000*/	uint16	slot;
 	/*002*/	uint16	spell_id;
-	/*004*/	uint16	inventoryslot;  // slot for clicky item, 0xFFFF = normal cast
-	/*006*/	uint16	target_id;
-	/*008*/	uint32	cs_unknown2;
-	/*012*/
+	/*004*/	int16	inventoryslot;  // slot for clicky item, 0xFFFF = normal cast
+	/*006*/ uint8	unknown6[2];
+	/*008*/	uint32	target_id;
+	/*012*/	uint32	cs_unknown2;
+	/*016*/
 };
 		
 struct SpawnAppearance_Struct
 {
-	// len = 8
+	// len = 12
 	/*000*/ uint16 spawn_id;          // ID of the spawn
-	/*002*/ uint16 type;              // Values associated with the type
-	/*004*/ uint32 parameter;         // Type of data sent
-	/*008*/
+	/*002*/ uint16 unknown2;
+	/*004*/ uint16 type;              // Values associated with the type
+	/*006*/ uint16 unknown6;
+	/*008*/ uint32 parameter;         // Type of data sent
+	/*012*/
 };
 
 // Length: 20
@@ -433,20 +430,20 @@ struct NewSpawn_Struct
 
 struct DeleteSpawn_Struct
 {
-	/*00*/ uint16 spawn_id;				// Comment: Spawn ID to delete
-	/*02*/
+	/*00*/ uint32 spawn_id;				// Comment: Spawn ID to delete
+	/*04*/
 };
 
 //New ChannelMessage_Struct struct
 struct ChannelMessage_Struct
 {
-	/*000*/	char	targetname[30];		// Tell recipient
-	/*064*/	char	sender[30];			// The senders name (len might be wrong)
-	/*128*/	uint16	language;			// Language
-	/*130*/	uint16	chan_num;			// Channel
-	/*132*/	uint16	cm_unknown4;		// ***Placeholder
-	/*134*/	uint16	skill_in_language;	// The players skill in this language? might be wrong
-	/*136*/	char	message[0];			// Variable length message
+	/*000*/	char	targetname[32];		// Tell recipient
+	/*032*/	char	sender[32];			// The senders name (len might be wrong)
+	/*064*/	uint16	language;			// Language
+	/*066*/	uint16	chan_num;			// Channel
+	/*068*/	uint8	skill_in_language;	// The players skill in this language? might be wrong
+	/*069*/ uint8	padding069;
+	/*072*/	char	message[0];			// Variable length message
 };
 
 struct FormattedMessage_Struct
@@ -590,7 +587,8 @@ struct Charm_Struct
 #define ZONE_ERROR_NOEXPERIENCE -7
 struct ZoneChange_Struct
 {
-	/*000*/	char	char_name[30];     // Character Name
+	/*000*/	char	char_name[32];     // Character Name
+	/*032*/ char	short_name[16];
 	/*064*/	uint16	zoneID;
 	/*066*/ uint16  zone_reason;
 	/*068*/ uint16  unknown[2];
@@ -601,10 +599,11 @@ struct ZoneChange_Struct
 
 struct Animation_Struct
 {
-	/*000*/ uint32   spawnid;		// Comment: Spawn ID
-	/*004*/ uint8    action;			// Comment: 
-	/*005*/ uint8    a_unknown[7];	// Comment: ***Placeholder};
-	/*012*/	
+	/*00*/	uint32 spawnid;
+	/*04*/	uint8  action;
+	/*05*/  uint8  value;
+	/*06*/	uint32 unknown06;
+	/*10*/	uint16 unknown10; // 80 3F
 };
 
 struct Consider_Struct
@@ -636,17 +635,15 @@ struct ConsentResponse_Struct
 
 struct Death_Struct
 {
-	/*000*/	uint16	spawn_id;		// Comment: 
-	/*002*/	uint16	killer_id;		// Comment: 
-	/*004*/	uint16	corpseid;		// Comment: corpseid used for looting PC corpses !
-	/*006*/	uint8	spawn_level;		// Comment: 
-	/*007*/ uint8   unknown007;
-	/*008*/	uint16	spell_id;	// Comment: Attack skill (Confirmed )
-	/*010*/	uint8	attack_skill;		// Comment: 
-	/*011*/ uint8   unknonw011;
-	/*012*/	uint32	damage;			// Comment: Damage taken, (Confirmed )
-	/*016*/ uint8   is_PC;		// Comment: 
-	/*017*/ uint8   unknown015[3];
+	/*000*/	uint32	spawn_id;		// Comment: 
+	/*004*/	uint32	killer_id;		// Comment: 
+	/*008*/	uint32	corpseid;		// Comment: corpseid used for looting PC corpses !
+	/*012*/	uint16	spell_id;		// Comment: 
+	/*014*/	uint8	attack_skill;		// Comment: 
+	/*015*/ uint8	unknown015;
+	/*016*/	uint16	damage;			// Comment: Damage taken, (Confirmed )
+	/*018*/ uint8   is_PC;		// Comment: 
+	/*019*/ uint8   unknown017;
 	/*020*/
 };
 
@@ -819,37 +816,37 @@ struct Item_Struct
 			};
 			/*0217*/ uint8    EffectLevel2;            // Casting level
 			/*0218*/ int8     Charges;         // Number of charges (-1 = unlimited)
-			/*0279*/ int8     EffectType2;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
-			/*0280*/ uint16   Effect2;         // spellId of special effect
-			/*0282*/ int8     unknown0282; //FF
-			/*0283*/ int8     unknown0283; //FF
-			/*0284*/ uint8    unknown0284[4]; // ***Placeholder 0288
-			/*0288*/ float    SellRate;
-			/*0292*/ uint32   CastTime;        // Cast time of clicky item in miliseconds
-			/*0296*/ uint8    unknown0296[16]; // ***Placeholder
-			/*0312*/ uint16   SkillModType;
-			/*0314*/ int16    SkillModValue;
-			/*0316*/ int16    BaneDmgRace;
-			/*0318*/ int16    BaneDmgBody;
-			/*0320*/ uint8    BaneDmgAmt;
-			/*0321*/ uint8    unknown0321[3]; //title_flag
-			/*0324*/ uint8    RecLevel;         // max should be 65
-			/*0325*/ uint8    RecSkill;         // Max should be 252
-			/*0326*/ uint16   ProcRate; 
-			/*0328*/ uint8    ElemDmgType; 
-			/*0329*/ uint8    ElemDmgAmt;
-			/*0330*/ uint16   FactionMod1;
-			/*0332*/ uint16	  FactionMod2;
-			/*0334*/ uint16   FactionMod3;
-			/*0336*/ uint16	  FactionMod4;
-			/*0338*/ uint16   FactionAmt1;
-			/*0340*/ uint16	  FactionAmt2;
-			/*0342*/ uint16   FactionAmt3;
-			/*0344*/ uint16	  FactionAmt4;
-			/*0346*/ uint16	  Void346;
-			/*0348*/ uint16	  Deity;
-			/*0350*/ uint16	  unknown290;
-			/*0360*/
+			/*0219*/ int8     EffectType2;      // 0=combat, 1=click anywhere w/o class check, 2=latent/worn, 3=click anywhere EXPENDABLE, 4=click worn, 5=click anywhere w/ class check, -1=no effect
+			/*0220*/ uint16   Effect2;         // spellId of special effect
+			/*0222*/ int8     unknown0282; //FF
+			/*0223*/ int8     unknown0283; //FF
+			/*0224*/ uint8    unknown0284[4]; // ***Placeholder 0288
+			/*0228*/ float    SellRate;
+			/*0232*/ uint32   CastTime;        // Cast time of clicky item in miliseconds
+			/*0236*/ uint8    unknown0296[16]; // ***Placeholder
+			/*0252*/ uint16   SkillModType;
+			/*0254*/ int16    SkillModValue;
+			/*0256*/ int16    BaneDmgRace;
+			/*0258*/ int16    BaneDmgBody;
+			/*0260*/ uint8    BaneDmgAmt;
+			/*0261*/ uint8    unknown0321[3]; //title_flag
+			/*0264*/ uint8    RecLevel;         // max should be 65
+			/*0265*/ uint8    RecSkill;         // Max should be 252
+			/*0266*/ uint16   ProcRate; 
+			/*0268*/ uint8    ElemDmgType; 
+			/*0269*/ uint8    ElemDmgAmt;
+			/*0270*/ uint16   FactionMod1;
+			/*0272*/ uint16	  FactionMod2;
+			/*0274*/ uint16   FactionMod3;
+			/*0276*/ uint16	  FactionMod4;
+			/*0278*/ uint16   FactionAmt1;
+			/*0280*/ uint16	  FactionAmt2;
+			/*0282*/ uint16   FactionAmt3;
+			/*0284*/ uint16	  FactionAmt4;
+			/*0286*/ uint16	  Void346;
+			/*0288*/ uint16	  Deity;
+			/*0290*/ uint16	  unknown290;
+			/*0292*/
 		} common; 
 		struct
 		{
@@ -2383,8 +2380,8 @@ struct UseDiscipline_Struct
 
 struct EntityId_Struct
 {
-	/*000*/	int16 entity_id;
-	/*002*/
+	/*000*/	int32 entity_id;
+	/*004*/
 };
 
 struct ApproveWorld_Struct

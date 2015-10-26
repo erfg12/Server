@@ -502,8 +502,8 @@ namespace Trilogy {
 		__packet->size = len; 
 		memset(__packet->pBuffer, 0, len); 
 		structs::ChannelMessage_Struct *eq = (structs::ChannelMessage_Struct *) __packet->pBuffer; 
-		strncpy(eq->targetname, emu->targetname, 30);
-		strncpy(eq->sender, emu->sender, 30);
+		strn0cpy(eq->targetname, emu->targetname, 30);
+		strn0cpy(eq->sender, emu->sender, 30);
 		eq->language = emu->language;
 		eq->chan_num = emu->chan_num;
 		eq->skill_in_language = emu->skill_in_language;
@@ -541,8 +541,8 @@ namespace Trilogy {
 		__packet->pBuffer = new unsigned char[len];
 		MEMSET_IN(ChannelMessage_Struct);
 		ChannelMessage_Struct *emu = (ChannelMessage_Struct *) __packet->pBuffer;
-		strncpy(emu->targetname, eq->targetname, 30);
-		strncpy(emu->sender, eq->targetname, 30);
+		strn0cpy(emu->targetname, eq->targetname, 30);
+		strn0cpy(emu->sender, eq->targetname, 30);
 		emu->language = eq->language;
 		emu->chan_num = eq->chan_num;
 		emu->skill_in_language = eq->skill_in_language;
@@ -668,7 +668,7 @@ namespace Trilogy {
 		safe_delete(spawns);
 
 
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct) * 1);
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(structs::Spawn_Struct) * 1);
 		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, __packet->size, outapp->pBuffer, sizeof(structs::Spawn_Struct));
 		EncryptZoneSpawnPacketOld(outapp->pBuffer, outapp->size);
@@ -676,6 +676,26 @@ namespace Trilogy {
 		delete[] __emu_buffer;
 		safe_delete(__packet);
 
+	}
+
+	DECODE(OP_SpawnAppearance)
+	{
+		DECODE_LENGTH_EXACT(structs::SpawnAppearance_Struct);
+		SETUP_DIRECT_DECODE(SpawnAppearance_Struct, structs::SpawnAppearance_Struct);
+		IN(spawn_id);
+		IN(type);
+		IN(parameter);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_SpawnAppearance)
+	{
+		ENCODE_LENGTH_EXACT(SpawnAppearance_Struct);
+		SETUP_DIRECT_ENCODE(SpawnAppearance_Struct, structs::SpawnAppearance_Struct);
+		OUT(spawn_id);
+		OUT(type);
+		OUT(parameter);
+		FINISH_ENCODE();
 	}
 
 	DECODE(OP_ZoneChange)
@@ -686,6 +706,7 @@ namespace Trilogy {
 		IN(zone_reason);
 		IN(zoneID);
 		IN(success);
+
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -779,6 +800,16 @@ namespace Trilogy {
 		FINISH_ENCODE();
 	}
 
+	DECODE(OP_BeginCast)
+	{
+		DECODE_LENGTH_EXACT(structs::BeginCast_Struct);
+		SETUP_DIRECT_DECODE(BeginCast_Struct, structs::BeginCast_Struct);
+		OUT(spell_id);
+		OUT(caster_id);
+		OUT(cast_time);
+		FINISH_DIRECT_DECODE();
+	}
+
 	ENCODE(OP_CastSpell)
 	{
 		SETUP_DIRECT_ENCODE(CastSpell_Struct, structs::CastSpell_Struct);
@@ -808,9 +839,8 @@ namespace Trilogy {
 		OUT(type);
 		OUT(spellid);
 		OUT(damage);
-		//OUT(unknown11);
+		OUT(force);
 		OUT(sequence);
-		//OUT(unknown19);
 		FINISH_ENCODE();
 	}
 
@@ -822,9 +852,10 @@ namespace Trilogy {
 		OUT(target);
 		OUT(source);
 		OUT(level);
-		eq->unknown6 = 0x41; //Think this is target level.
 		OUT(instrument_mod);
+		OUT(force);
 		OUT(sequence);
+		OUT(pushup_angle);
 		OUT(type);
 		OUT(spell);
 		OUT(buff_unknown);
@@ -1314,8 +1345,8 @@ namespace Trilogy {
 		SETUP_DIRECT_ENCODE(Animation_Struct, structs::Animation_Struct);
 		OUT(spawnid);
 		OUT(action);
-		eq->a_unknown[5]=0x80;
-		eq->a_unknown[6]=0x3F;
+		OUT(value);
+		OUT(unknown10);
 		FINISH_ENCODE();
 	}
 
@@ -1325,6 +1356,8 @@ namespace Trilogy {
 		SETUP_DIRECT_DECODE(Animation_Struct, structs::Animation_Struct);
 		IN(spawnid);
 		IN(action);
+		IN(value);
+		IN(unknown10);
 		FINISH_DIRECT_DECODE();
 	}
 
