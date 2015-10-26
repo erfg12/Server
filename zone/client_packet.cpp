@@ -1421,7 +1421,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	/* Zone Spawns Packet */
 	entity_list.SendZoneSpawnsBulk(this);
 	entity_list.SendZoneCorpsesBulk(this);
-	entity_list.SendZonePVPUpdates(this);	//hack until spawn struct is fixed.
+	//entity_list.SendZonePVPUpdates(this);	//hack until spawn struct is fixed.
 	//_log(EQMAC__LOG, "Time");
 	/* Time of Day packet */
 	outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
@@ -5288,7 +5288,7 @@ void Client::Handle_OP_LootRequest(const EQApplicationPacket *app)
 {
 	if (Admin() >= RuleI(GM, NoCombatLow) && Admin()<= RuleI(GM, NoCombatHigh) && Admin() != 0) return;
 
-	if (app->size != sizeof(uint16)) {
+	if (app->size != sizeof(uint16) && app->size != sizeof(uint32)) {
 		std::cout << "Wrong size: OP_EndLootRequest, size=" << app->size << ", expected " << sizeof(uint16) << std::endl;
 		return;
 	}
