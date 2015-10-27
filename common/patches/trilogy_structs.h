@@ -981,12 +981,12 @@ struct ItemOnCorpse_Struct
 
 struct LootingItem_Struct 
 {
-	/*000*/	uint16	lootee;	
-	/*002*/	uint16	looter;	
-	/*004*/	uint16	slot_id;
-	/*006*/	uint8	unknown3[2];
-	/*008*/	uint32	auto_loot;	
-	/*012*/	
+	/*000*/	uint32	lootee;	
+	/*004*/	uint32	looter;	
+	/*008*/	uint16	slot_id;
+	/*010*/	uint8	unknown3[2];
+	/*012*/	uint32	auto_loot;	
+	/*016*/	
 };
 
 struct RequestClientZoneChange_Struct 
