@@ -3417,7 +3417,7 @@ void Client::Handle_OP_Emote(const EQApplicationPacket *app)
 
 void Client::Handle_OP_EndLootRequest(const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(uint16)) {
+	if (app->size != sizeof(uint16) && app->size != sizeof(uint32)) {
 		std::cout << "Wrong size: OP_EndLootRequest, size=" << app->size << ", expected " << sizeof(uint16) << std::endl;
 		return;
 	}
