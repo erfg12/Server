@@ -14,6 +14,7 @@
 #include "trilogy_structs.h"
 #include "../rulesys.h"
 
+#include "../zone_numbers.h"
 
 namespace Trilogy {
 
@@ -703,8 +704,8 @@ namespace Trilogy {
 		DECODE_LENGTH_EXACT(structs::ZoneChange_Struct);
 		SETUP_DIRECT_DECODE(ZoneChange_Struct, structs::ZoneChange_Struct);
 		memcpy(emu->char_name, eq->char_name, sizeof(emu->char_name));
+		emu->zoneID = 0;
 		IN(zone_reason);
-		IN(zoneID);
 		IN(success);
 
 		FINISH_DIRECT_DECODE();
@@ -715,13 +716,10 @@ namespace Trilogy {
 		ENCODE_LENGTH_EXACT(ZoneChange_Struct);
 		SETUP_DIRECT_ENCODE(ZoneChange_Struct, structs::ZoneChange_Struct);
 
-		memcpy(emu->char_name, eq->char_name, sizeof(emu->char_name));
-		OUT(zoneID);
+		strn0cpy(eq->char_name, emu->char_name, 30);
+		strn0cpy(eq->short_name, StaticGetZoneName(emu->zoneID), 15);
+		OUT(zone_reason);
 		OUT(success);
-		if(emu->success != 1)
-		{
-			memset(eq->error,0xff,sizeof(eq->error));
-		}
 		FINISH_ENCODE();
 	}
 
