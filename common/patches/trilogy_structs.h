@@ -589,12 +589,12 @@ struct ZoneChange_Struct
 {
 	/*000*/	char	char_name[32];     // Character Name
 	/*032*/ char	short_name[16];
-	/*064*/	uint16	zoneID;
-	/*066*/ uint16  zone_reason;
-	/*068*/ uint16  unknown[2];
-	/*072*/	int8	success;		// =0 client->server, =1 server->client, -X=specific error
-	/*073*/	uint8	error[3]; // =0 ok, =ffffff error
-	/*076*/	
+	/*048*/	uint32	unknown048;
+	/*052*/ uint32  unknown052;
+	/*056*/ uint32  unknown056;
+	/*064*/ uint32  zone_reason;		// =0 client->server, =1 server->client, -X=specific error
+	/*066*/	uint32  success; // =0 ok, =ffffff error
+	/*068*/	
 };
 
 struct Animation_Struct

@@ -200,7 +200,7 @@ struct Action_Struct
 	/*07*/	uint8	unknown7;		// Comment: Unknown -> needs confirming 
 	/*08*/	int32	instrument_mod;
 	/*12*/	float	force;
-	/*16*/	uint32	sequence;			// Comment: Heading of Who? Caster or Target? Needs confirming
+	/*16*/	float	sequence;			// Comment: Heading of Who? Caster or Target? Needs confirming
 	/*20*/	float	pushup_angle;
 	/*24*/	uint8	type;				// Comment: Unknown -> needs confirming -> Which action target or caster does maybe?
 	/*25*/	uint8	unknown28[5];			// Comment: Spell ID of the Spell being casted? Needs Confirming
