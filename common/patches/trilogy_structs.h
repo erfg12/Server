@@ -163,7 +163,7 @@ struct ServerZoneEntry_Struct
 /*162*/	int8    invis;
 /*163*/	int8	sneaking;
 /*164*/	int8    pvp;					// Comment: 0x0=non_pvp 0x1=pvp
-/*165*/	int8    anim_type;
+/*165*/	uint8    anim_type;
 /*166*/	int8    light;
 /*167*/	int8    face;					// Comment: 
 /*168*/	uint8   equipment[9]; // Array elements correspond to struct equipment above
@@ -386,7 +386,7 @@ struct Spawn_Struct
 	/*0061*/	int32	deltaY : 11,			// Velocity Y
 						deltaZ : 11,			// Velocity Z
 						deltaX : 10;			// Velocity X
-	/*0065*/	uint8 unknownk;
+	/*0065*/	uint8	unknown065;
 	/*0066*/	uint16	spawn_id;			// Id of new spawn
 	/*0068*/	uint16	bodytype;			// 65 is disarmable trap, 66 and 67 are invis triggers/traps
 	/*0070*/	uint16	petOwnerId;		// Id of pet owner (0 if not a pet)
@@ -415,7 +415,7 @@ struct Spawn_Struct
 	/*0104*/	char	name[30];			// Name of spawn (len is 30 or less)
 	/*0134*/	char	Surname[20];		// Last Name of player	
 	/*0154*/	int8	guildrank;			// ***Placeholder
-	/*0155*/	int8	unknown161;				// unknown
+	/*0155*/	int8	unknown155;				// unknown
 	/*0156*/	int8	deity;
 	/*0157*/	uint8	unknown_end[11];
 	/*0168*/
@@ -443,7 +443,7 @@ struct ChannelMessage_Struct
 	/*066*/	uint16	chan_num;			// Channel
 	/*068*/	uint8	skill_in_language;	// The players skill in this language? might be wrong
 	/*069*/ uint8	padding069;
-	/*072*/	char	message[0];			// Variable length message
+	/*070*/	char	message[0];			// Variable length message
 };
 
 struct FormattedMessage_Struct
@@ -991,13 +991,12 @@ struct LootingItem_Struct
 
 struct RequestClientZoneChange_Struct 
 {
-	/*000*/	uint32	zone_id;
-	/*004*/	float	y;
-	/*008*/	float	x;
-	/*012*/	float	z;
-	/*016*/	float	heading;
-	/*020*/	uint32	type;	//unknown... values
-	/*024*/	
+	/*000*/	char	zone_name[32];
+	/*032*/	float	y;
+	/*036*/	float	x;
+	/*040*/	float	z;
+	/*044*/	float	heading;
+	/*048*/	
 };
 
 struct GMZoneRequest_Struct 
@@ -2525,7 +2524,7 @@ struct PlayerProfile_Struct
 /*3980*/ int16	bank_inv[8];				// Comment: id of items in bank (Confirmed by Tazadar)
 /*3996*/ int16	bank_cont_inv[80];			// Comment: id of items in bank containers  (Confirmed by Tazadar)
 /*4156*/ int8	unknown4156[2];				// Comment: 
-/*4158*/ int16	guild_id;					// Comment: 
+/*4158*/ uint16	guild_id;					// Comment: 
 /*4160*/ int32  time2;						// Comment:
 /*4164*/ int8	unknown4164[6];			    // Comment:
 /*4170*/ int8	fatigue;					// Comment: full endu => fatigue = 0 ; zero endu => fatigue = 100 (Confirmed by Tazadar)
