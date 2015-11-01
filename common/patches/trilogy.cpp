@@ -265,7 +265,7 @@ namespace Trilogy {
 				eq->equipment[k] = emu->player.spawn.equipment[k];
 				eq->equipcolors[k].color = emu->player.spawn.colors[k].color;
 			}
-			eq->anim_type = 0x64;
+			eq->anim_type = emu->player.spawn.StandState;
 			eq->texture = emu->player.spawn.bodytexture;
 			eq->helm = emu->player.spawn.helm;
 			eq->race = emu->player.spawn.race;
@@ -366,7 +366,10 @@ namespace Trilogy {
 		}
 		OUT_str(name);
 		strncpy(eq->Surname, emu->last_name, 20);
-		OUT(guild_id);
+		if (emu->guild_id == 0)
+			emu->guild_id = 0xFFFF;
+		else
+			eq->guild_id = emu->guild_id;
 		OUT(pvp);
 		OUT(anon);
 		OUT(gm);
@@ -668,8 +671,7 @@ namespace Trilogy {
 		memcpy(eq, spawns, sizeof(structs::Spawn_Struct));
 		safe_delete(spawns);
 
-
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(structs::Spawn_Struct) * 1);
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct) * 1);
 		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, __packet->size, outapp->pBuffer, sizeof(structs::Spawn_Struct));
 		EncryptZoneSpawnPacketOld(outapp->pBuffer, outapp->size);
@@ -704,7 +706,19 @@ namespace Trilogy {
 		DECODE_LENGTH_EXACT(structs::ZoneChange_Struct);
 		SETUP_DIRECT_DECODE(ZoneChange_Struct, structs::ZoneChange_Struct);
 		memcpy(emu->char_name, eq->char_name, sizeof(emu->char_name));
+		char shortname[16];
+		strncpy(shortname, eq->short_name, 16);
+		int i = 179;
 		emu->zoneID = 0;
+		if (strlen(eq->short_name) > 0)
+		{
+			while (emu->zoneID == 0 && i > 0)
+			{
+				if (!strcasecmp(eq->short_name, StaticGetZoneName(i)))
+					emu->zoneID = i;
+				i--;
+			}
+		}
 		IN(zone_reason);
 		IN(success);
 
@@ -792,7 +806,10 @@ namespace Trilogy {
 	ENCODE(OP_BeginCast)
 	{
 		SETUP_DIRECT_ENCODE(BeginCast_Struct, structs::BeginCast_Struct);
-		OUT(spell_id);
+		if (emu->spell_id >= 2999)
+			eq->spell_id = 0xFFFF;
+		else
+			eq->spell_id = emu->spell_id;
 		OUT(caster_id);
 		OUT(cast_time);
 		FINISH_ENCODE();
@@ -1607,12 +1624,11 @@ namespace Trilogy {
 	ENCODE(OP_RequestClientZoneChange)
 	{
 		SETUP_DIRECT_ENCODE(RequestClientZoneChange_Struct, structs::RequestClientZoneChange_Struct);
-		OUT(zone_id);
+		strn0cpy(eq->zone_name, StaticGetZoneName(emu->zone_id), 30);
 		OUT(x);
 		OUT(y);
 		OUT(z);
 		OUT(heading);
-		OUT(type);
 		FINISH_ENCODE();
 	}
 
@@ -2176,13 +2192,11 @@ namespace Trilogy {
 
 		structs::Spawn_Struct *eq = new structs::Spawn_Struct;
 		memset(eq, 0, sizeof(structs::Spawn_Struct));
-
 		if (type == 0)
 			eq->deltaHeading = emu->deltaHeading;
 		if (type == 1)
 			eq->deltaHeading = 0;
-		eq->GM = emu->gm;
-		eq->anon = emu->anon;
+
 		strn0cpy(eq->name, emu->name, 30);
 		eq->deity = emu->deity;
 		if ((emu->race == 42 || emu->race == 120) && emu->gender == 2)
@@ -2190,12 +2204,10 @@ namespace Trilogy {
 		else
 			eq->size = emu->size;
 		eq->NPC = emu->NPC;
-		eq->invis = emu->invis;
-		eq->sneaking = 0;
+
 		eq->cur_hp = emu->curHp;
 		eq->x_pos = (int16)emu->x;
 		eq->y_pos = (int16)emu->y;
-		eq->anim_type = 0x64;
 		eq->z_pos = (int16)emu->z;
 		eq->deltaY = 0;
 		eq->deltaX = 0;
@@ -2204,12 +2216,6 @@ namespace Trilogy {
 		eq->level = emu->level;
 		eq->petOwnerId = emu->petOwnerId;
 		eq->guildrank = emu->guildrank;
-		if (emu->NPC == 1)
-		{
-			eq->guildrank = 0;
-			eq->LD = 1;
-		}
-
 		eq->bodytexture = emu->bodytexture;
 		for (int k = 0; k < 9; k++)
 		{
@@ -2217,11 +2223,21 @@ namespace Trilogy {
 			eq->equipcolors[k].color = emu->colors[k].color;
 		}
 		eq->runspeed = emu->runspeed;
-		eq->AFK = emu->afk;
+		eq->LD = 0;					// 0=NotLD, 1=LD
 		eq->GuildID = emu->guildID;
+		if (emu->NPC == 1)
+		{
+			eq->guildrank = 0;
+			eq->LD = 1;
+			eq->GuildID = 0XFFFF;
+		}
 		if (eq->GuildID == 0)
 			eq->GuildID = 0xFFFF;
 		eq->helm = emu->helm;
+		eq->face = emu->face;
+		eq->gender = emu->gender;
+		eq->bodytype = emu->bodytype;
+		
 		if (emu->race >= 209 && emu->race <= 212)
 		{
 			eq->race = 75;
@@ -2233,11 +2249,12 @@ namespace Trilogy {
 				eq->bodytexture = 1;
 			else
 				eq->bodytexture = 0;
-		}
+		} else
 			eq->race = (int8)emu->race;
+
 		strn0cpy(eq->Surname, emu->lastName, 20);
 		eq->walkspeed = emu->walkspeed;
-		eq->light = emu->light;
+
 		if (emu->class_ > 19 && emu->class_ < 35)
 			eq->class_ = emu->class_ - 3;
 		else if (emu->class_ == 40)
@@ -2246,12 +2263,19 @@ namespace Trilogy {
 			eq->class_ = 32;
 		else
 			eq->class_ = emu->class_;
-		eq->face = emu->face;
-		eq->gender = emu->gender;
-		eq->bodytype = emu->bodytype;
+		eq->anon = 0;
 		eq->spawn_id = emu->spawnId;
-		eq->flymode = emu->flymode;
 
+		eq->invis = emu->invis;			// 0=visable, 1=invisable
+		eq->sneaking = 0;				
+		eq->pvp = 0;
+		eq->anim_type = emu->StandState; 
+		eq->light = emu->light;
+		eq->anon = emu->anon;			// 0=normal, 1=anon, 2=RP
+		eq->AFK = emu->afk;				// 0=off, 1=on
+		eq->GM = emu->gm;
+
+		eq->flymode = emu->flymode;
 		return eq;
 	}
 

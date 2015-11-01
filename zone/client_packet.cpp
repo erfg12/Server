@@ -893,7 +893,6 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 	zonesendname->unknown0 = 0x0A;
 	QueuePacket(outapp);
 	safe_delete(outapp);
-
 	SendGuildMOTD();
 	SendCursorItems();
 

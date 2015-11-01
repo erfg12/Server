@@ -1088,7 +1088,7 @@ void Client::QuestJournalledMessage(const char *npcname, const char* message) {
 		OldSpecialMesg_Struct* sm=(OldSpecialMesg_Struct*)app->pBuffer;
 
 		sm->msg_type = 0x0a;
-		memcpy(sm->message, OutMessage, strlen(OutMessage) + 1);
+		strn0cpy(sm->message, OutMessage, strlen(OutMessage) + 1);
 
 		QueuePacket(app);
 		safe_delete(app);
