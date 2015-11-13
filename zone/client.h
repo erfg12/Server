@@ -479,7 +479,7 @@ public:
 	int32 CalcHPRegenCap();
 	inline uint8 GetEndurancePercent() { return (uint8)((float)cur_end / (float)max_end * 100.0f); }
 	inline uint8 GetFatiguePercent() { return (100 - GetEndurancePercent()); }
-	void SetEndurance(int32 newEnd);	//This sets the current endurance to the new value
+	void SetEndurance(int32 newEnd, bool sendupdate = true);	//This sets the current endurance to the new value
 	void DoEnduranceRegen();	//This Regenerates endurance
 	void DoEnduranceUpkeep();	//does the endurance upkeep
 

@@ -293,9 +293,78 @@ struct OldClientZoneEntry_Struct {
 ** OPCodes: OP_ServerZoneEntry
 **
 */
-struct ServerZoneEntry_Struct
+struct ServerZoneEntry_Struct 
 {
-	struct NewSpawn_Struct player;
+	/*0000*/	uint8	checksum[4];		// Checksum
+	/*0004*/	uint8	type;		// ***Placeholder
+	/*0005*/	char	name[64];			// Name
+	/*0069*/	uint8	sze_unknown0069;	// ***Placeholder
+	/*0070*/	uint16	unknown0070;		// ***Placeholder
+	/*0072*/	uint32	zoneID;				// Current Zone
+	/*0076*/	float	y_pos;				// Y Position
+	/*0080*/	float	x_pos;				// X Position
+	/*0084*/	float	z_pos;				// Z Position
+	/*0088*/	float	heading;
+	/*0092*/	float	physicsinfo[8];
+	/*0124*/	int32	prev;
+	/*0128*/	int32	next;
+	/*0132*/	int32	corpse;
+	/*0136*/	int32	LocalInfo;
+	/*0140*/	int32	My_Char;
+	/*0144*/	float	view_height;
+	/*0148*/	float	sprite_oheight;
+	/*0152*/	uint16	sprite_oheights;
+	/*0154*/	uint16	petOwnerId;
+	/*0156*/	uint32	max_hp;
+	/*0160*/	uint32	curHP;
+	/*0164*/	uint16	GuildID;			// Guild ID Number
+	/*0166*/	uint8	my_socket[6];		// ***Placeholder
+	/*0172*/	uint8	NPC;
+	/*0173*/	uint8	class_;				// Class
+	/*0174*/	uint16	race;				// Race
+	/*0176*/	uint8	gender;				// Gender
+	/*0177*/	uint8	level;				// Level
+	/*0178*/	uint8	invis;
+	/*0179*/	uint8	sneaking;
+	/*0180*/	uint8	pvp;				// PVP Flag
+	/*0181*/	uint8	anim_type;
+	/*0182*/	uint8	light;
+	/*0183*/	int8	face;				// Face Type
+	/*0184*/    uint16  equipment[9]; // Array elements correspond to struct equipment above
+	/*0202*/	uint16	unknown; //Probably part of equipment
+	/*0204*/	Color_Struct equipcolors[9]; // Array elements correspond to struct equipment_colors above
+	/*0240*/	uint32	bodytexture;	// Texture (0xFF=Player - See list of textures for more)
+	/*0244*/	float	size;
+	/*0248*/	float	width;
+	/*0252*/	float	length;
+	/*0256*/	uint32	helm;
+	/*0260*/	float	walkspeed;			// Speed when you walk
+	/*0264*/	float	runspeed;			// Speed when you run
+	/*0268*/	int8	LD;
+	/*0269*/	int8	GM;
+	/*0270*/	int16	flymode;
+	/*0272*/	int8	bodytype;
+	/*0273*/	int8	view_player[7];
+	/*0280*/	uint8	anon;				// Anon. Flag
+	/*0281*/	uint16	avatar;
+	/*0283*/	uint8	AFK;
+	/*0284*/	uint8	summoned_pc;
+	/*0285*/	uint8	title;
+	/*0286*/	uint8	extra[18];	// ***Placeholder (At least one flag in here disables a zone point or all)
+	/*0304*/	char	Surname[32];		// Lastname (This has to be wrong.. but 70 is to big =/..)
+	/*0336*/	uint16  guildrank;
+	/*0338*/	uint16	deity;				// Diety (Who you worship for those less literate)
+	/*0340*/	uint8	animation;		// ***Placeholder
+	/*0341*/	uint8	haircolor;			// Hair Color
+	/*0342*/	uint8	beardcolor;			// Beard Color
+	/*0343*/	uint8	eyecolor1;			// Left Eye Color
+	/*0344*/	uint8	eyecolor2;			// Right Eye Color
+	/*0345*/	uint8	hairstyle;			// Hair Style
+	/*0346*/	uint8	beard;				// AA Title
+	/*0347*/	uint32	SerialNumber;
+	/*0351*/	char	m_bTemporaryPet[4];
+	/*0355*/	uint8	void_;
+	/*0356*/
 };
 
 //This should be treated as an internal struct

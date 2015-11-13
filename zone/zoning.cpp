@@ -508,14 +508,14 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			y = m_Position.y = m_pp.binds[0].y;
 			z = m_Position.z = m_pp.binds[0].z;
 			heading = m_pp.binds[0].heading;
-			m_Position.w = heading / 2.0f;
+			m_Position.w = heading * 255.0f / 512.0f;
 			break;
 		case ZoneToBindPoint:
 			x = m_Position.x = m_pp.binds[0].x;
 			y = m_Position.y = m_pp.binds[0].y;
 			z = m_Position.z = m_pp.binds[0].z;
 			heading = m_pp.binds[0].heading;
-			m_Position.w = heading / 2.0f;
+			m_Position.w = heading * 255.0f / 512.0f;
 
 			zonesummon_ignorerestrictions = 1;
 			Log.Out(Logs::General, Logs::None, "Player %s has died and will be zoned to bind point in zone: %s at LOC x=%f, y=%f, z=%f, heading=%f", GetName(), pZoneName, m_pp.binds[0].x, m_pp.binds[0].y, m_pp.binds[0].z, m_pp.binds[0].heading);

@@ -241,54 +241,45 @@ namespace Trilogy {
 				eq->guildrank = 0xFF;*/
 
 			int k = 0;
-			strncpy(eq->zone, emu->player.spawn.zonename,15);
-			eq->anon = emu->player.spawn.anon;
-			strncpy(eq->name, emu->player.spawn.name, 30);
-			eq->deity = emu->player.spawn.deity;
-			eq->race = emu->player.spawn.race;
-			if (emu->player.spawn.race == 42 && emu->player.spawn.gender == 2)
-				eq->size = emu->player.spawn.size + 2.0f;
-			else
-				eq->size = emu->player.spawn.size;
-			eq->NPC = emu->player.spawn.NPC;
-			eq->invis = emu->player.spawn.invis;
-			eq->max_hp = emu->player.spawn.max_hp;
-			eq->curHP = emu->player.spawn.curHp;
-			eq->x_pos = (float)emu->player.spawn.x;
-			eq->y_pos = (float)emu->player.spawn.y;
-			eq->z_pos = (float)emu->player.spawn.z;///10.0f;
-			eq->heading = (float)emu->player.spawn.heading;
-			eq->face = emu->player.spawn.face;
-			eq->level = emu->player.spawn.level;
+			strn0cpy(eq->zone, StaticGetZoneName(emu->zoneID),15);
+			OUT(anon);
+			strn0cpy(eq->name, emu->name, 30);
+			eq->deity = emu->deity;
+			eq->race = emu->race;
+			OUT(size);
+			OUT(NPC);
+
+			OUT(invis);
+			OUT(max_hp);
+			OUT(curHP);
+			OUT(x_pos);
+			OUT(y_pos);
+			OUT(z_pos);
+			OUT(heading);
+			OUT(face);
+			OUT(level);
+
 			for(k = 0; k < 9; k++) 
 			{
-				eq->equipment[k] = emu->player.spawn.equipment[k];
-				eq->equipcolors[k].color = emu->player.spawn.colors[k].color;
+				eq->equipment[k] = emu->equipment[k];
+				eq->equipcolors[k].color = emu->equipcolors[k].color;
 			}
-			eq->anim_type = emu->player.spawn.StandState;
-			eq->texture = emu->player.spawn.bodytexture;
-			eq->helm = emu->player.spawn.helm;
-			eq->race = emu->player.spawn.race;
-			eq->GM = emu->player.spawn.gm;
-			eq->GuildID = emu->player.spawn.guildID;
-			if(eq->GuildID == 0)
-				eq->GuildID = 0xFFFF;
-			strncpy(eq->Surname, emu->player.spawn.lastName, 32);
-			eq->walkspeed = emu->player.spawn.walkspeed;
-			eq->runspeed = emu->player.spawn.runspeed;
-			eq->light = emu->player.spawn.light;
-			if(emu->player.spawn.class_ > 19 && emu->player.spawn.class_ < 35)
-				eq->class_ = emu->player.spawn.class_-3;
-			else if(emu->player.spawn.class_ == 40)
-				eq->class_ = 16;
-			else if(emu->player.spawn.class_ == 41)
-				eq->class_ = 32;
-			else 
-				eq->class_ = emu->player.spawn.class_;
-			eq->gender = emu->player.spawn.gender;
-			eq->flymode = emu->player.spawn.flymode;
-			eq->size = emu->player.spawn.size;
-			eq->petOwnerId = emu->player.spawn.petOwnerId;
+			OUT(anim_type);
+			OUT(bodytexture);
+			OUT(helm);
+			OUT(race);
+			OUT(GM);
+			OUT(GuildID);
+
+			strn0cpy(eq->Surname, emu->Surname, 32);
+			OUT(walkspeed);
+			OUT(runspeed);
+			OUT(light);
+			OUT(class_);
+			OUT(gender);
+			OUT(flymode);
+			OUT(size);
+			OUT(petOwnerId);
 			CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::ServerZoneEntry_Struct));
 
 		FINISH_ENCODE();
@@ -316,7 +307,7 @@ namespace Trilogy {
 		}*/
 
 		int r = 0;
-		strncpy(eq->current_zone, emu->current_zone, 15);
+		strn0cpy(eq->current_zone, StaticGetZoneName(emu->zone_id), 15);
 		OUT(gender);
 		OUT(race);
 		OUT(class_);
@@ -358,16 +349,29 @@ namespace Trilogy {
 
 		for(r = 0; r < 15; r++)
 		{
-			eq->buffs[r].visable = (emu->buffs[r].spellid == 0xFFFFFFFF || emu->buffs[r].spellid == 0) ? 0 : 2;
-			OUT(buffs[r].level);
-			OUT(buffs[r].bard_modifier);
-			OUT(buffs[r].spellid);
-			OUT(buffs[r].duration);
+			if (emu->buffs[r].spellid == 0xFFFFFFFF || emu->buffs[r].spellid > 2999)
+				eq->buffs[r].spellid = 0;
+			else
+				eq->buffs[r].spellid = emu->buffs[r].spellid;
+			if (eq->buffs[r].spellid == 0)
+			{
+				eq->buffs[r].visable = 0;
+				eq->buffs[r].level = 0;
+				eq->buffs[r].bard_modifier = 0;
+				eq->buffs[r].duration = 0;
+				eq->buffs[r].activated = 0;
+			} else {
+				eq->buffs[r].visable = 2;
+				eq->buffs[r].level = emu->buffs[r].level;
+				eq->buffs[r].bard_modifier = emu->buffs[r].bard_modifier;
+				eq->buffs[r].spellid = emu->buffs[r].spellid;
+				eq->buffs[r].duration = emu->buffs[r].duration;
+			}
 		}
-		OUT_str(name);
+		strn0cpy(eq->name, emu->name, 30);
 		strncpy(eq->Surname, emu->last_name, 20);
-		if (emu->guild_id == 0)
-			emu->guild_id = 0xFFFF;
+		if (emu->guild_id == 0 || emu->guild_id == 0xFFFFFFFF)
+			eq->guild_id = 0xFFFF;
 		else
 			eq->guild_id = emu->guild_id;
 		OUT(pvp);
@@ -396,7 +400,6 @@ namespace Trilogy {
 		OUT(abilitySlotRefresh);
 		OUT_array(spellSlotRefresh, structs::MAX_PP_MEMSPELL);
 		eq->eqbackground = 0;
-
 
 		Log.Out(Logs::General, Logs::Netcode, "[STRUCTS] Player Profile Packet is %i bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
 
@@ -512,6 +515,48 @@ namespace Trilogy {
 		eq->chan_num = emu->chan_num;
 		eq->skill_in_language = emu->skill_in_language;
 		strcpy(eq->message, emu->message);
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_FormattedMessage) 
+	{
+		EQApplicationPacket *__packet = *p; 
+		*p = nullptr;
+		char *bufptr;
+		unsigned char *__emu_buffer = __packet->pBuffer; 
+		OldFormattedMessage_Struct *emu = (OldFormattedMessage_Struct *) __emu_buffer; 
+		uint32 __i = 0; 
+		__i++; /* to shut up compiler */
+	
+		int msglen = __packet->size - sizeof(OldFormattedMessage_Struct);
+		int len = sizeof(structs::ChannelMessage_Struct) + msglen;
+		__packet->pBuffer = new unsigned char[len]; 
+		__packet->size = len; 
+		memset(__packet->pBuffer, 0, len); 
+		structs::ChannelMessage_Struct *eq = (structs::ChannelMessage_Struct *) __packet->pBuffer;
+		switch(emu->string_id) {
+			
+			case 1032: // say
+				__packet->SetOpcode(OP_ChannelMessage);
+				strn0cpy(eq->sender, emu->message, 30);
+				bufptr = emu->message + strlen(eq->sender) + 1;
+				strn0cpy(eq->message, bufptr, msglen - strlen(eq->sender) - 1);
+				eq->chan_num = 8;
+				eq->skill_in_language = 100;
+				break;
+			case 1034: // shout
+				__packet->SetOpcode(OP_ChannelMessage);
+				
+				strn0cpy(eq->sender, emu->message, 30);
+				bufptr = emu->message + strlen(eq->sender) + 1;
+				strn0cpy(eq->message, bufptr, msglen - strlen(eq->sender) - 1);
+				eq->chan_num = 3;
+				eq->skill_in_language = 100;
+				break;
+			default:
+				return;
+		}
+
 		FINISH_ENCODE();
 	}
 
@@ -830,7 +875,7 @@ namespace Trilogy {
 		SETUP_DIRECT_ENCODE(CastSpell_Struct, structs::CastSpell_Struct);
 		OUT(slot);
 		OUT(spell_id);
-		OUT(inventoryslot);
+		eq->inventoryslot = ServerToTrilogySlot(emu->inventoryslot);
 		OUT(target_id);
 		FINISH_ENCODE();
 	}
@@ -864,16 +909,24 @@ namespace Trilogy {
 	{
 		ENCODE_LENGTH_EXACT(Action_Struct);
 		SETUP_DIRECT_ENCODE(Action_Struct, structs::Action_Struct);
-		OUT(target);
-		OUT(source);
-		OUT(level);
-		OUT(instrument_mod);
-		OUT(force);
-		OUT(sequence);
+		eq->target = emu->target;
+		eq->source = emu->source;
+		if (emu->level > 65)
+			eq->level = 0x41;
+		else
+			eq->level = static_cast<uint8>(emu->level);
+		eq->spell_level = 0x41;
+		eq->instrument_mod = static_cast<uint8>(emu->instrument_mod);
+		eq->force = emu->force;
+		
 		OUT(pushup_angle);
-		OUT(type);
-		OUT(spell);
-		OUT(buff_unknown);
+		eq->type = emu->type;
+		if (emu->spell > 2999)
+			eq->spell = 0xFFFF;
+		else
+			eq->spell = emu->spell;
+		eq->buff_unknown = emu->buff_unknown;
+		eq->sequence = emu->sequence;
 		FINISH_ENCODE();
 	}
 
@@ -1095,12 +1148,8 @@ namespace Trilogy {
 			delete in;
 			return;
 		}
-		if(itemcount > 79)
-			itemcount = 79;
-
-		int pisize = sizeof(structs::MerchantItems_Struct) + (79 * sizeof(structs::MerchantItemsPacket_Struct));
-		structs::MerchantItems_Struct* pi = (structs::MerchantItems_Struct*) new uchar[pisize];
-		memset(pi, 0, pisize);
+		if(itemcount > 40)
+			itemcount = 40;
 
 		InternalSerializedItem_Struct *eq = (InternalSerializedItem_Struct *) in->pBuffer;
 		//do the transform...
@@ -1112,28 +1161,25 @@ namespace Trilogy {
 
 			if(mac_item != 0)
 			{
-				structs::MerchantItemsPacket_Struct* merchant = new struct structs::MerchantItemsPacket_Struct;
-				memset(merchant,0,sizeof(structs::MerchantItemsPacket_Struct));
-				memcpy(&merchant->item,mac_item,sizeof(structs::Item_Struct));
-				merchant->itemtype = mac_item->ItemClass;
+				int pisize = ITEM_STRUCT_SIZE;
+				if (mac_item->ItemClass == ItemClassBook)
+					pisize = SHORT_BOOK_ITEM_STRUCT_SIZE;
+				else if (mac_item->ItemClass == ItemClassContainer)
+					pisize = SHORT_CONTAINER_ITEM_STRUCT_SIZE;
+				
+				EQApplicationPacket* outapp = new EQApplicationPacket();
+				outapp->SetOpcode(OP_ShopInventoryPacket);
+				outapp->size = pisize + 5;
+				outapp->pBuffer = new unsigned char[outapp->size];
+				structs::MerchantItems_Struct* pi = (structs::MerchantItems_Struct*) outapp->pBuffer;
+				memcpy(&pi->item, mac_item, pisize);
+				pi->itemtype = mac_item->ItemClass;
+				dest->FastQueuePacket(&outapp);
 
-				char *mac_item_char = reinterpret_cast<char*>(merchant);
-				mac_item_string.append(mac_item_char,sizeof(structs::MerchantItemsPacket_Struct));
 				safe_delete(mac_item);	
-				safe_delete(merchant);
 			}
 		}
-		int32 length = 5000;
-		int buffer = 2;
-
-		memcpy(pi->packets,mac_item_string.c_str(),mac_item_string.length());
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ShopInventoryPacket, length);
-		outapp->size = buffer + DeflatePacket((uchar*) pi->packets, itemcount * sizeof(structs::MerchantItemsPacket_Struct), &outapp->pBuffer[buffer], length-buffer);
-		outapp->pBuffer[0] = itemcount;
-
-		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
-		safe_delete_array(pi);
 	}
 
 	DECODE(OP_DeleteCharge) {  DECODE_FORWARD(OP_MoveItem); }
@@ -1157,7 +1203,6 @@ namespace Trilogy {
 
 		eq->from_slot = ServerToTrilogySlot(emu->from_slot);
 		eq->to_slot = ServerToTrilogySlot(emu->to_slot);
-		OUT(to_slot);
 		OUT(number_in_stack);
 		Log.Out(Logs::Detail, Logs::Inventory, "EQMAC ENCODE OUTPUT to_slot: %i, from_slot: %i, number_in_stack: %i", eq->to_slot, eq->from_slot, eq->number_in_stack);
 
@@ -1359,6 +1404,7 @@ namespace Trilogy {
 		ENCODE_LENGTH_EXACT(Animation_Struct);
 		SETUP_DIRECT_ENCODE(Animation_Struct, structs::Animation_Struct);
 		OUT(spawnid);
+		OUT(target);
 		OUT(action);
 		OUT(value);
 		OUT(unknown10);
@@ -1627,7 +1673,7 @@ namespace Trilogy {
 		strn0cpy(eq->zone_name, StaticGetZoneName(emu->zone_id), 30);
 		OUT(x);
 		OUT(y);
-		OUT(z);
+		eq->z = emu->z * 10;
 		OUT(heading);
 		FINISH_ENCODE();
 	}
@@ -2010,6 +2056,10 @@ namespace Trilogy {
   
 			// Comment: Flag value indicating type of item:
 			// Comment: 0x0000 - Readable scroll? few i've seen say "rolled up", i think they're like books
+			// 	#define ITEM_NORMAL1                    0x0031
+			// 	#define ITEM_NORMAL2                    0x0036
+			// 	#define ITEM_NORMAL3                    0x315f
+			// 	#define ITEM_NORMAL4                    0x3336
 			// Comment: 0x0031 - Normal Item - Only seen once on GM summoned food
 			// Comment: 0x0036 - Normal Item (all scribed spells, Velium proc weapons, and misc.)
 			// Comment: 0x315f - Normal Item
@@ -2018,7 +2068,21 @@ namespace Trilogy {
 			// Comment: 0x5400 - Container (Combine, Player made, Weight Reducing, etc...)
 			// Comment: 0x5450 - Container, plain ordinary newbie containers
 			// Comment: 0x7669 - Book item
-
+			if (item->ItemClass == 2) {
+				// books
+				mac_pop_item->flag = 0x7669;
+			} else if(item->ItemClass == 1) {
+				if (item->BagType > 8)
+					mac_pop_item->flag = 0x3d00;
+				else
+					mac_pop_item->flag = 0x5450;
+			} else {
+				if ((item->Worn.Effect > 0 && item->Worn.Effect < 3000) || (item->Click.Effect > 0 && item->Click.Effect < 3000) || (item->Scroll.Effect > 0 && item->Scroll.Effect < 3000) || (item->Proc.Effect > 0 && item->Proc.Effect < 3000))
+					mac_pop_item->flag = 0x0036;
+				else
+					mac_pop_item->flag = 0x315f;
+			}
+			mac_pop_item->flag = 0x0036;
 			mac_pop_item->ItemClass = item->ItemClass;
 			strn0cpy(mac_pop_item->Name,item->Name, 35);
 			strn0cpy(mac_pop_item->Lore,item->Lore, 60);       
@@ -2069,8 +2133,14 @@ namespace Trilogy {
 					mac_pop_item->common.container.BagWR = item->BagWR; 
 				} else {
 					mac_pop_item->common.normal.Races = item->Races;
-					if(item->Click.Effect > 0)
+					if(item->Click.Effect > 0 && item->Click.Effect < 3000)
 						mac_pop_item->common.normal.click_effect_type = item->Click.Type;
+					else if(item->Worn.Effect > 0 && item->Click.Effect < 3000)
+						mac_pop_item->common.normal.click_effect_type = item->Worn.Type;
+					else if(item->Scroll.Effect > 0 && item->Scroll.Effect < 3000)
+						mac_pop_item->common.normal.click_effect_type = item->Scroll.Type;
+					else if (item->Proc.Effect > 0 && item->Proc.Effect < 3000)
+						mac_pop_item->common.normal.click_effect_type = 2;
 				}
 			mac_pop_item->common.AStr = item->AStr;           
 			mac_pop_item->common.ASta = item->ASta;           
@@ -2103,7 +2173,7 @@ namespace Trilogy {
 
 			//FocusEffect and BardEffect is already handled above. Now figure out click, scroll, proc, and worn.
 
-			if(item->Click.Effect > 0)
+			if(item->Click.Effect > 0 && item->Click.Effect < 3000)
 			{
 				mac_pop_item->common.Effect1 = item->Click.Effect;
 				mac_pop_item->common.Effect2 = item->Click.Effect; 
@@ -2120,7 +2190,7 @@ namespace Trilogy {
 					mac_pop_item->common.EffectLevel2 = item->Click.Level2;  
 				}
 			}
-			else if(item->Scroll.Effect > 0)
+			else if(item->Scroll.Effect > 0 && item->Scroll.Effect < 3000)
 			{
 				mac_pop_item->common.Effect1 = item->Scroll.Effect;
 				mac_pop_item->common.Effect2 = item->Scroll.Effect; 
@@ -2138,7 +2208,7 @@ namespace Trilogy {
 				}
 			}
 			//We have some worn effect items (Lodizal Shell Shield) as proceffect in db.
-			else if(item->Proc.Effect > 0)
+			else if(item->Proc.Effect > 0 && item->Proc.Effect < 3000)
 			{
 				mac_pop_item->common.Effect1 = item->Proc.Effect;
 				mac_pop_item->common.Effect2 = item->Proc.Effect; 
@@ -2163,7 +2233,7 @@ namespace Trilogy {
 					mac_pop_item->common.EffectLevel2 = item->Proc.Level2;  
 				}
 			}
-			else if(item->Worn.Effect > 0)
+			else if(item->Worn.Effect > 0 && item->Worn.Effect < 3000)
 			{
 				mac_pop_item->common.Effect1 = item->Worn.Effect;
 				mac_pop_item->common.Effect2 = item->Worn.Effect; 
@@ -2208,7 +2278,7 @@ namespace Trilogy {
 		eq->cur_hp = emu->curHp;
 		eq->x_pos = (int16)emu->x;
 		eq->y_pos = (int16)emu->y;
-		eq->z_pos = (int16)emu->z;
+		eq->z_pos = (int16)emu->z*10;
 		eq->deltaY = 0;
 		eq->deltaX = 0;
 		eq->heading = (uint8)emu->heading;
@@ -2280,6 +2350,8 @@ namespace Trilogy {
 	}
 
 	ENCODE(OP_RaidJoin) { ENCODE_FORWARD(OP_Unknown); }
+	ENCODE(OP_RaidUpdate) { ENCODE_FORWARD(OP_Unknown); }
+	ENCODE(OP_RaidInvite) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_SendAAStats) { ENCODE_FORWARD(OP_Unknown); }
 	ENCODE(OP_Unknown)
 	{
@@ -2290,6 +2362,7 @@ namespace Trilogy {
 
 		delete in;
 		return;
+		
 	}
 
 	static inline int16 ServerToTrilogySlot(uint32 ServerSlot)
