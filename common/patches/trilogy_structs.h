@@ -169,7 +169,7 @@ struct ServerZoneEntry_Struct
 /*168*/	uint8   equipment[9]; // Array elements correspond to struct equipment above
 /*177*/	int8    sze_unknown5_2_2_6[3];	// Comment: 
 /*180*/	Color_Struct equipcolors[9]; // Array elements correspond to struct equipment_colors above
-/*216*/	uint32	texture;	// Texture (0xFF=Player - See list of textures for more)
+/*216*/	uint32	bodytexture;	// Texture (0xFF=Player - See list of textures for more)
 /*220*/	float	size;
 /*224*/	float	width;
 /*228*/	float	length;
@@ -260,24 +260,26 @@ struct CombatDamage_Struct
 	/*012*/	int32	damage; // confirmed
 	/*016*/	float	force;
 	/*020*/	float	sequence;
-	/*024*/
+	/*024*/ float	pushup_angle;
+	/*028*/
 };
 
 struct Action_Struct
 {
 	/*00*/	uint32	target;				// Comment: Spell Targets ID 
 	/*04*/	uint32	source;				// Comment: Spell Caster ID
-	/*08*/	uint8	level;				// Comment: Spell Casters Level 
-	/*09*/  uint8   unknown9[3];
-	/*12*/	int32	instrument_mod;		// int8 + padding?
+	/*08*/	uint16	level;				// Comment: Spell Casters Level
+	/*10*/	uint16	spell_level;
+	/*12*/	uint32	instrument_mod;		// int8 + padding?
 	/*16*/	float	force;				// confirmed
 	/*20*/	float	sequence;			// confirmed
 	/*24*/	float	pushup_angle;		// maybe
 	/*28*/	uint8	type;				// confirmed
-	/*29*/	uint8	unknown28[3];	
+	/*29*/  uint8	unknown029[3];
 	/*32*/	uint16	spell;		// confirmed
-	/*34*/	uint8	unknown34[2];	
+	/*34*/	uint8	unknown034;
 	/*35*/  uint8	buff_unknown; // confirmed
+	/*36*/
 };
 
 struct InterruptCast_Struct
@@ -312,7 +314,7 @@ struct BeginCast_Struct
 
 struct Buff_Struct
 {
-	/*000*/	uint32	entityid;		// Comment: Unknown -> needs confirming -> Target of the Buff
+	/*000*/	uint32	visible;		// Comment: Unknown -> needs confirming -> Target of the Buff
 	/*004*/	uint32	b_unknown1;		// Comment: Unknown -> needs confirming
 	/*008*/	uint16	spellid;		// Comment: Unknown -> needs confirming -> Spell ID?
 	/*010*/	uint32	b_unknown2;		// Comment: Unknown -> needs confirming
@@ -344,18 +346,18 @@ struct SpawnAppearance_Struct
 	/*012*/
 };
 
-// Length: 20
+// Length: 24
 struct SpellBuffFade_Struct
 {
-	/*000*/	uint16	entityid;
-	/*002*/	uint8   slot;
-	/*003*/ uint8   level;
-	/*004*/ uint8   effect;
-	/*005*/ uint8   unknown1;
-	/*006*/	uint16  spellid;
-	/*008*/	uint32	duration;
-	/*012*/	uint32	slotid;	
-	/*016*/	uint32	bufffade;
+	/*000*/	uint32	entityid;
+	/*004*/	uint8   slot;
+	/*005*/ uint8   level;
+	/*006*/ uint8   effect;
+	/*007*/ uint8   unknown1;
+	/*008*/	uint16  spellid;
+	/*010*/	uint32	slotid;
+	/*014*/	uint32	duration;	
+	/*018*/	uint16	bufffade;
 	/*020*/
 };
 
@@ -441,17 +443,17 @@ struct ChannelMessage_Struct
 	/*032*/	char	sender[32];			// The senders name (len might be wrong)
 	/*064*/	uint16	language;			// Language
 	/*066*/	uint16	chan_num;			// Channel
-	/*068*/	uint8	skill_in_language;	// The players skill in this language? might be wrong
-	/*069*/ uint8	padding069;
+	/*068*/	uint16	skill_in_language;	// The players skill in this language? might be wrong
 	/*070*/	char	message[0];			// Variable length message
 };
 
 struct FormattedMessage_Struct
 {
-	/*000*/	uint16	unknown0;
-	/*002*/	uint16	string_id;
-	/*004*/	uint16	type;
-	/*006*/	char	message[0];
+	/*000*/	char	unknown[32]; // not used?
+	/*032*/	char	targetname[32];
+	/*064*/ char	sender[32];
+	/*096*/	uint16	type;
+	/*098*/	char	message[0];
 };
 
 struct WearChange_Struct
@@ -600,16 +602,16 @@ struct ZoneChange_Struct
 struct Animation_Struct
 {
 	/*00*/	uint32 spawnid;
-	/*04*/	uint8  action;
-	/*05*/  uint8  value;
-	/*06*/	uint32 unknown06;
+	/*04*/  uint32 target;
+	/*08*/	uint8  action;
+	/*09*/  uint8  value;
 	/*10*/	uint16 unknown10; // 80 3F
 };
 
 struct Consider_Struct
 {
-	/*000*/ uint16	playerid;               // PlayerID
-	/*002*/ uint16	targetid;               // TargetID
+	/*000*/ uint32	playerid;               // PlayerID
+	/*002*/ uint32	targetid;               // TargetID
 	/*004*/ uint32	faction;                // Faction
 	/*008*/ uint32	level;                  // Level
 	/*012*/ int32	cur_hp;			// Current Hitpoints
@@ -872,7 +874,7 @@ struct PlayerItems_Struct
 
 struct MerchantItemsPacket_Struct 
 {
-	/*000*/	uint16 itemtype;
+	/*000*/	uint8 itemtype;
 	/*002*/	struct Item_Struct	item;
 };
 
@@ -888,8 +890,9 @@ struct TradeItemsPacket_Struct
 
 struct MerchantItems_Struct
 {
-	/*000*/	int16		count;	
-	/*002*/	struct MerchantItemsPacket_Struct packets[0];
+	/*000*/ uint32		merchant_id;
+	/*004*/	uint8 itemtype;
+	/*005*/	unsigned char	item[0];
 };
 
 struct SummonedItem_Struct
@@ -1163,8 +1166,8 @@ struct TimeOfDay_Struct
 
 struct Merchant_Click_Struct 
 {
-	/*000*/ uint16	npcid;			// Merchant NPC's entity id
-	/*002*/ uint16	playerid;
+	/*000*/ uint32	npcid;			// Merchant NPC's entity id
+	/*002*/ uint32	playerid;
 	/*004*/	uint8  command;
 	/*005*/ uint8	unknown[3];
 	/*008*/ float   rate;
@@ -1193,11 +1196,12 @@ struct Merchant_Click_Struct
 	
 struct Merchant_Sell_Struct
 {
-	/*000*/	uint16	npcid;			// Merchant NPC's entity id
-	/*002*/	uint16	playerid;		// Player's entity id
+	/*000*/	uint32	npcid;			// Merchant NPC's entity id
+	/*002*/	uint32	playerid;		// Player's entity id
 	/*004*/	uint16	itemslot;
-	/*006*/	uint8	IsSold;		// Already sold
+	/*006*/	/*uint8	IsSold;	*/	// Already sold
 	/*007*/	uint8	unknown001;
+	/*007*/	uint8	unknown002;
 	/*008*/	uint8	quantity;	// Qty - when used in Merchant_Purchase_Struct
 	/*009*/	uint8	unknown004[3];
 	/*012*/	uint32	price;
@@ -1206,13 +1210,14 @@ struct Merchant_Sell_Struct
 
 struct Merchant_Purchase_Struct
 {
-	/*000*/	uint16	npcid;			// Merchant NPC's entity id
-	/*002*/ uint16  playerid;
-	/*004*/	uint16	itemslot;		// Player's entity id
-	/*006*/ uint16  price;
-	/*008*/	uint8	quantity;
-	/*009*/ uint8   unknown_void[7];
-	/*016*/	
+	/*000*/	uint32	npcid;			// Merchant NPC's entity id
+	/*004*/ uint32  playerid;
+	/*008*/	uint16	itemslot;		// Player's entity id
+	/*010*/ uint16	unknown010;
+	/*012*/ uint8	quantity;
+	/*013*/ uint8	unknown011[3];
+	/*016*/ uint32  price;
+	/*020*/	
 };
 
 struct Item_Shop_Struct
@@ -1223,11 +1228,11 @@ struct Item_Shop_Struct
 
 struct Merchant_DelItem_Struct
 {
-	/*000*/	uint16	npcid;			// Merchant NPC's entity id
-	/*002*/	uint16	playerid;		// Player's entity id
-	/*004*/	uint8	itemslot;       // Slot of the item you want to remove
-	/*005*/	uint8	type;     // 0x40
-	/*006*/	
+	/*000*/	uint32	npcid;			// Merchant NPC's entity id
+	/*004*/	uint32	playerid;		// Player's entity id
+	/*008*/	uint16	itemslot;       // Slot of the item you want to remove
+	/*010*/	uint16	type;     // 0x40
+	/*012*/ 
 };
 
 struct Illusion_Struct

@@ -16,6 +16,7 @@ E(OP_SpawnAppearance)
 D(OP_EnterWorld)
 D(OP_ChannelMessage)
 E(OP_ChannelMessage)
+E(OP_FormattedMessage)
 E(OP_SpecialMesg)
 D(OP_TargetCommand)
 D(OP_TargetMouse)
@@ -120,6 +121,8 @@ D(OP_ZoneEntry);
 //Below are invalid opcodes ONLY
 E(OP_Unknown);
 E(OP_RaidJoin);
+E(OP_RaidInvite);
+E(OP_RaidUpdate);
 E(OP_SendAAStats);
 #undef E
 #undef D

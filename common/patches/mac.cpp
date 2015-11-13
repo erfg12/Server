@@ -154,85 +154,8 @@ namespace Mac {
 	ENCODE(OP_ZoneEntry)
 	{ 
 		SETUP_DIRECT_ENCODE(ServerZoneEntry_Struct, structs::ServerZoneEntry_Struct);
-
-			int k = 0;
-			eq->zoneID = emu->player.spawn.zoneID;
-			eq->anon = emu->player.spawn.anon;
-			strncpy(eq->name, emu->player.spawn.name, 64);
-			eq->deity = emu->player.spawn.deity;
-			eq->race = emu->player.spawn.race;
-			if ((emu->player.spawn.race == 42 || emu->player.spawn.race == 120) && emu->player.spawn.gender == 2)
-			{
-				eq->size = emu->player.spawn.size + 4.0f;
-				eq->width = emu->player.spawn.size + 4.0f;
-			}
-			else
-			{
-				eq->size = emu->player.spawn.size;
-				eq->width = emu->player.spawn.size;
-			}
-			
-			eq->NPC = emu->player.spawn.NPC;
-			eq->invis = emu->player.spawn.invis;
-			eq->max_hp = emu->player.spawn.max_hp;
-			eq->curHP = emu->player.spawn.curHp;
-			eq->x_pos = (float)emu->player.spawn.x;
-			eq->y_pos = (float)emu->player.spawn.y;
-			eq->z_pos = (float)emu->player.spawn.z;
-			eq->animation = emu->player.spawn.animation;
-			eq->heading = (float)emu->player.spawn.heading;
-			eq->haircolor = emu->player.spawn.haircolor;
-			eq->beardcolor = emu->player.spawn.beardcolor;
-			eq->eyecolor1 = emu->player.spawn.eyecolor1;
-			eq->eyecolor2 = emu->player.spawn.eyecolor2;
-			eq->hairstyle = emu->player.spawn.hairstyle;
-			eq->beard = emu->player.spawn.beard;
-			eq->face = emu->player.spawn.face;
-			eq->level = emu->player.spawn.level;
-			for(k = 0; k < 9; k++) 
-			{
-				eq->equipment[k] = emu->player.spawn.equipment[k];
-				eq->equipcolors[k].color = emu->player.spawn.colors[k].color;
-			}
-			eq->AFK = emu->player.spawn.afk;
-			eq->title = emu->player.spawn.aaitle;
-			eq->anim_type = 0x64;
-			eq->bodytexture = emu->player.spawn.bodytexture;
-			eq->helm = emu->player.spawn.helm;
-			eq->GM = emu->player.spawn.gm;
-			eq->GuildID = emu->player.spawn.guildID;
-			if(eq->GuildID == 0)
-				eq->GuildID = 0xFFFF;
-			eq->guildrank = emu->player.spawn.guildrank;
-			if(eq->guildrank == 0)
-				eq->guildrank = 0xFFFF;
-			strncpy(eq->Surname, emu->player.spawn.lastName, 32);
-			eq->walkspeed = emu->player.spawn.walkspeed;
-			eq->runspeed = emu->player.spawn.runspeed;
-			eq->light = emu->player.spawn.light;
-			if(emu->player.spawn.class_ > 19 && emu->player.spawn.class_ < 35)
-				eq->class_ = emu->player.spawn.class_-3;
-			else if(emu->player.spawn.class_ == 40)
-				eq->class_ = 16;
-			else if(emu->player.spawn.class_ == 41)
-				eq->class_ = 32;
-			else 
-				eq->class_ = emu->player.spawn.class_;
-			eq->gender = emu->player.spawn.gender;
-			eq->flymode = emu->player.spawn.flymode;
-			eq->prev = 0xa0ae0e00;
-			eq->next = 0xa0ae0e00;
-			eq->view_height = 0x6666c640;
-			eq->sprite_oheight = 0x00004840;
-			eq->extra[10] = 0xFF;
-			eq->extra[11] = 0xFF;
-			eq->extra[12] = 0xFF;
-			eq->extra[13] = 0xFF;
-			eq->type = 0;
-			eq->petOwnerId = emu->player.spawn.petOwnerId;
-
+			memcpy(eq, emu, sizeof(structs::ServerZoneEntry_Struct));
 			CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::ServerZoneEntry_Struct));
-
 		FINISH_ENCODE();
 	}
 

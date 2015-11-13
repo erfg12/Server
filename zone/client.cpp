@@ -2838,7 +2838,7 @@ void Client::SendRules(Client* client)
 	safe_delete_array(rules);
 }
 
-void Client::SetEndurance(int32 newEnd)
+void Client::SetEndurance(int32 newEnd, bool sendupdate)
 {
 	/*Endurance can't be less than 0 or greater than max*/
 	if(newEnd < 0)
@@ -2848,7 +2848,8 @@ void Client::SetEndurance(int32 newEnd)
 	}
 
 	cur_end = newEnd;
-	SendStaminaUpdate();
+	if (sendupdate)
+		SendStaminaUpdate();
 }
 
 void Client::SacrificeConfirm(Client *caster) {

@@ -101,6 +101,7 @@ void MapOpcodes()
 	ConnectingOpcodes[OP_ZoneEntry] = &Client::Handle_Connect_OP_ZoneEntry;
 	ConnectingOpcodes[OP_LFGCommand] = &Client::Handle_OP_LFGCommand;
 	ConnectingOpcodes[OP_TargetMouse] = &Client::Handle_Connect_OP_TargetMouse;
+	ConnectingOpcodes[OP_DeleteCharge] = &Client::Handle_Connect_OP_DeleteCharge;
 
 	//temporary hack
 	ConnectingOpcodes[OP_GetGuildsList] = &Client::Handle_OP_GetGuildsList;
@@ -787,21 +788,23 @@ void Client::Handle_Connect_OP_ClientUpdate(const EQApplicationPacket *app)
 void Client::Handle_Connect_OP_ReqClientSpawn(const EQApplicationPacket *app)
 {
 	conn_state = ClientSpawnRequested;
-
-	EQApplicationPacket* outapp = new EQApplicationPacket;
-	uint8 count = 0;
-	if (entity_list.SendZoneDoorsBulk(outapp, this, count))
+	if (GetClientVersion() != EQClientTrilogy)
 	{
-		QueuePacket(outapp);
-		if (count > 1)
-			safe_delete(outapp);
+		EQApplicationPacket* outapp = new EQApplicationPacket;
+		uint8 count = 0;
+		if (entity_list.SendZoneDoorsBulk(outapp, this, count))
+		{
+			QueuePacket(outapp);
+			if (count > 1)
+				safe_delete(outapp);
+		}
+
+		entity_list.SendZoneObjects(this);
+		outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
+		outapp->priority = 6;
+		FastQueuePacket(&outapp);
 	}
-
-	entity_list.SendZoneObjects(this);
 	SendZonePoints();
-
-	outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
-	FastQueuePacket(&outapp);
 
 	conn_state = ZoneContentsSent;
 
@@ -823,7 +826,24 @@ void Client::Handle_Connect_OP_ReqNewZone(const EQApplicationPacket *app)
 	Log.Out(Logs::Detail, Logs::Zone_Server, "NewZone data for %s (%i) successfully sent.", zone->newzone_data.zone_short_name, zone->newzone_data.zone_id);
 
 	FastQueuePacket(&outapp);
+	
+	if (GetClientVersionBit() & EQClientTrilogy) {
+		outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
+		outapp->priority = 6;
+		FastQueuePacket(&outapp);
+		entity_list.SendZoneSpawnsBulk(this);
+		entity_list.SendZoneCorpsesBulk(this);
+		outapp = new EQApplicationPacket;
+		uint8 count = 0;
+		if (entity_list.SendZoneDoorsBulk(outapp, this, count))
+		{
+			QueuePacket(outapp);
+			if (count > 1)
+				safe_delete(outapp);
+		}
 
+		entity_list.SendZoneObjects(this);
+	}
 	return;
 }
 
@@ -849,6 +869,16 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 	else
 		entity_list.QueueClients(this, outapp, true);
 	safe_delete(outapp);
+
+	if (GetClientVersion() == EQClientTrilogy) {
+		outapp = new EQApplicationPacket(OP_LogServer, sizeof(LogServer_Struct));
+		QueuePacket(outapp);
+		safe_delete(outapp);
+		SendHPUpdate();
+		SendManaUpdatePacket();
+		Log.Out(Logs::Detail, Logs::Zone_Server, "Detected as Trilogy - Sending OP_LogServer");
+	}
+
 	if (GetPVP())	//force a PVP update until we fix the spawn struct
 		SendAppearancePacket(AT_PVP, GetPVP(), true, false);
 
@@ -879,8 +909,7 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 	}
 
 	outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
-	QueuePacket(outapp);
-	safe_delete(outapp);
+	FastQueuePacket(&outapp);
 
 	outapp = new EQApplicationPacket(OP_ZoneInAvatarSet, 1);
 	QueuePacket(outapp);
@@ -895,7 +924,6 @@ void Client::Handle_Connect_OP_SendExpZonein(const EQApplicationPacket *app)
 	safe_delete(outapp);
 	SendGuildMOTD();
 	SendCursorItems();
-
 	return;
 }
 
@@ -1099,7 +1127,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	m_Position.x = m_pp.x;
 	m_Position.y = m_pp.y;
 	m_Position.z = m_pp.z;
-	m_Position.w = m_pp.heading / 2.0f;
+	m_Position.w = m_pp.heading * 255 / 512;
 	race = m_pp.race;
 	base_race = m_pp.race;
 	gender = m_pp.gender;
@@ -1235,7 +1263,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	SetHP(m_pp.cur_hp);
 
 	Mob::SetMana(m_pp.mana); // mob function doesn't send the packet
-	SetEndurance(m_pp.endurance);
+	SetEndurance(m_pp.endurance, false);
 	m_pp.fatigue = GetFatiguePercent();
 
 	uint32 max_slots = GetMaxBuffSlots();
@@ -1335,7 +1363,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	PlayerProfile_Struct* pps = (PlayerProfile_Struct*) new uchar[sizeof(PlayerProfile_Struct) - 4];
 	memcpy(pps, &m_pp, sizeof(PlayerProfile_Struct) - 4);
-	pps->heading /= 2.0f;
+	pps->heading = m_pp.heading;
 	pps->perAA = m_epp.perAA;
 	int r = 0;
 	for (r = 0; r < MAX_PP_AA_ARRAY; r++)
@@ -1371,19 +1399,19 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 				pps->skills[s] = 255;
 		}
 	}
-
-	if(GetClientVersion() == EQClientTrilogy)
-		strcpy(pps->current_zone, database.GetZoneName(pps->zone_id));
-
 	
 	if(m_pp.boatid > 0 && (zone->GetZoneID() == timorous || zone->GetZoneID() == firiona))
 		pps->boat[0] = 0;
 
 	// The entityid field in the Player Profile is used by the Client in relation to Group Leadership AA
+	if(GetClientVersion() == EQClientTrilogy)
+		strn0cpy(pps->current_zone, database.GetZoneName(zone->GetZoneID()),16);
+
 	m_pp.entityid = GetID();
 	memcpy(outapp->pBuffer, pps, outapp->size);
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
+
 	database.LoadPetInfo(this);
 
 	/* Moved here so it's after where we load the pet data. */
@@ -1393,33 +1421,115 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	/* Server Zone Entry Packet */
 	outapp = new EQApplicationPacket(OP_ZoneEntry, sizeof(ServerZoneEntry_Struct));
 	ServerZoneEntry_Struct* sze = (ServerZoneEntry_Struct*)outapp->pBuffer;
+	memset(sze, 0, sizeof(ServerZoneEntry_Struct));
 	
-	FillSpawnStruct(&sze->player, CastToMob());
-	sze->player.spawn.curHp = 1;
-	sze->player.spawn.NPC = 0;
+	strcpy(sze->name, name);
+	strn0cpy(sze->Surname, lastname, 32);
+	sze->zoneID = zone->GetZoneID();
+	sze->x_pos = m_pp.x;
+	sze->y_pos = m_pp.y;				// X Position
+	sze->z_pos = m_pp.z;				// Z Position
+	sze->heading = m_pp.heading;
+	sze->race = m_pp.race;
+	sze->deity = m_pp.deity;
+	sze->curHP = static_cast<uint32>(GetHPRatio());
+	sze->max_hp = 100;
+	sze->size = base_size;
+	sze->width = base_size;
+	
+	sze->NPC = IsBecomeNPC() ? 1 : 0;
+	sze->invis = invisible;
+	sze->sneaking = sneaking;
+	sze->animation = animation;
+	
+	sze->haircolor = m_pp.haircolor;
+	sze->beardcolor = m_pp.beardcolor;
+	sze->eyecolor1 = m_pp.eyecolor1;
+	sze->eyecolor2 = m_pp.eyecolor2;
+	sze->hairstyle = m_pp.hairstyle;
+	sze->beard = m_pp.beard;
+	sze->face = m_pp.face;
+	sze->level = m_pp.level;
+	for(int k = 0; k < 9; k++) 
+	{
+		sze->equipment[k] = GetEquipmentMaterial(k);
+		if (armor_tint[k])
+		{
+			sze->equipcolors[k].color = armor_tint[k];
+		}
+		else
+		{
+			sze->equipcolors[k].color = GetEquipmentColor(i);
+		}
+	}
+	sze->AFK = AFK;
+	sze->title = 0;
+	sze->anim_type = 0x64;
+	sze->bodytexture = texture;
+	sze->bodytype = bodytype;
+
+	if(helmtexture && helmtexture != 0xFF)
+	{
+		sze->helm=helmtexture;
+	} else {
+		sze->helm = 0;
+	}
+
+	sze->GM = GetGM();
+	sze->GuildID = GuildID();
+	if(sze->GuildID == 0)
+		sze->GuildID = 0xFFFF;
+	if (!IsInAGuild()) {
+		sze->guildrank = 0xFFFF;
+	} else {
+		sze->guildrank = guild_mgr.GetDisplayedRank(GuildID(), GuildRank(), AccountID());
+	}
+	if(sze->guildrank == 0)
+		sze->guildrank = 0xFFFF;
+			
+	sze->walkspeed = walkspeed;
+	sze->runspeed = (gmspeed == 0) ? runspeed : 3.1f;
+	sze->light = m_Light.Type.Active;
+	sze->class_ = GetClass();
+
+	sze->gender = m_pp.gender;
+	sze->flymode = FindType(SE_Levitate) ? 2 : 0;
+	sze->prev = 0xa0ae0e00;
+	sze->next = 0xa0ae0e00;
+	sze->view_height = 0x6666c640;
+	sze->sprite_oheight = 0x00004840;
+	sze->extra[10] = 0xFF;
+	sze->extra[11] = 0xFF;
+	sze->extra[12] = 0xFF;
+	sze->extra[13] = 0xFF;
+	sze->type = 0;
+	sze->petOwnerId = ownerid;
+
+	//sze->curHP = 1;
+	sze->NPC = 0;
 	if(zone->zonemap)
 	{
 		// This prevents hopping on logging in.
-		glm::vec3 loc(sze->player.spawn.x,sze->player.spawn.y,sze->player.spawn.z);
+		glm::vec3 loc(m_Position.x, m_Position.y, m_Position.z);
 		if (!IsEncumbered() && m_pp.boatid == 0 && (!zone->HasWaterMap() || !zone->watermap->InLiquid(loc)) && 
 			zone->GetZoneID() != hole && zone->GetZoneID() != freporte)
 		{
-			m_Position.z = zone->zonemap->FindBestZ(loc, nullptr);
-			if(size > 0)
-				m_Position.z += static_cast<int16>(size);
+			float bestz = zone->zonemap->FindBestZ(loc, nullptr);
+			if(bestz > -5000.0f && size > 0)
+				m_Position.z = bestz + (0.625 * (float)size);
 		}
-
-		sze->player.spawn.z = m_Position.z;
+		sze->z_pos = m_Position.z;
 	}
-	sze->player.spawn.heading *= 2;
-	sze->player.spawn.zoneID = zone->GetZoneID();
-	strncpy(sze->player.spawn.zonename, zone->GetShortName(), 15);
+
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
+
 	//_log(EQMAC__LOG, "Spawns");
 	/* Zone Spawns Packet */
-	entity_list.SendZoneSpawnsBulk(this);
-	entity_list.SendZoneCorpsesBulk(this);
+	if (GetClientVersion() != EQClientTrilogy) {
+		entity_list.SendZoneSpawnsBulk(this);
+		entity_list.SendZoneCorpsesBulk(this);
+	}
 	//entity_list.SendZonePVPUpdates(this);	//hack until spawn struct is fixed.
 	//_log(EQMAC__LOG, "Time");
 	/* Time of Day packet */
@@ -1466,6 +1576,13 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 void Client::Handle_Connect_OP_TargetMouse(const EQApplicationPacket *app)
 {
 	// This can happen if you tab while zoning. Just handle the opcode and return.
+	return;
+}
+
+void Client::Handle_Connect_OP_DeleteCharge(const EQApplicationPacket *app)
+{
+	//just send it back, if this happens while connecting.
+	QueuePacket(app);
 	return;
 }
 
