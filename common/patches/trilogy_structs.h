@@ -1850,12 +1850,12 @@ struct GuildsListEntry_Struct
 {
 	/*0000*/	uint32 guildID;				// Comment: empty = 0xFFFFFFFF
 	/*0004*/	char name[32];				// Comment: 
-	/*0036*/	uint8 unknown1[4];			// Comment: = 0xFF
-	/*0072*/	uint8 exists;				// Comment: = 1 if exists, 0 on empty
-	/*0074*/	uint8 unknown2[7];			// Comment: = 0x00
-	/*0080*/	uint8 unknown3[4];			// Comment: = 0xFF
-	/*0084*/	uint8 unknown4[8];			// Comment: = 0x00
-	/*0096*/
+	/*0036*/	uint32 unknown1;			// Comment: = 0xFF
+	/*0040*/	uint16 exists;				// Comment: = 1 if exists, 0 on empty
+	/*0042*/	uint8 unknown2[6];			// Comment: = 0x00
+	/*0048*/	uint32 unknown3;			// Comment: = 0xFF
+	/*0052*/	uint8 unknown4[8];			// Comment: = 0x00
+	/*0060*/
 };
 
 struct GuildsList_Struct 
