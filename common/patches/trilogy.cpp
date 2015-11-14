@@ -614,6 +614,25 @@ namespace Trilogy {
 		FINISH_DIRECT_DECODE();
 	}
 
+	DECODE(OP_Surname)
+	{
+		SETUP_DIRECT_DECODE(Surname_Struct, structs::Surname_Struct);
+		strn0cpy(emu->name, eq->name, 32);
+		emu->unknown0064 = eq->unknown032;
+		strn0cpy(emu->lastname, eq->lastname, 20);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_Surname)
+	{
+		ENCODE_LENGTH_EXACT(Surname_Struct);
+		SETUP_DIRECT_ENCODE(Surname_Struct, structs::Surname_Struct);
+		strn0cpy(eq->name, emu->name, 32);
+		eq->unknown032 = emu->unknown0064;
+		strn0cpy(eq->lastname, emu->lastname, 20);
+		FINISH_ENCODE();
+	}
+
 	DECODE(OP_Taunt)
 	{
 		SETUP_DIRECT_DECODE(ClientTarget_Struct, structs::ClientTarget_Struct);
