@@ -958,10 +958,10 @@ struct Split_Struct
 
 struct Surname_Struct
 {
-	/*000*/	char name[16];				// Comment: Player's first name
-	/*016*/	uint8 s_unknown1[20];		// Comment: put 1 in this in order to accept the surname  ^^
-	/*036*/	char Surname[30];			// Comment: Player's Surname (max size 20 limited by client)
-	/*066*/	
+	/*000*/	char name[32];				// Comment: Player's first name
+	/*032*/	uint32 unknown032;			// Comment: put 1 in this in order to accept the surname  ^^
+	/*036*/	char lastname[20];			// Comment: Player's Surname (max size 20 limited by client)
+	/*056*/	
 };
 
 struct MoneyOnCorpse_Struct
