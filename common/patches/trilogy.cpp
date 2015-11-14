@@ -554,9 +554,11 @@ namespace Trilogy {
 				eq->skill_in_language = 100;
 				break;
 			default:
+				delete __packet;
+				delete[]__emu_buffer;
 				return;
 		}
-
+		
 		FINISH_ENCODE();
 	}
 
@@ -570,7 +572,7 @@ namespace Trilogy {
 		__i++; /* to shut up compiler */
 	
 		int msglen = __packet->size - sizeof(structs::SpecialMesg_Struct);
-		int len = sizeof(structs::SpecialMesg_Struct) + msglen + 1;
+		int len = sizeof(structs::SpecialMesg_Struct) + msglen + 4;
 		__packet->pBuffer = new unsigned char[len]; 
 		__packet->size = len; 
 		memset(__packet->pBuffer, 0, len); 
@@ -1014,8 +1016,8 @@ namespace Trilogy {
 				return;
 			}
 
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemPacket,sizeof(structs::Item_Struct));
-			memcpy(outapp->pBuffer,trilogy_item,sizeof(structs::Item_Struct));
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemPacket,ITEM_STRUCT_SIZE);
+			memcpy(outapp->pBuffer,trilogy_item,ITEM_STRUCT_SIZE);
 
 			outapp->SetOpcode(OP_Unknown);
 		
@@ -1036,10 +1038,11 @@ namespace Trilogy {
 			else
 				outapp->SetOpcode(OP_ItemPacket);
 
-			if(outapp->size != sizeof(structs::Item_Struct))
+			if(outapp->size != ITEM_STRUCT_SIZE)
 				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_ItemPacket packet. Expected: %i, Got: %i", sizeof(structs::Item_Struct), outapp->size);
 
 			dest->FastQueuePacket(&outapp);
+			safe_delete_array(trilogy_item);
 			delete[] __emu_buffer;
 		}
 	}
@@ -2025,9 +2028,10 @@ namespace Trilogy {
 
 		if(item->ID > 32767)
 			return 0;
-
-		structs::Item_Struct *mac_pop_item = new structs::Item_Struct;
-		memset(mac_pop_item,0,sizeof(structs::Item_Struct));
+		
+		unsigned char *buffer = new unsigned char[ITEM_STRUCT_SIZE];
+		structs::Item_Struct *mac_pop_item = (structs::Item_Struct *)buffer;
+		memset(mac_pop_item,0,ITEM_STRUCT_SIZE);
 
 		if(item->GMFlag == -1)
 			Log.Out(Logs::Moderate, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
@@ -2082,7 +2086,7 @@ namespace Trilogy {
 				else
 					mac_pop_item->flag = 0x315f;
 			}
-			mac_pop_item->flag = 0x0036;
+			//mac_pop_item->flag = 0x0036;
 			mac_pop_item->ItemClass = item->ItemClass;
 			strn0cpy(mac_pop_item->Name,item->Name, 35);
 			strn0cpy(mac_pop_item->Lore,item->Lore, 60);       
@@ -2103,6 +2107,8 @@ namespace Trilogy {
 			}
 			else
 			{
+				mac_pop_item->common.unknown0282 = 0xFF;
+				mac_pop_item->common.unknown0283 = 0XFF;
 				mac_pop_item->common.CastTime = item->CastTime;  
 				mac_pop_item->common.SkillModType = item->SkillModType;
 				mac_pop_item->common.SkillModValue = item->SkillModValue;
@@ -2133,14 +2139,19 @@ namespace Trilogy {
 					mac_pop_item->common.container.BagWR = item->BagWR; 
 				} else {
 					mac_pop_item->common.normal.Races = item->Races;
-					if(item->Click.Effect > 0 && item->Click.Effect < 3000)
-						mac_pop_item->common.normal.click_effect_type = item->Click.Type;
-					else if(item->Worn.Effect > 0 && item->Click.Effect < 3000)
+					if(item->Click.Effect > 0 && item->Click.Effect < 3000) {
+						if (item->Click.Type == 5) {
+							mac_pop_item->common.normal.click_effect_type = 3;
+						} else {
+							mac_pop_item->common.normal.click_effect_type = item->Click.Type;
+						}
+					} else if(item->Worn.Effect > 0 && item->Worn.Effect < 3000) {
 						mac_pop_item->common.normal.click_effect_type = item->Worn.Type;
-					else if(item->Scroll.Effect > 0 && item->Scroll.Effect < 3000)
+					} else if(item->Scroll.Effect > 0 && item->Scroll.Effect < 3000) {
 						mac_pop_item->common.normal.click_effect_type = item->Scroll.Type;
-					else if (item->Proc.Effect > 0 && item->Proc.Effect < 3000)
+					} else if (item->Proc.Effect > 0 && item->Proc.Effect < 3000) {
 						mac_pop_item->common.normal.click_effect_type = 2;
+					}
 				}
 			mac_pop_item->common.AStr = item->AStr;           
 			mac_pop_item->common.ASta = item->ASta;           
@@ -2168,7 +2179,7 @@ namespace Trilogy {
 			mac_pop_item->common.Color = item->Color;    
 			//mac_pop_item->common.Faction = item->Faction;   
 			mac_pop_item->common.Classes = item->Classes;  
-			mac_pop_item->common.Stackable = item->Stackable_; 
+			mac_pop_item->common.Stackable = (item->Stackable_ == 1 ? 1 : 0); 
 			}
 
 			//FocusEffect and BardEffect is already handled above. Now figure out click, scroll, proc, and worn.
