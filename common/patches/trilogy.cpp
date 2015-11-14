@@ -710,6 +710,43 @@ namespace Trilogy {
 
 	}
 
+	ENCODE(OP_GuildsList)
+	{
+		//consume the packet
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		//store away the emu struct
+		unsigned char *__emu_buffer = in->pBuffer;
+		OldGuildsList_Struct *old_guildlist_pkt=(OldGuildsList_Struct *)__emu_buffer;
+		OldGuildsListEntry_Struct *old_entry = old_guildlist_pkt->Guilds;
+		int num_guilds = (in->size - 4) / sizeof(OldGuildsListEntry_Struct);
+		Log.Out(Logs::Detail, Logs::Zone_Server, "GuildList size %i", num_guilds);
+
+		if (num_guilds == 0) {
+			delete in;
+			return;
+		}
+		if (num_guilds > 512)
+			num_guilds = 512;
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildsList, 4 + sizeof(structs::GuildsListEntry_Struct) * num_guilds);
+		structs::GuildsList_Struct *new_list = (structs::GuildsList_Struct *)outapp->pBuffer;
+		structs::GuildsListEntry_Struct *new_entry = new_list->Guilds;
+		new_list->head[0] = old_guildlist_pkt->head[0];
+		new_list->head[1] = old_guildlist_pkt->head[1];
+		new_list->head[2] = old_guildlist_pkt->head[2];
+		new_list->head[3] = old_guildlist_pkt->head[3];
+		memcpy(new_list->head, old_guildlist_pkt->head, 4);
+		for (int i = 0; i < num_guilds; i++)
+		{
+			new_entry[i].guildID = old_entry[i].guildID;
+			strn0cpy(new_entry[i].name, old_entry[i].name, 32);
+			memcpy(&new_entry[i].unknown1, &old_entry[i].unknown1, 24);
+		};
+		dest->FastQueuePacket(&outapp);
+		delete[] __emu_buffer;
+		delete in;
+	}
 	ENCODE(OP_NewSpawn)
 	{
 		SETUP_DIRECT_ENCODE(Spawn_Struct, structs::Spawn_Struct);
@@ -718,8 +755,7 @@ namespace Trilogy {
 		memcpy(eq, spawns, sizeof(structs::Spawn_Struct));
 		safe_delete(spawns);
 
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct) * 1);
-		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct));
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, __packet->size, outapp->pBuffer, sizeof(structs::Spawn_Struct));
 		EncryptZoneSpawnPacketOld(outapp->pBuffer, outapp->size);
 		dest->FastQueuePacket(&outapp, ack_req);
