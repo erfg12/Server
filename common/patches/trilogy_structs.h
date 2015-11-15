@@ -1342,33 +1342,35 @@ struct FaceChange_Struct
 
 struct TradeRequest_Struct
 {
-	/*000*/	uint16 to_mob_id;	
-	/*002*/	uint16 from_mob_id;	
+	/*000*/	uint32 to_mob_id;	
+	/*002*/	uint32 from_mob_id;	
 	/*004*/	
 };
 
 struct TradeAccept_Struct
 {
-	/*000*/	uint16 from_mob_id;
-	/*002*/	uint16 to_mob_id;	
+	/*000*/	uint32 from_mob_id;
+	/*002*/	uint32 to_mob_id;	
 	/*004*/
 };
 
 struct TradeMoneyUpdate_Struct
 {
-	/*000*/	uint16	trader;			
-	/*002*/	uint8	type;	
- 	/*003*/	uint8   unknown;	//0x06
+	/*000*/	uint32	trader;			
+	/*002*/	uint32	type;	
 	/*004*/	uint32	amount;	
 	/*008*/	
 };
 
 struct TradeCoin_Struct
 {
-	/*000*/	uint16	trader;	
-	/*002*/	uint16	slot;	
-	/*004*/	uint32	amount;	
-	/*008*/	
+	/*000*/	uint32	trader;	
+	/*004*/	uint8	slot;		// Comment: 
+	/*005*/	uint16	unknown005;		// Comment: 
+	/*007*/	uint8	unknown007;		// Comment: 
+	/*004*/	uint32	amount;
+	/*008*/	uint8	unknown008[10];
+	/*018*/
 };
 
 struct Trader_Struct 
@@ -2652,18 +2654,16 @@ struct LogServer_Struct
 /* _MAC_NET_MSG_reward_MacMsg, OP_Sound, Size: 48 */
 struct QuestReward_Struct
 {
-	/*000*/	uint16	mob_id; 
-	/*002*/	uint16	target_id;
-	/*006*/	uint32	exp_reward;
-	/*010*/	uint32	faction;
-	/*014*/	uint32	faction_mod;
-	/*018*/	uint32	copper;
+	/*000*/	uint32	mob_id;
+	/*004*/ uint32	unknown004;
+	/*008*/	uint32	unknown008;
+	/*012*/	uint32	unknown012;
+	/*016*/	uint32	unknown016;
+	/*020*/	uint32	copper;
 	/*022*/	uint32	silver;
 	/*024*/	uint32	gold;
 	/*028*/	uint32	platinum;
-	/*032*/	uint16	item_id;
-	/*034*/	uint8	unknown[14];
-	/*048*/	
+	/*032*/	
 };
 
 	};	//end namespace structs
