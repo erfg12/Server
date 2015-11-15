@@ -554,9 +554,10 @@ namespace Trilogy {
 				eq->skill_in_language = 100;
 				break;
 			default:
-				delete __packet;
-				delete[]__emu_buffer;
-				return;
+				break;
+				//delete __packet;
+				//delete[]__emu_buffer;
+				//return;
 		}
 		
 		FINISH_ENCODE();
@@ -854,6 +855,26 @@ namespace Trilogy {
 		SETUP_DIRECT_DECODE(TradeRequest_Struct, structs::TradeRequest_Struct);
 		IN(from_mob_id);
 		IN(to_mob_id);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_TradeMoneyUpdate)
+	{
+		ENCODE_LENGTH_EXACT(TradeMoneyUpdate_Struct);
+		SETUP_DIRECT_ENCODE(TradeMoneyUpdate_Struct, structs::TradeMoneyUpdate_Struct);
+		OUT(trader);
+		OUT(type);
+		OUT(amount);
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_TradeMoneyUpdate)
+	{
+		DECODE_LENGTH_EXACT(structs::TradeMoneyUpdate_Struct);
+		SETUP_DIRECT_DECODE(TradeMoneyUpdate_Struct, structs::TradeMoneyUpdate_Struct);
+		IN(trader);
+		IN(type);
+		IN(amount);
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -1713,6 +1734,7 @@ namespace Trilogy {
 		OUT(trader);
 		OUT(slot);
 		OUT(amount);
+		eq->unknown005 = 0x4fD2;
 		FINISH_ENCODE();
 	}
 
@@ -2017,15 +2039,10 @@ namespace Trilogy {
 		ENCODE_LENGTH_EXACT(QuestReward_Struct);
 		SETUP_DIRECT_ENCODE(QuestReward_Struct, structs::QuestReward_Struct);
 		OUT(mob_id);
-		OUT(target_id);
-		OUT(exp_reward);
 		OUT(copper);
 		OUT(silver);
 		OUT(gold);
 		OUT(platinum);
-		OUT(item_id);
-		OUT(faction);
-		OUT(faction_mod);
 		FINISH_ENCODE();
 	}
 
