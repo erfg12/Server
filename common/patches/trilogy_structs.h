@@ -767,6 +767,12 @@ struct Item_Struct
 	{
 		struct
 		{
+			/*0172*/ int8     Book;      // Are we a book
+			/*0173*/ int16	  BookType;	 // Type of book (scroll, note, etc)
+			/*0175*/ char     Filename[15];            // Filename of book text on server
+			/*0190*/ uint8    buffer1[102];    // Not used, fills out space in the packet so ShowEQ doesn't complain.
+		} book;
+		struct {
 			/*0172*/ int8      AStr;              // Strength
 			/*0173*/ int8      ASta;              // Stamina
 			/*0174*/ int8      ACha;              // Charisma
@@ -850,13 +856,6 @@ struct Item_Struct
 			/*0290*/ uint16	  unknown290;
 			/*0292*/
 		} common; 
-		struct
-		{
-			/*0172*/ int8     Book;      // Are we a book
-			/*0173*/ int16	  BookType;	 // Type of book (scroll, note, etc)
-			/*0175*/ char     Filename[15];            // Filename of book text on server
-			/*0190*/ int32    buffer1[102];    // Not used, fills out space in the packet so ShowEQ doesn't complain.
-		} book;
 	};
 };
 

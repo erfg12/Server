@@ -1092,8 +1092,8 @@ namespace Trilogy {
 				return;
 			}
 
-			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemPacket,ITEM_STRUCT_SIZE);
-			memcpy(outapp->pBuffer,trilogy_item,ITEM_STRUCT_SIZE);
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemPacket,sizeof(structs::Item_Struct));
+			memcpy(outapp->pBuffer,trilogy_item,sizeof(structs::Item_Struct));
 
 			outapp->SetOpcode(OP_Unknown);
 		
@@ -1114,7 +1114,7 @@ namespace Trilogy {
 			else
 				outapp->SetOpcode(OP_ItemPacket);
 
-			if(outapp->size != ITEM_STRUCT_SIZE)
+			if(outapp->size != sizeof(structs::Item_Struct))
 				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_ItemPacket packet. Expected: %i, Got: %i", sizeof(structs::Item_Struct), outapp->size);
 
 			dest->FastQueuePacket(&outapp);
@@ -2101,9 +2101,9 @@ namespace Trilogy {
 		if(item->ID > 32767)
 			return 0;
 		
-		unsigned char *buffer = new unsigned char[ITEM_STRUCT_SIZE];
+		unsigned char *buffer = new unsigned char[sizeof(structs::Item_Struct)];
 		structs::Item_Struct *mac_pop_item = (structs::Item_Struct *)buffer;
-		memset(mac_pop_item,0,ITEM_STRUCT_SIZE);
+		memset(mac_pop_item,0,sizeof(structs::Item_Struct));
 
 		if(item->GMFlag == -1)
 			Log.Out(Logs::Moderate, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
