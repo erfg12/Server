@@ -763,9 +763,9 @@ namespace Trilogy {
 			strn0cpy(new_entry[i].name, old_entry[i].name, 32);
 			memcpy(&new_entry[i].unknown1, &old_entry[i].unknown1, 24);
 		};
-		dest->FastQueuePacket(&outapp);
 		delete[] __emu_buffer;
-		delete in;
+		dest->FastQueuePacket(&outapp);
+
 	}
 	ENCODE(OP_NewSpawn)
 	{
