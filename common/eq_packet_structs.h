@@ -1815,6 +1815,30 @@ struct OldDoorSpawns_Struct	//SEQ
 	uint16 count;            
 	struct OldDoor_Struct doors[0];
 };
+
+struct TrilogyDoor_Struct
+{
+/*0000*/ char    name[16];            // Filename of Door
+/*0016*/ float   yPos;               // y loc
+/*0020*/ float   xPos;               // x loc
+/*0024*/ float   zPos;               // z loc
+/*0028*/ float	 heading;
+/*0032*/ float	 incline;
+/*0036*/ uint8	 padding036[4];
+/*0040*/ uint8	 doorid;             // door's id #
+/*0041*/ uint8	 opentype;			// confirmed - H
+/*0042*/ uint8	 doorIsOpen;
+/*0043*/ uint8	 inverted;
+/*0044*/ uint16	 parameter;
+/*0046*/ uint8   padding046[2];
+/*0048*/
+};
+
+struct TrilogyDoorSpawns_Struct	//SEQ
+{
+	uint16 count;            
+	struct TrilogyDoor_Struct doors[0];
+};
 /*
  OP Code: Op_ClickDoor
  Size:		16

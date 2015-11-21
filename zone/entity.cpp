@@ -971,6 +971,71 @@ bool EntityList::SendZoneDoorsBulk(EQApplicationPacket* app, Client *client, uin
 	return true;
 }
 
+bool EntityList::SendZoneDoorsBulkTrilogy(EQApplicationPacket* app, Client *client, uint8 &count)
+{
+	if (door_list.empty())
+		return false;
+
+	uint32 mask_test = client->GetClientVersionBit();
+	uchar doorstruct[sizeof(TrilogyDoor_Struct)];
+	uchar packet[sizeof(TrilogyDoor_Struct)*255];
+	int16 length = 0;
+
+	auto it = door_list.begin();
+	while (it != door_list.end()) {
+		if ((it->second->GetClientVersionMask() & mask_test) &&
+				strlen(it->second->GetDoorName()) > 3)
+			count++;
+		++it;
+	}
+
+	if(count == 0 || count > 255) //doorid is uint8
+		return false;
+
+	count = 0;
+	Doors *door;
+	TrilogyDoor_Struct* nd = (TrilogyDoor_Struct*)doorstruct;
+	memset(nd,0,sizeof(TrilogyDoor_Struct));
+
+	it = door_list.begin();
+	while (it != door_list.end()) {
+		door = it->second;
+		if (door && (door->GetClientVersionMask() & mask_test) &&
+				strlen(door->GetDoorName()) > 3) {
+			memcpy(nd->name, door->GetDoorName(), 16);
+			auto position = door->GetPosition();
+			nd->xPos = position.x;
+			nd->yPos = position.y;
+			nd->zPos = position.z;
+			nd->heading = position.w;			
+			nd->incline = door->GetIncline();
+			nd->doorid = door->GetDoorID();
+			nd->opentype = door->GetOpenType();
+			nd->doorIsOpen = door->GetInvertState() ? !door->IsDoorOpen() : door->IsDoorOpen();
+			nd->inverted = door->GetInvertState();
+			nd->parameter = door->GetDoorParam();
+			
+			memcpy(packet+length,doorstruct,sizeof(TrilogyDoor_Struct));
+			length += sizeof(TrilogyDoor_Struct);
+
+			count++;
+		}
+		++it;
+	}
+		
+	int32 deflength = sizeof(TrilogyDoor_Struct)*count;
+	int buffer = 2; //Length of count that preceeds the packet.
+
+	app->SetOpcode(OP_SpawnDoor);
+	app->pBuffer = new uchar[sizeof(TrilogyDoor_Struct)*count];
+	app->size = buffer + DeflatePacket(packet,length,app->pBuffer+buffer,deflength+buffer);
+	TrilogyDoorSpawns_Struct* ds = (TrilogyDoorSpawns_Struct*)app->pBuffer;
+
+	ds->count = count;
+
+	return true;
+}
+
 bool EntityList::MakeDoorSpawnPacket(EQApplicationPacket* app, Client *client)
 {
 	if (door_list.empty())
