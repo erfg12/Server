@@ -201,6 +201,7 @@ public:
 	Object*	FindNearbyObject(float x, float y, float z, float radius);
 	bool	MakeDoorSpawnPacket(EQApplicationPacket* app, Client *client);
 	bool	SendZoneDoorsBulk(EQApplicationPacket* app, Client *client, uint8 &count);
+	bool	SendZoneDoorsBulkTrilogy(EQApplicationPacket* app, Client *client, uint8 &count);
 	void	SendTraders(Client* client);
 	void	AddClient(Client*);
 	void	AddNPC(NPC*, bool SendSpawnPacket = true, bool dontqueue = false);

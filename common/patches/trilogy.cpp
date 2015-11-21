@@ -721,7 +721,6 @@ namespace Trilogy {
 
 		}
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
-		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)*entrycount];
 		outapp->size = DeflatePacket((unsigned char*)out->pBuffer, out->size, outapp->pBuffer, sizeof(structs::Spawn_Struct)*entrycount);
 		EncryptZoneSpawnPacketOld(outapp->pBuffer, outapp->size);
 		delete[] __emu_buffer;
@@ -1669,11 +1668,27 @@ namespace Trilogy {
 
 	ENCODE(OP_ManaChange)
 	{
-		ENCODE_LENGTH_EXACT(ManaChange_Struct);
-		SETUP_DIRECT_ENCODE(ManaChange_Struct, structs::ManaChange_Struct);
-		OUT(new_mana);
-		OUT(spell_id);
-		FINISH_ENCODE();
+		EQApplicationPacket *__packet = *p; 
+		*p = nullptr; 
+		unsigned char *__emu_buffer = __packet->pBuffer; 
+		ManaChange_Struct *emu = (ManaChange_Struct *) __emu_buffer;
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange);
+		if (emu->spell_id > 0 && emu->spell_id < 3000)
+		{
+			outapp->size = sizeof(structs::ManaChange_Struct);
+			outapp->pBuffer = new uchar[outapp->size];
+			structs::ManaChange_Struct *eq = (structs::ManaChange_Struct *)outapp->pBuffer;
+			eq->new_mana = emu->new_mana;
+			eq->spell_id = emu->spell_id;
+			
+		} else {
+			outapp->size = sizeof(structs::ManaChange_Struct2);
+			outapp->pBuffer = new uchar[outapp->size];
+			structs::ManaChange_Struct2 *eq = (structs::ManaChange_Struct2 *)outapp->pBuffer;
+			eq->new_mana = emu->new_mana;
+		}
+		delete[] __emu_buffer;
+		dest->FastQueuePacket(&outapp);
 	}
 
 	ENCODE(OP_DeleteSpawn)

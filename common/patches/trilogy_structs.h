@@ -297,6 +297,12 @@ struct ManaChange_Struct
 	/*04*/
 };
 
+struct ManaChange_Struct2
+{
+	/*00*/	uint16 new_mana;	// Comment:  New Mana AMount
+	/*02*/
+};
+
 struct SwapSpell_Struct 
 { 
 	/*00*/	uint32 from_slot;	// Comment: Moving Spells around?
@@ -2068,10 +2074,12 @@ struct DoorSpawns_Struct	//SEQ
 struct ClickDoor_Struct 
 {
 	/*000*/	uint8	doorid;
-	/*001*/	uint8	unknown[3];
-	/*002*/	uint16	item_id;
-	/*004*/	uint16	player_id;
-	/*008*/	
+	/*001*/	uint8	unknown001[3];
+	/*004*/	uint16	item_id;
+	/*006*/ uint8	unknown004[2];
+	/*008*/	uint16	player_id;
+	/*010*/ uint8	unknown010[2];
+	/*012*/	
 };
 
 struct DoorOpen_Struct

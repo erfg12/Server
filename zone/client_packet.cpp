@@ -835,7 +835,7 @@ void Client::Handle_Connect_OP_ReqNewZone(const EQApplicationPacket *app)
 		entity_list.SendZoneCorpsesBulk(this);
 		outapp = new EQApplicationPacket;
 		uint8 count = 0;
-		if (entity_list.SendZoneDoorsBulk(outapp, this, count))
+		if (entity_list.SendZoneDoorsBulkTrilogy(outapp, this, count))
 		{
 			QueuePacket(outapp);
 			if (count > 1)
