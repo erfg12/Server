@@ -115,6 +115,13 @@ struct ZoneServerInfo_Struct
 	/*0128*/	uint16	port;
 };
 
+struct InterruptCast_Struct
+{
+	uint16 messageid;
+	uint16 color;
+	char	message[0];
+};
+
 struct NewZone_Struct 
 {
 	/*0000*/	char	char_name[64];			// Character Name

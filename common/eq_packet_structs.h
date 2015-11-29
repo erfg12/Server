@@ -439,6 +439,7 @@ struct Charm_Struct {
 
 struct InterruptCast_Struct
 {
+	uint16 entityid;
 	uint16 messageid;
 	uint16 color;
 	char	message[0];

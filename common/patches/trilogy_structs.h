@@ -284,9 +284,8 @@ struct Action_Struct
 
 struct InterruptCast_Struct
 {
-	/*00*/	uint16	messageid;		// Comment: ID of Spell Caster
-	/*02*/	uint16	spawnid;		// Comment: Unknown -> needs confirming -> placeholder?
-	/*04*/	char	message[0];		// Comment: Unknown -> needs confirming -> Message of what? the spell cast text?
+	/*00*/	uint32	spawnid;		// Comment: ID of Spell Caster
+	/*04*/	char	message[0];		// Comment: Interrupt Message.
 	/*05*/
 };
 

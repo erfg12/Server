@@ -1002,6 +1002,79 @@ namespace Trilogy {
 					message += emu->message;
 					message += " got better.";
 					break;
+				case 12268:
+					message = "You must target a player or use /invite <name> to invite someone to your group.";
+					break;
+				case 12270:
+					message = "You cannot invite yourself.";
+					break;
+				case 12290:
+					message = "You abandon your preparations to camp.";
+					break;
+				case 12323:
+					message = "Talking to yourself again?";
+					break;
+				case 12368:
+					message = "You do not have control of yourself right now.";
+					break;
+				case 12409:
+					message = "You can't seem to steal from yourself for some reason...";
+					break;
+				case 12406:
+					message = "You must target a player to steal from first.  You may not steal from corpses.";
+					break;
+				case 12410:
+					message = "You may not steal from a person who does not follow the ways of chaos....";
+					break;
+				case 12413:
+					message = "You can only steal from others in your level range.";
+					break;
+				case 12440:
+					message = "You are too distracted to cast a spell now!";
+					break;
+				case 12442:
+					message = "You are already casting a spell!";
+					break;
+				case 12444:
+					message = "Your ";
+					message += emu->message;
+					message += " shimmers briefly.";
+					break;
+				case 12446:
+					message = "You don't sense any corpses of that name.";
+					break;
+				case 12447:
+					message = "You don't sense any corpses.";
+					break;
+				case 12448:
+					message = "Your immunity buff protected you from the spell ";
+					message += emu->message;
+					message += " !";
+					break;
+				case 12452:
+					message = "You are not holding an item!";
+					break;
+				case 12471:
+					message = "You sense undead in this direction.";
+					break;
+				case 12472:
+					message = "You sense an animal in this direction.";
+					break;
+				case 12473:
+					message = "You sense a summoned being in this direction.";
+					break;
+				case 12474:
+					message = "You don't sense anything.";
+					break;
+				case 12478:
+					message = emu->message;
+					message+= "'s casting is interrupted!";
+					break;
+				case 12481:
+					message = "You were hit by non-melee for ";
+					message += emu->message;
+					message += " damage.";
+					break;
 				default:
 					message = "Unhandled string_id: ";
 					message += itoa(emu->string_id);
@@ -1019,6 +1092,39 @@ namespace Trilogy {
 			eq->msg_type = emu->type;
 		}
 		
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_InterruptCast)
+	{
+		EQApplicationPacket *__packet = *p; 
+		*p = nullptr; 
+		unsigned char *__emu_buffer = __packet->pBuffer; 
+		InterruptCast_Struct *emu = (InterruptCast_Struct *) __emu_buffer;
+		std::string message = "";
+		switch(emu->messageid) {
+			case 12687:
+				message = "Your song ends.";
+				break;
+			case 439:
+				message = "Your spell is interrupted.";
+				break;
+			case 12686:
+				message = "Your song ends abruptly.";
+				break;
+			case 173:
+				message = "Your spell fizzles!";
+				break;
+			default:
+				break;
+		}
+		int len = sizeof(structs::InterruptCast_Struct) + message.length() + 1;
+		__packet->pBuffer = new unsigned char[len]; 
+		__packet->size = len; 
+		memset(__packet->pBuffer, 0, len); 
+		structs::InterruptCast_Struct *eq = (structs::InterruptCast_Struct *) __packet->pBuffer;
+		eq->spawnid = emu->entityid;
+		strncpy(eq->message, message.c_str(), message.length());
 		FINISH_ENCODE();
 	}
 

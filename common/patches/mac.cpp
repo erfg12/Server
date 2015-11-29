@@ -469,6 +469,14 @@ namespace Mac {
 		FINISH_ENCODE();	
 	}
 
+	ENCODE(OP_InterruptCast)
+	{
+		SETUP_DIRECT_ENCODE(InterruptCast_Struct, structs::InterruptCast_Struct);
+		OUT(color);
+		OUT(messageid);
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_SpecialMesg)
 	{
 		EQApplicationPacket *__packet = *p; 

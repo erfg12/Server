@@ -844,6 +844,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 		// the interrupt message
 		outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
 		InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
+		ic->entityid = GetID();
 		ic->messageid = message;
 		ic->color = color;
 		outapp->priority = 5;
