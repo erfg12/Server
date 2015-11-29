@@ -3427,6 +3427,7 @@ void Client::Handle_OP_Discipline(const EQApplicationPacket *app)
 		Log.Out(Logs::General, Logs::Discs, "No disc used and reuse time is met.");
 		EQApplicationPacket *outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
 		InterruptCast_Struct* ic = (InterruptCast_Struct*)outapp->pBuffer;
+		ic->entityid = GetID();
 		ic->messageid = DISCIPLINE_RDY;
 		ic->color = CC_User_Disciplines;
 		QueuePacket(outapp);
