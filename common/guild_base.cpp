@@ -320,7 +320,7 @@ uint32 BaseGuildManager::_GetFreeGuildID() {
 	// inserting, then getting the id. NOT getting a free id then inserting.
 	// could be a race condition.
 
-	for (auto index = 1; index < RuleI(Guild, MaxGuilds); ++index)
+	for (auto index = 1; index <= RuleI(Guild, MaxGuilds); ++index)
 	{
         query = StringFormat("SELECT id FROM guilds where id=%i;", index);
 		auto results = m_db->QueryDatabase(query);
@@ -949,7 +949,7 @@ unsigned char *BaseGuildManager::MakeOldGuildList(uint32 &length) const {
 	OldGuildsList_Struct* gl = new struct OldGuildsList_Struct;
 	memset(gl,0,sizeof(OldGuildsList_Struct));
 
-	for (int16 r = 0; r <= RuleI(Guild, MaxGuilds); r++) {
+	for (int16 r = 1; r <= RuleI(Guild, MaxGuilds); r++) {
 		std::string tmp;
 		if(GetGuildNameByID(r,tmp))
 		{
