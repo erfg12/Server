@@ -1399,8 +1399,8 @@ void Mob::MakeSpawnUpdateNoDelta(SpawnPositionUpdate_Struct *spu)
 	memset(spu,0xff,sizeof(SpawnPositionUpdate_Struct));
 
 	spu->spawn_id	= GetID();
-	spu->x_pos = static_cast<int16>(m_Position.x);
-	spu->y_pos = static_cast<int16>(m_Position.y);
+	spu->x_pos = static_cast<int16>(m_Position.x + 0.5f);
+	spu->y_pos = static_cast<int16>(m_Position.y + 0.5f);
 	spu->z_pos = static_cast<int16>((m_Position.z)*10);
 	spu->heading	= static_cast<int8>(m_Position.w);
 
@@ -1432,8 +1432,8 @@ void Mob::MakeSpawnUpdate(SpawnPositionUpdate_Struct* spu)
 	auto currentloc = glm::vec4(GetX(), GetY(), GetZ(), GetHeading());
 
 	spu->spawn_id	= GetID();
-	spu->x_pos = static_cast<int16>(m_Position.x);
-	spu->y_pos = static_cast<int16>(m_Position.y);
+	spu->x_pos = static_cast<int16>(m_Position.x + 0.5f);
+	spu->y_pos = static_cast<int16>(m_Position.y + 0.5f);
 	spu->z_pos = static_cast<int16>(10.0f * m_Position.z);
 	spu->heading	= static_cast<int8>(currentloc.w);
 

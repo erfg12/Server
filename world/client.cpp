@@ -1066,6 +1066,13 @@ bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 	{
 		int32 zoneid = database.GetZoneID(cc->zonename);
 		cc->start_zone =  zoneid;
+		// dwarf start zone for Cleric, Paladin and Rogues
+		if (cc->race == 8)
+		{
+			if (cc->class_ == 2 || cc->class_ == 3 || cc->class_ == 9) {
+				cc->start_zone = 67;
+			}
+		}
 	}
 
 	Log.Out(Logs::Detail, Logs::World_Server, "Character creation request from %s LS#%d (%s:%d) : ", GetCLE()->LSName(), GetCLE()->LSID(), inet_ntoa(in), GetPort());
