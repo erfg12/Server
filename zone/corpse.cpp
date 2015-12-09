@@ -16,7 +16,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 /*
-New class for handeling corpses and everything associated with them.
+New class for handling corpses and everything associated with them.
 Child of the Mob class.
 -Quagmire
 */
@@ -47,6 +47,7 @@ Child of the Mob class.
 #include "quest_parser_collection.h"
 #include "string_ids.h"
 #include "worldserver.h"
+#include "queryserv.h"
 #include <iostream>
 #include "remote_call_subscribe.h"
 
@@ -54,6 +55,7 @@ Child of the Mob class.
 extern EntityList entity_list;
 extern Zone* zone;
 extern WorldServer worldserver;
+extern QueryServ* QServ;
 extern npcDecayTimes_Struct npcCorpseDecayTimes[100];
 
 void Corpse::SendEndLootErrorPacket(Client* client) {
@@ -282,7 +284,7 @@ Corpse::Corpse(Client* client, int32 in_rezexp, uint8 in_killedby) : Mob (
 	0,								  // uint16		in_cha,
 	client->GetPP().haircolor,		  // uint8		in_haircolor,
 	client->GetPP().beardcolor,		  // uint8		in_beardcolor,
-	client->GetPP().eyecolor1,		  // uint8		in_eyecolor1, // the eyecolors always seem to be the same, maybe left and right eye?
+	client->GetPP().eyecolor1,		  // uint8		in_eyecolor1, // the eye colors always seem to be the same, maybe left and right eye?
 	client->GetPP().eyecolor2,		  // uint8		in_eyecolor2,
 	client->GetPP().hairstyle,		  // uint8		in_hairstyle,
 	client->GetPP().face,			  // uint8		in_luclinface,
@@ -290,7 +292,7 @@ Corpse::Corpse(Client* client, int32 in_rezexp, uint8 in_killedby) : Mob (
 	0,								  // uint32		in_armor_tint[_MaterialCount],
 	0xff,							  // uint8		in_aa_title,
 	0,								  // uint8		in_see_invis, // see through invis
-	0,								  // uint8		in_see_invis_undead, // see through invis vs. undead
+	0,								  // uint8		in_see_invis_undead, // see through invis vs. un dead
 	0,								  // uint8		in_see_hide,
 	0,								  // uint8		in_see_improved_hide,
 	0,								  // int32		in_hp_regen,
@@ -602,7 +604,7 @@ Corpse::~Corpse() {
 
 /*
 this needs to be called AFTER the entity_id is set
-the client does this too, so it's unchangable
+the client does this too, so it's unchangeable
 */
 void Corpse::CalcCorpseName() {
 	EntityList::RemoveNumbers(name);
@@ -929,7 +931,7 @@ bool Corpse::Process() {
 				Save();
 				player_corpse_depop = true;
 				corpse_db_id = 0;
-				Log.Out(Logs::General, Logs::Corpse, "Tagged %s player corpse has burried.", this->GetName());
+				Log.Out(Logs::General, Logs::Corpse, "Tagged %s player corpse has buried.", this->GetName());
 			}
 			else {
 				Log.Out(Logs::General, Logs::Error, "Unable to bury %s player corpse.", this->GetName());
@@ -1049,7 +1051,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 		d->unknown1		= 0x42;
 		d->unknown2		= 0xef;
 
-		/* Dont take the coin off if it's a gm peeking at the corpse */
+		/* Don't take the coin off if it's a gm peeking at the corpse */
 		if(Loot_Request_Type == 2 || (Loot_Request_Type >= 3 && loot_coin)) { 
 			if(!IsPlayerCorpse() && client->IsGrouped() && client->AutoSplitEnabled() && client->GetGroup()) {
 				d->copper		= 0;
@@ -1058,6 +1060,11 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 				d->platinum		= 0;
 				Group *cgroup = client->GetGroup();
 				cgroup->SplitMoney(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), client);
+				/* QS: Player_Log_Looting */
+				if (RuleB(QueryServ, PlayerLogLoot))
+				{
+					QServ->QSLootRecords(client->CharacterID(), corpse_name, "CASH-SPLIT", client->GetZoneID(), 0, "null", 0, GetPlatinum(), GetGold(), GetSilver(), GetCopper());
+				}
 			}
 			else {
 				d->copper = this->GetCopper();
@@ -1065,6 +1072,11 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 				d->gold = this->GetGold();
 				d->platinum = this->GetPlatinum();
 				client->AddMoneyToPP(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), false);
+				/* QS: Player_Log_Looting */
+				if (RuleB(QueryServ, PlayerLogLoot))
+				{
+					QServ->QSLootRecords(client->CharacterID(), corpse_name, "CASH", client->GetZoneID(), 0, "null", 0, GetPlatinum(), GetGold(), GetSilver(), GetCopper());
+				}
 			}
 
 			RemoveCash();
@@ -1100,7 +1112,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 			ServerLootItem_Struct* item_data = *cur;
 			item_data->lootslot = 0xFFFF;
 
-			// Dont display the item if it's in a bag
+			// Don't display the item if it's in a bag
 			// Added cursor queue slots to corpse item visibility list. Nothing else should be making it to corpse.
 			if (!IsPlayerCorpse() || item_data->equip_slot <= EmuConstants::GENERAL_END || item_data->equip_slot == MainPowerSource || Loot_Request_Type >= 3 ||
 				(item_data->equip_slot >= EmuConstants::CURSOR_QUEUE_BEGIN && item_data->equip_slot <= EmuConstants::CURSOR_QUEUE_END)) {
@@ -1135,7 +1147,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 			}
 
 			if (IsPlayerCorpse() && i == 0 && itemlist.size() > 0) { // somehow, player corpse contains items, but client doesn't see them...
-				client->Message(CC_Red, "This corpse contains items that are inaccessable!");
+				client->Message(CC_Red, "This corpse contains items that are inaccessible!");
 				client->Message(CC_Yellow, "Contact a GM for item replacement, if necessary.");
 				client->Message(CC_Yellow, "BUGGED CORPSE [DBID: %i, Name: %s, Item Count: %i]", GetCorpseDBID(), GetName(), itemlist.size());
 
@@ -1145,7 +1157,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 					ServerLootItem_Struct* item_data = *cur;
 					item = database.GetItem(item_data->item_id);
 					Log.Out(Logs::General, Logs::Corpse, "Corpse Looting: %s was not sent to client loot window (corpse_dbid: %i, charname: %s(%s))", item->Name, GetCorpseDBID(), client->GetName(), client->GetGM() ? "GM" : "Owner");
-					client->Message(CC_Default, "Inaccessable Corpse Item: %s", item->Name);
+					client->Message(CC_Default, "Inaccessible Corpse Item: %s", item->Name);
 				}
 			}
 		}
@@ -1154,6 +1166,7 @@ void Corpse::MakeLootRequestPackets(Client* client, const EQApplicationPacket* a
 	// Disgrace: Client seems to require that we send the packet back...
 	client->QueuePacket(app);
 }
+
 void Corpse::LootItem(Client* client, const EQApplicationPacket* app) {
 	/* This gets sent no matter what as a sort of ACK */
 	client->QueuePacket(app);
@@ -1186,7 +1199,7 @@ void Corpse::LootItem(Client* client, const EQApplicationPacket* app) {
 		return;
 	}
 	if (IsPlayerCorpse() && !CanPlayerLoot(client->CharacterID()) && !become_npc && (char_id != client->CharacterID() && client->Admin() < 150)) {
-		client->Message(CC_Red, "Error: This is a player corpse and you dont own it.");
+		client->Message(CC_Red, "Error: This is a player corpse and you don't own it.");
 		SendEndLootErrorPacket(client);
 		return;
 	}
@@ -1210,7 +1223,7 @@ void Corpse::LootItem(Client* client, const EQApplicationPacket* app) {
 		item = database.GetItem(GetPlayerKillItem());
 	}
 	else if (GetPlayerKillItem() == -1 || GetPlayerKillItem() == 1){
-		item_data = GetItem(lootitem->slot_id); //dont allow them to loot entire bags of items as pvp reward
+		item_data = GetItem(lootitem->slot_id); //don't allow them to loot entire bags of items as pvp reward
 	}
 	else{
 		item_data = GetItem(lootitem->slot_id, bag_item_data);
@@ -1340,6 +1353,12 @@ void Corpse::LootItem(Client* client, const EQApplicationPacket* app) {
 		SendEndLootErrorPacket(client);
 		safe_delete(inst);
 		return;
+	}
+
+	/* QS: Player_Log_Looting */
+	if (RuleB(QueryServ, PlayerLogLoot))
+	{
+		QServ->QSLootRecords(client->CharacterID(), corpse_name, "ITEM", client->GetZoneID(), item->ID, item->Name, inst->GetCharges(), GetPlatinum(), GetGold(), GetSilver(), GetCopper());
 	}
 
 	safe_delete(inst);

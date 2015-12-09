@@ -645,6 +645,12 @@ void Lua_Client::SummonItem(uint32 item_id, int charges, bool attuned, int to_sl
 	self->SummonItem(item_id, charges, attuned, to_slot);
 }
 
+void Lua_Client::SummonItem(uint32 item_id, int charges, bool attuned, int to_slot, bool force_charges) {
+	Lua_Safe_Call_Void();
+	self->SummonItem(item_id, charges, attuned, to_slot, force_charges);
+}
+
+
 void Lua_Client::DropItem(int slot_id) {
 	Lua_Safe_Call_Void();
 	self->DropItem(slot_id);
@@ -1230,6 +1236,7 @@ luabind::scope lua_register_client() {
 		.def("SummonItem", (void(Lua_Client::*)(uint32,int))&Lua_Client::SummonItem)
 		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool))&Lua_Client::SummonItem)
 		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool,int))&Lua_Client::SummonItem)
+		.def("SummonItem", (void(Lua_Client::*)(uint32,int,bool,int,bool))&Lua_Client::SummonItem)
 		.def("DropItem", (void(Lua_Client::*)(int))&Lua_Client::DropItem)
 		.def("BreakInvis", (void(Lua_Client::*)(void))&Lua_Client::BreakInvis)
 		.def("LeaveGroup", (void(Lua_Client::*)(void))&Lua_Client::LeaveGroup)

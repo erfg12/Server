@@ -163,7 +163,7 @@ struct Item_Struct {
 	uint32	RecastType;
 	bool	NoPet;
 	bool	Stackable;
-	int8	Stackable_; //Stackable is not a bool on EQMac
+	int8	Stackable_; // EQMac uses 0 for non-stackable, 1 for stackable, and 3 indicates the item has a spell effect. 2 seems to be unused.
 	bool	NoTransfer;
 	bool	QuestItemFlag;
 	int16	StackSize;

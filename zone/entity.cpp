@@ -461,53 +461,54 @@ void EntityList::CorpseProcess()
 
 void EntityList::MobProcess()
 {
-
-	if(zone && RuleB(Zone, IdleWhenEmpty) && !zone->IsBoatZone())
-	{
-		if (numclients < 1 && !zone->idle_timer.Enabled() && !zone->idle)
-		{
-			zone->idle_timer.Start(RuleI(Zone, IdleTimer)); // idle timer from when the last player left the zone.
-			Log.Out(Logs::General, Logs::EQMac, "Entity Process: Number of clients has dropped to 0. Setting idle timer.");
-			Log.log_settings[Logs::Server_Client_Packet_With_Dump].log_to_gmsay = 0;
-			Log.log_settings[Logs::Client_Server_Packet_With_Dump].log_to_gmsay = 0;
-		}
-		else if(numclients >= 1 && zone->idle)
-		{
-			if(zone->idle_timer.Enabled())
-				zone->idle_timer.Disable();
-			zone->idle = false;
-			Log.Out(Logs::General, Logs::EQMac, "Entity Process: A player has entered the zone, leaving idle state.");
-		}
-
-		if(zone->idle_timer.Check())
-		{
-			zone->idle_timer.Disable();
-			if(numclients < 1)
-			{
-				zone->idle = true;
-				Log.Out(Logs::General, Logs::EQMac, "Entity Process: Idle timer has expired, zone will now idle.");
-			}
-			else
-			{
-				zone->idle = false;
-				Log.Out(Logs::General, Logs::EQMac, "Entity Process: Idle timer has expired, but there are players in the zone. Zone will not idle.");
-			}
-		}
-
-		if(numclients < 1 && zone->idle)
-		{
-			return;
-		}
-	}
-
-
+	bool mob_dead;
 	auto it = mob_list.begin();
 	while (it != mob_list.end()) {
 		uint16 id = it->first;
 		Mob *mob = it->second;
-
 		size_t sz = mob_list.size();
-		bool p_val = mob->Process();
+		if (zone && RuleB(Zone, IdleWhenEmpty) && !zone->IsBoatZone())
+		{
+			if (numclients < 1 && !zone->idle_timer.Enabled() && !zone->idle)
+			{
+				zone->idle_timer.Start(RuleI(Zone, IdleTimer)); // idle timer from when the last player left the zone.
+				Log.Out(Logs::General, Logs::EQMac, "Entity Process: Number of clients has dropped to 0. Setting idle timer.");
+				Log.log_settings[Logs::Server_Client_Packet_With_Dump].log_to_gmsay = 0;
+				Log.log_settings[Logs::Client_Server_Packet_With_Dump].log_to_gmsay = 0;
+			}
+			else if (numclients >= 1 && zone->idle)
+			{
+				if (zone->idle_timer.Enabled())
+					zone->idle_timer.Disable();
+				zone->idle = false;
+				Log.Out(Logs::General, Logs::EQMac, "Entity Process: A player has entered the zone, leaving idle state.");
+			}
+
+			if (zone->idle_timer.Check())
+			{
+				zone->idle_timer.Disable();
+				if (numclients < 1)
+				{
+					zone->idle = true;
+					Log.Out(Logs::General, Logs::EQMac, "Entity Process: Idle timer has expired, zone will now idle.");
+				}
+				else
+				{
+					zone->idle = false;
+					Log.Out(Logs::General, Logs::EQMac, "Entity Process: Idle timer has expired, but there are players in the zone. Zone will not idle.");
+				}
+			}
+
+			// spawn_events can cause spawns and deaths while zone idled.
+			// At the very least, process that.
+			if (numclients < 1 && zone->idle)
+				mob_dead = mob->CastToNPC()->GetDepop();
+			else
+				mob_dead = !mob->Process();
+		}
+		else
+			mob_dead = !mob->Process();
+
 		size_t a_sz = mob_list.size();
 
 		if(a_sz > sz) {
@@ -520,7 +521,7 @@ void EntityList::MobProcess()
 			++it;
 		}
 
-		if(!p_val) {
+		if (mob_dead) {
 			if(mob->IsNPC()) {
 				entity_list.RemoveNPC(id);
 			}
@@ -3000,7 +3001,7 @@ void EntityList::ClearFeignAggro(Mob *targ)
 
 			it->second->RemoveFromHateList(targ);
 			if (targ->IsClient()) {
-				if (it->second->GetLevel() >= 35 && zone->random.Roll(60))
+				if (it->second->GetLevel() >= 35 && zone->random.Roll(65))
 					it->second->AddFeignMemory(targ->CastToClient());
 			}
 		}
@@ -3119,7 +3120,7 @@ void EntityList::AddHealAggro(Mob *target, Mob *caster, uint16 hate)
 			continue;
 		}
 		if (zone->random.Roll(50))		// heals and other beneficial spells can fail a 'witness check' and do zero hate
-		{								// the chance seems to scale by level.  formula unknown.  pulling 15% out of my ass for now
+		{
 			++it;
 			continue;
 		}
@@ -3640,6 +3641,20 @@ bool EntityList::GetZommPet(Mob *owner, NPC* &pet)
 		++it;
 	}
 	return false;
+}
+
+uint16 EntityList::GetSummonedPetID(Mob *summoner)
+{
+	auto it = npc_list.begin();
+	while (it != npc_list.end())
+	{
+		if (it->second->GetSummonerID() == summoner->GetID())
+		{
+			return it->second->GetID();
+		}
+		++it;
+	}
+	return 0;
 }
 
 void EntityList::AddTempPetsToHateList(Mob *owner, Mob* other, bool bFrenzy)
@@ -4628,7 +4643,7 @@ void EntityList::SendMerchantEnd(Mob* merchant)
 	return;
 }
 
-void EntityList::SendMerchantInventory(Mob* merchant)
+void EntityList::SendMerchantInventory(Mob* merchant, int32 slotid, bool isdelete)
 {
 
 	if(!merchant || !merchant->IsNPC())
@@ -4643,7 +4658,21 @@ void EntityList::SendMerchantInventory(Mob* merchant)
 
 		if(c->GetMerchantSession() == merchant->GetID())
 		{
-			c->BulkSendMerchantInventory(merchant->CastToNPC()->MerchantType, merchant->GetNPCTypeID());
+			if(!isdelete)
+			{
+				c->BulkSendMerchantInventory(merchant->CastToNPC()->MerchantType, merchant->GetNPCTypeID());
+			}
+			else
+			{
+				EQApplicationPacket* delitempacket = new EQApplicationPacket(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
+				Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
+				delitem->itemslot = slotid;
+				delitem->npcid = merchant->GetID();
+				delitem->playerid = c->GetID();
+				delitempacket->priority = 6;
+				c->QueuePacket(delitempacket);
+				safe_delete(delitempacket);
+			}
 		}
 		++it;
 	}

@@ -59,6 +59,20 @@ SET(world_headers
 	zoneserver.h
 )
 
+SOURCE_GROUP(admin_page FILES
+	eqw.h
+	eqw.cpp
+	eqw_http_handler.h
+	eqw_http_handler.cpp
+	eqw_parser.h
+	eqw_parser.cpp
+	http_request.h
+	http_request.cpp
+	perl_eql_config.cpp
+	perl_eqw.cpp
+	perl_http_request.cpp
+)
+
 ADD_EXECUTABLE(world ${world_sources} ${world_headers})
 
 INSTALL(TARGETS world RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})

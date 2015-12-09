@@ -982,6 +982,9 @@ bool Mob::CombatRange(Mob* other)
 	float size_mod = GetSize();
 	float other_size_mod = other->GetSize();
 
+	// race 49 == 'Lava Dragon' (Lord Nagafen, Lady Vox, All VP dragons, Klandicar, etc)
+	// race 158 == Wurms
+	// race 196 == 'Ghost Dragon' (Jaled`Dar's shade)
 	if(GetRace() == 49 || GetRace() == 158 || GetRace() == 196) //For races with a fixed size
 		size_mod = 60.0f;
 	else if (size_mod < 6.0)
@@ -1053,7 +1056,6 @@ bool Mob::CheckLosFN(Mob* other) {
 		Result = CheckLosFN(other->GetX(), other->GetY(), other->GetZ(), other->GetSize());
 
 	SetLastLosState(Result);
-	
 	return Result;
 }
 
@@ -1142,10 +1144,6 @@ int32 Mob::CheckAggroAmount(uint16 spell_id, Mob* target, int32 &jolthate, bool 
 	if (standardSpellHate > 1200)
 	{
 		standardSpellHate = 1200;
-	}
-	if (isproc && standardSpellHate > 400)
-	{
-		standardSpellHate = 400;
 	}
 
 	for (int o = 0; o < EFFECT_COUNT; o++)
@@ -1309,6 +1307,11 @@ int32 Mob::CheckAggroAmount(uint16 spell_id, Mob* target, int32 &jolthate, bool 
 			}
 		}
 	}
+
+	// procs and clickables capped at 400
+	// damage aggro is still added later, so procs like the SoD's anarchy still do more than 400
+	if (isproc && AggroAmount > 400)
+		AggroAmount = 400;
 
 	if (GetClass() == BARD)
 	{
@@ -1528,9 +1531,40 @@ bool Mob::PassCharismaCheck(Mob* caster, uint16 spell_id) {
 	else
 	{
 		// Assume this is a harmony/pacify spell
-		// If 'Lull' spell resists, do a second resist check with a charisma modifier AND regular resist checks. If resists agian you gain aggro.
-		resist_check = ResistSpell(spells[spell_id].resisttype, spell_id, caster, false,0,true);
-		if (resist_check == 100)
+
+		/*	Data this is based on:
+
+			Level 50 Enchanter with 62 Charisma casting Pacify on Test Fifty Five:
+			2428 casts; 2111 hits; 317 resists (13.05%)
+			Aggros on resists: 241 (76% of resists, 9.9% of casts)
+
+			Level 50 Enchanter with 115 Charisma casting Pacify on Test Fifty Five:
+			671 casts; 585 hits; 86 resists (12.8%)
+			Aggros on resists: 53 (61.3% of resists, 7.9% of casts)
+
+			Level 50 Enchanter with 159 Charisma casting Pacify on Test Fifty:
+			1482 casts; 1365 hits; 117 resists (7.89%)
+			Aggros on resists: 52 (44.44% of resists, 3.5% of casts)
+
+			Level 50 Enchanter with 200 Charisma casting Pacify on Test Fifty Five:
+			1496 casts; 1294 hits; 202 resists (13.5%)
+			Aggros on resists: 80 (39.6% of resists, 5.3% of casts)
+
+			Level 50 Enchanter with 255 Charisma casting Pacify on Test Fifty:
+			1865 casts; 1722 hits; 143 resists (7.66%)
+			Aggros on resists: 36 (25.17% of resists, 1.93% of casts)
+
+			Level 65 Enchanter with 305 Charisma casting Pacification on Test Sixty Five:
+			4833 casts; 4463 hits; 370 resists (7.66%)
+			Aggros on resists: 51 (13.78% of resists, 1.06% of casts)
+
+			Dev comment stated that this check is entirely charisma based.  Logs confirm.
+		*/
+		int aggroChance = 93 - caster->GetCHA() * 100 / 375;
+		if (aggroChance < 15)
+			aggroChance = 15;
+		
+		if (!zone->random.Roll(aggroChance))
 			return true;
 	}
 

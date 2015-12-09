@@ -361,6 +361,21 @@ void Client::SendLogoutPackets() {
 	FastQueuePacket(&outapp);
 }
 
+void Client::SendCancelTrade(Mob* with) {
+
+	EQApplicationPacket* outapp = new EQApplicationPacket(OP_CancelTrade, sizeof(CancelTrade_Struct));
+	CancelTrade_Struct* ct = (CancelTrade_Struct*) outapp->pBuffer;
+	ct->fromid = with->GetID();
+	FastQueuePacket(&outapp);
+
+	outapp = new EQApplicationPacket(OP_TradeReset, 0);
+	QueuePacket(outapp);
+	safe_delete(outapp);
+
+	FinishTrade(this);
+	trade->Reset();
+}
+
 void Client::ReportConnectingState() {
 	switch(conn_state) {
 	case NoPacketsReceived:		//havent gotten anything
@@ -2982,6 +2997,7 @@ void Client::SendPickPocketResponse(Mob *from, uint32 amt, int type, int16 sloti
 	if(type == PickPocketItem && inst)
 	{
 		SendItemPacket(slotid, inst, ItemPacketStolenItem, GetID(), from->GetID(), GetSkill(SkillPickPockets));
+		PutItemInInventory(slotid, *inst);
 		return;
 	}
 	else
@@ -3006,19 +3022,42 @@ void Client::SendPickPocketResponse(Mob *from, uint32 amt, int type, int16 sloti
 
 bool Client::GetPickPocketSlot(ItemInst* inst, int16& freeslotid)
 {
-	bool is_arrow = (inst->GetItem()->ItemType == ItemTypeArrow) ? true : false;
-	freeslotid = m_inv.FindFreeSlot(false, true, inst->GetItem()->Size, is_arrow);
 
-	//make sure we are not completely full...
-	if ((freeslotid == MainCursor && m_inv.GetItem(MainCursor) != nullptr) || freeslotid == INVALID_INDEX)
+	if(CheckLoreConflict(inst->GetItem()))
 	{
-		freeslotid == INVALID_INDEX;
 		return false;
 	}
-	else
+
+	if(database.ItemQuantityType(inst->GetItem()->ID) == Quantity_Stacked)
 	{
-		PutItemInInventory(freeslotid, *inst);
-		return true;
+		freeslotid = GetStackSlot(inst);
+		if(freeslotid >= 0)
+		{
+			ItemInst* oldinst = GetInv().GetItem(freeslotid);
+			if(oldinst)
+			{
+				uint8 newcharges = oldinst->GetCharges() + inst->GetCharges();
+				inst->SetCharges(newcharges);
+				DeleteItemInInventory(freeslotid, 0, true);
+			}
+			return true;
+		}
+	}
+	
+	if(freeslotid < 0)
+	{
+		bool is_arrow = (inst->GetItem()->ItemType == ItemTypeArrow) ? true : false;
+		freeslotid = m_inv.FindFreeSlot(false, true, inst->GetItem()->Size, is_arrow);
+
+		//make sure we are not completely full...
+		if ((freeslotid == MainCursor && m_inv.GetItem(MainCursor) != nullptr) || freeslotid == INVALID_INDEX)
+		{
+			return false;
+		}
+		else
+		{
+			return true;
+		}
 	}
 }
 
@@ -4060,7 +4099,8 @@ void Client::SendStats(Client* client)
 	client->Message(CC_Default, " Level: %i Class: %i Race: %i RaceBit: %i Size: %1.1f BaseSize: %1.1f Weight: %.1f/%d  ", GetLevel(), GetClass(), GetRace(), GetRaceBitmask(GetRace()), GetSize(), GetBaseSize(), (float)CalcCurrentWeight() / 10.0f, GetSTR());
 	client->Message(CC_Default, " HP: %i/%i  HP Regen: %i/%i",GetHP(), GetMaxHP(), CalcHPRegen()+RestRegenHP, CalcHPRegenCap());
 	client->Message(CC_Default, " AC: %i ( Mit.: %i + Avoid.: %i + Spell: %i ) | Shield AC: %i DS: %i", CalcAC(), GetMitigation(), GetAvoidance(), spellbonuses.AC, shield_ac, GetDS());
-	client->Message(CC_Default, " AFK: %i LFG: %i Anon: %i PVP: %i GM: %i Flymode: %i GMSpeed: %i Hideme: %i GMInvul: %d LD: %i ClientVersion: %i TellsOff: %i", AFK, LFG, GetAnon(), GetPVP(), GetGM(), flymode, GetGMSpeed(), GetHideMe(), GetGMInvul(), IsLD(), GetClientVersionBit(), tellsoff);
+	client->Message(CC_Default, " AFK: %i LFG: %i Anon: %i PVP: %i LD: %i ClientVersion: %i ", AFK, LFG, GetAnon(), GetPVP(), IsLD(), GetClientVersionBit());
+	client->Message(CC_Default, " GM: %i Flymode: %i GMSpeed: %i Hideme: %i GMInvul: %d TellsOff: %i ", GetGM(), flymode, GetGMSpeed(), GetHideMe(), GetGMInvul(), tellsoff);
 	if(CalcMaxMana() > 0)
 		client->Message(CC_Default, " Mana: %i/%i  Mana Regen: %i/%i", GetMana(), GetMaxMana(), CalcManaRegen()+RestRegenMana, CalcManaRegenCap());
 	client->Message(CC_Default, "  X: %0.2f Y: %0.2f Z: %0.2f", GetX(), GetY(), GetZ());
@@ -4069,7 +4109,7 @@ void Client::SendStats(Client* client)
 	client->Message(CC_Default, " Haste: %i / %i (Item: %i + Spell: %i + Over: %i)", GetHaste(), RuleI(Character, HasteCap), itembonuses.haste, spellbonuses.haste + spellbonuses.hastetype2, spellbonuses.hastetype3 + ExtraHaste);
 	client->Message(CC_Default, " STR: %i  STA: %i  AGI: %i DEX: %i  WIS: %i INT: %i  CHA: %i", GetSTR(), GetSTA(), GetAGI(), GetDEX(), GetWIS(), GetINT(), GetCHA());
 	client->Message(CC_Default, " PR: %i MR: %i  DR: %i FR: %i  CR: %i  ", GetPR(), GetMR(), GetDR(), GetFR(), GetCR());
-	client->Message(CC_Default, " Shielding: %i  Spell Shield: %i  DoT Shielding: %i Stun Resist: %i  Strikethrough: %i  Avoidance: %i  Accuracy: %i  Combat Effects: %i", GetShielding(), GetSpellShield(), GetDoTShield(), GetStunResist(), GetStrikeThrough(), GetAvoidanceMod(), GetAccuracy(), GetCombatEffects());
+	client->Message(CC_Default, " Shielding: %i  Spell Shield: %i  DoT Shielding: %i Stun Resist: %i  Strikethrough: %i  Avoidance: %i  Accuracy: %i", GetShielding(), GetSpellShield(), GetDoTShield(), GetStunResist(), GetStrikeThrough(), GetAvoidanceMod(), GetAccuracy());
 	client->Message(CC_Default, " Runspeed: %0.1f  Walkspeed: %0.1f Hunger: %i Thirst: %i Famished: %i Encumbered: %i Boat: %s (Ent %i : NPC %i)", GetRunspeed(), GetWalkspeed(), GetHunger(), GetThirst(), GetFamished(), IsEncumbered(), GetBoatName(), GetBoatID(), GetBoatNPCID());
 	if(GetClass() == WARRIOR)
 		client->Message(CC_Default, "HasShield: %i KickDmg: %i BashDmg: %i", HasShieldEquiped(), GetKickDamage(), GetBashDamage());
@@ -4263,7 +4303,7 @@ FACTION_VALUE Client::GetFactionLevel(uint32 char_id, uint32 npc_id, uint32 p_ra
 		return FACTION_INDIFFERENT;
 	if (tnpc && tnpc->GetOwnerID() != 0) // pets con amiably to owner and indiff to rest
 	{
-		if (tnpc->GetOwner()->IsClient() && char_id == tnpc->GetOwner()->CastToClient()->CharacterID())
+		if (tnpc->GetOwner() && tnpc->GetOwner()->IsClient() && char_id == tnpc->GetOwner()->CastToClient()->CharacterID())
 			return FACTION_AMIABLE;
 		else
 			return FACTION_INDIFFERENT;

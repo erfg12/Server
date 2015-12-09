@@ -117,7 +117,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int if
 	qglobal_purge_timer(30000),
 	sendhpupdate_timer(1000),
 	enraged_timer(1000),
-	taunt_timer(TauntReuseTime * 1000),
+	taunt_timer((TauntReuseTime + 1) * 1000),		// pet taunt timer should be 6 seconds
 	m_SpawnPoint(position),
 	m_GuardPoint(-1,-1,-1,0),
 	m_GuardPointSaved(0,0,0,0)
@@ -235,6 +235,7 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int if
 	HasAISpell = false;
 	HasAISpellEffects = false;
 	innateProcSpellId = 0;
+	hasZeroPrioritySpells = false;
 
 	SpellFocusDMG = 0;
 	SpellFocusHeal = 0;
@@ -271,6 +272,15 @@ NPC::NPC(const NPCType* d, Spawn2* in_respawn, const glm::vec4& position, int if
 	int r;
 	for(r = 0; r <= HIGHEST_SKILL; r++) {
 		skills[r] = database.GetSkillCap(GetClass(),(SkillUseTypes)r,moblevel);
+	}
+
+	if (GetSpecialAbility(USE_WARRIOR_SKILLS))
+	{
+		skills[SkillRiposte] = database.GetSkillCap(WARRIOR, SkillRiposte, moblevel);
+		skills[SkillParry] = database.GetSkillCap(WARRIOR, SkillParry, moblevel);
+		skills[SkillDodge] = database.GetSkillCap(WARRIOR, SkillDodge, moblevel);
+		skills[SkillBash] = database.GetSkillCap(WARRIOR, SkillBash, moblevel);
+		skills[SkillKick] = database.GetSkillCap(WARRIOR, SkillKick, moblevel);
 	}
 
 	reface_timer = new Timer(15000);
@@ -1324,7 +1334,7 @@ void NPC::PickPocket(Client* thief)
 			if (item)
 			{
 				inst = database.CreateItem(item, citem->charges);
-				if (!IsEquipped(item->ID) && !item->Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer))
+				if (!IsEquipped(item->ID) && !item->Magic && item->NoDrop != 0 && !inst->IsType(ItemClassContainer) && !thief->CheckLoreConflict(item))
 				{
 					steal_items[x] = item->ID;
 					if (inst->IsStackable())
@@ -1347,15 +1357,22 @@ void NPC::PickPocket(Client* thief)
 				{
 					if (steal_skill > zone->random.Int(1,210))
 					{
-						int16 slotid = 0;
+						int16 slotid = -1;
 						if(!thief->GetPickPocketSlot(inst, slotid))
 						{
 							thief->SendPickPocketResponse(this, 0, PickPocketFailed);
 						}
 						else
 						{
-							thief->SendPickPocketResponse(this, 0, PickPocketItem, slotid, inst);
-							RemoveItem(item->ID);
+							if(slotid >= 0)
+							{
+								thief->SendPickPocketResponse(this, 0, PickPocketItem, slotid, inst);
+								RemoveItem(item->ID);
+							}
+							else
+							{
+								thief->SendPickPocketResponse(this, 0, PickPocketFailed);
+							}
 						}
 						safe_delete(inst);
 						return;
@@ -2365,7 +2382,7 @@ int32 NPC::GetHPRegen()
 	if((GetHP() < GetMaxHP()) && !IsPet()) 
 	{
 		// OOC
-		if(!IsEngaged()) 
+		if(!IsEngaged())
 		{
 			return(GetNPCHPRegen() + bonus); // hp_regen + spell/item regen + sitting bonus
 		// In Combat
@@ -2376,7 +2393,7 @@ int32 NPC::GetHPRegen()
 	// Pet
 	else if(GetHP() < GetMaxHP() && GetOwnerID() !=0) 
 	{
-		if(!IsEngaged())
+		if (!IsEngaged() && !IsCharmed() && !IsDireCharmed())
 			return(GetNPCHPRegen() + bonus + (GetLevel()/5));
 		else
 			return(GetCombatHPRegen() + (GetNPCHPRegen() - hp_regen));

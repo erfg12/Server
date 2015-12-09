@@ -71,9 +71,19 @@ bool Database::GITInfo()
 	const char* branch;
 	FILE *fhash;
 	FILE *fbranch;
+#ifdef GITSOURCE
+	const char * source_path = nullptr;
+	if (GITSOURCE != nullptr)
+		source_path = GITSOURCE;
+	else
+		source_path = "./source/.git";
+#else
+	const char * source_path = "./source/.git";
+#endif
 #ifdef _WINDOWS
 	char buf[1024];
-	fhash = _popen("C:\\\"Program Files (x86)\"\\Git\\bin\\git --git-dir=C:\\EQEmu\\source\\.git rev-parse HEAD", "r");
+	std::string gitParseHead = StringFormat("C:\\\"Program Files (x86)\"\\Git\\bin\\git --git-dir=%s rev-parse HEAD", source_path);
+	fhash = _popen(gitParseHead.c_str(), "r"), source_path;
 	while (fgets(buf, 1024, fhash))
 	{
 		const char * output = (const char *)buf;
@@ -97,7 +107,8 @@ bool Database::GITInfo()
 	fclose(fhash);
 
 	char buf2[1024];
-	fbranch = _popen("C:\\\"Program Files (x86)\"\\Git\\bin\\git --git-dir=C:\\EQEmu\\source\\.git rev-parse --abbrev-ref HEAD", "r");
+	std::string gitParseHeadabbrev = StringFormat("C:\\\"Program Files (x86)\"\\Git\\bin\\git --git-dir=%s rev-parse --abbrev-ref HEAD", source_path);
+	fbranch = _popen(gitParseHeadabbrev.c_str(), "r"), source_path;
 	while (fgets(buf2, 1024, fbranch))
 	{
 		const char * output = (const char *)buf2;
@@ -123,7 +134,8 @@ bool Database::GITInfo()
 	char* buf = NULL;
 	size_t len = 0;
 	fflush(NULL);
-	fhash = popen("git --git-dir=./source/.git rev-parse HEAD", "r");
+	std::string gitParseHead = StringFormat("git --git-dir=%s rev-parse rev-parse HEAD", source_path);
+	fhash = popen(gitParseHead.c_str(), "r");
 
 	while (getline(&buf, &len, fhash) != -1)
 	{
@@ -152,7 +164,8 @@ bool Database::GITInfo()
 
 	char* buf2 = NULL;
 	len = 0;
-	fbranch = popen("git --git-dir=./source/.git rev-parse --abbrev-ref HEAD", "r");
+	std::string gitParseHeadabbrev = StringFormat("git --git-dir=%s rev-parse --abbrev-ref HEAD", source_path);
+	fbranch = popen(gitParseHeadabbrev.c_str(), "r");
 	while (getline(&buf2, &len, fbranch) != -1)
 	{
 		const char * output = (const char *)buf2;

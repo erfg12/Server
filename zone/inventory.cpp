@@ -149,11 +149,14 @@ uint32 Client::NukeItem(uint32 itemnum, uint8 where_to_check) {
 bool Client::CheckLoreConflict(const Item_Struct* item) {
 	if (!item)
 		return false;
-	if (item->Lore[0] != '*')
+	if (item->Lore[0] != '*' && item->Lore[0] != '#')
 		return false;
 
 	if (item->Lore[0] == '*')	// Standard lore items; look everywhere except unused, return the result
 		return (m_inv.HasItem(item->ID, 0, ~invWhereUnused) != INVALID_INDEX);
+
+	else if(item->Lore[0] == '#')
+		return (m_inv.HasArtifactItem() != INVALID_INDEX);
 
 }
 
@@ -175,7 +178,10 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, bool attuned, uint16 to_
 	// check that there is not a lore conflict between base item and existing inventory
 	else if(CheckLoreConflict(item)) {
 		// DuplicateLoreMessage(item_id);
-		Message(CC_Red, "You already have a lore %s (%i) in your inventory.", item->Name, item_id);
+		if(item->Lore[0] == '#')
+			Message(CC_Red, "You already have an artifact item in your inventory.");
+		else
+			Message(CC_Red, "You already have a lore %s (%i) in your inventory.", item->Name, item_id);
 
 		return false;
 	}
@@ -199,11 +205,12 @@ bool Client::SummonItem(uint32 item_id, int16 quantity, bool attuned, uint16 to_
 
 	// validation passed..so, set the quantity and create the actual item
 
-	//Todo: Figure out if we still need this, or if we are good with just using 0.
 	if(quantity < 0)
+	{
 		quantity = 1;
-
-	else if (quantity == 0){
+	}
+	else if (quantity == 0)
+	{
 		if(database.ItemQuantityType(item_id) == Quantity_Normal)
 		{ 
 			quantity = 1;
@@ -426,17 +433,16 @@ void Client::DeleteItemInInventory(int16 slot_id, int8 quantity, bool client_upd
 
 		if(m_inv[slot_id]) { delete_count += m_inv.GetItem(slot_id)->GetTotalItemCount(); }
 
-		ServerPacket* qspack = new ServerPacket(ServerOP_QSPlayerLogDeletes, sizeof(QSPlayerLogDelete_Struct) + (sizeof(QSDeleteItems_Struct) * delete_count));
-		QSPlayerLogDelete_Struct* qsaudit = (QSPlayerLogDelete_Struct*)qspack->pBuffer;
-		uint16 parent_offset = 0;
+		ServerPacket* pack = new ServerPacket(ServerOP_QSPlayerLogItemDeletes, sizeof(QSPlayerLogItemDelete_Struct) * delete_count);
+		QSPlayerLogItemDelete_Struct* QS = (QSPlayerLogItemDelete_Struct*)pack->pBuffer;
 
-		qsaudit->char_id	= character_id;
-		qsaudit->stack_size = quantity;
-		qsaudit->char_count = delete_count;
+		QS->char_id = character_id;
+		QS->stack_size = quantity;
+		QS->char_count = delete_count;
 
-		qsaudit->items[parent_offset].char_slot = slot_id;
-		qsaudit->items[parent_offset].item_id	= m_inv[slot_id]->GetID();
-		qsaudit->items[parent_offset].charges	= m_inv[slot_id]->GetCharges();
+		QS->char_slot = slot_id;
+		QS->item_id = m_inv[slot_id]->GetID();
+		QS->charges = m_inv[slot_id]->GetCharges();
 
 		if(m_inv[slot_id]->IsType(ItemClassContainer)) {
 			for(uint8 bag_idx = SUB_BEGIN; bag_idx < m_inv[slot_id]->GetItem()->BagSlots; bag_idx++) {
@@ -445,16 +451,16 @@ void Client::DeleteItemInInventory(int16 slot_id, int8 quantity, bool client_upd
 				if(bagitem) {
 					int16 bagslot_id = Inventory::CalcSlotId(slot_id, bag_idx);
 
-					qsaudit->items[++parent_offset].char_slot	= bagslot_id;
-					qsaudit->items[parent_offset].item_id		= bagitem->GetID();
-					qsaudit->items[parent_offset].charges		= bagitem->GetCharges();
+					QS->char_slot = bagslot_id;
+					QS->item_id = bagitem->GetID();
+					QS->charges = bagitem->GetCharges();
 				}
 			}
 		}
 
-		qspack->Deflate();
-		if(worldserver.Connected()) { worldserver.SendPacket(qspack); }
-		safe_delete(qspack);
+		pack->Deflate();
+		if(worldserver.Connected()) { worldserver.SendPacket(pack); }
+		safe_delete(pack);
 	}
 	// end QS code
 
@@ -682,6 +688,70 @@ bool Client::TryStacking(ItemInst* item, uint8 type, bool try_worn, bool try_cur
 	}
 	return false;
 }
+
+int16 Client::GetStackSlot(ItemInst* item, bool try_worn, bool try_cursor)
+{
+
+	if(!item || !item->IsStackable())
+		return -1;
+	int16 i;
+	uint32 item_id = item->GetItem()->ID;
+	// Do all we can get to arrows to go to quiver first.
+	if(item->GetItem()->ItemType == ItemTypeArrow)
+	{
+		for (i = EmuConstants::GENERAL_BEGIN; i <= EmuConstants::GENERAL_END; i++)
+		{
+			ItemInst* bag = m_inv.GetItem(i);
+			if(bag)
+			{
+				if(bag->GetItem()->BagType == BagTypeQuiver)
+				{
+					int8 slots = bag->GetItem()->BagSlots;
+					uint16 emptyslot = 0;
+					for (uint8 j = SUB_BEGIN; j < slots; j++)
+					{
+						uint16 slotid = Inventory::CalcSlotId(i, j);
+						ItemInst* tmp_inst = m_inv.GetItem(slotid);
+						if(!tmp_inst)
+						{
+							emptyslot = slotid;
+						}
+						// Partial stack found use this first
+						if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < tmp_inst->GetItem()->StackSize){
+							return slotid;
+						}
+					}
+					// Use empty slot if no partial stacks
+					if(emptyslot != 0)
+					{
+						return emptyslot;
+					}
+				}
+			}
+		}
+	}
+	for (i = EmuConstants::GENERAL_BEGIN; i <= EmuConstants::GENERAL_END; i++)
+	{
+		ItemInst* tmp_inst = m_inv.GetItem(i);
+		if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < tmp_inst->GetItem()->StackSize){
+			return i;
+		}
+	}
+	for (i = EmuConstants::GENERAL_BEGIN; i <= EmuConstants::GENERAL_END; i++)
+	{
+		for (uint8 j = SUB_BEGIN; j < EmuConstants::ITEM_CONTAINER_SIZE; j++)
+		{
+			uint16 slotid = Inventory::CalcSlotId(i, j);
+			ItemInst* tmp_inst = m_inv.GetItem(slotid);
+
+			if(tmp_inst && tmp_inst->GetItem()->ID == item_id && tmp_inst->GetCharges() < tmp_inst->GetItem()->StackSize){
+				return slotid;
+			}
+		}
+	}
+	return -1;
+}
+
 // Locate an available space in inventory to place an item
 // and then put the item there
 // The change will be saved to the database
@@ -980,7 +1050,7 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 
 	// This could be expounded upon at some point to let the server know that
 	// the client has moved a buffered cursor item onto the active cursor -U
-	if (move_in->from_slot == move_in->to_slot) { // Item summon, no further proccessing needed
+	if (move_in->from_slot == move_in->to_slot) { // Item summon, no further processing needed
 		if(RuleB(QueryServ, PlayerLogMoves)) { QSSwapItemAuditor(move_in); } // QS Audit
 		return true;
 	}
@@ -1213,13 +1283,24 @@ bool Client::SwapItem(MoveItem_Struct* move_in) {
 			Log.Out(Logs::Detail, Logs::Inventory, "Trading item no on cursor.");
 			return false;
 		}
-		if (with) {
+		if (with) 
+		{
 			Log.Out(Logs::Detail, Logs::Inventory, "Trade item move from slot %d to slot %d (trade with %s)", src_slot_id, dst_slot_id, with->GetName());
 			// Fill Trade list with items from cursor
 			if (!m_inv[MainCursor]) {
 				Message(CC_Red, "Error: Cursor item not located on server!");
 				Log.Out(Logs::Detail, Logs::Inventory, "Error: Cursor item not located on server!");
 				return false;
+			}
+
+			if(with->IsNPC() && with->IsEngaged())
+			{
+				if(RuleB(QueryServ, PlayerLogMoves)) { QSSwapItemAuditor(move_in); } // QS Audit
+				trade->AddEntity(dst_slot_id, move_in->number_in_stack);
+
+				SendCancelTrade(with);
+				Log.Out(Logs::General, Logs::Trading, "Cancelled in-progress trade due to %s being in combat.", with->GetCleanName());
+				return true;
 			}
 
 			// Add cursor item to trade bucket
@@ -1385,10 +1466,10 @@ void Client::SwapItemResync(MoveItem_Struct* move_slots) {
 	// wow..this thing created a helluva memory leak...
 	// with any luck..this won't be needed in the future
 
-	// resync the 'from' and 'to' slots on an as-needed basis
-	// Not as effective as the full process, but less intrusive to gameplay -U
-	Log.Out(Logs::Detail, Logs::Inventory, "Inventory desyncronization. (charname: %s, source: %i, destination: %i)", GetName(), move_slots->from_slot, move_slots->to_slot);
-	Message(CC_Yellow, "Inventory Desyncronization detected: Resending slot data...");
+	// re sync the 'from' and 'to' slots on an as-needed basis
+	// Not as effective as the full process, but less intrusive to game play -U
+	Log.Out(Logs::Detail, Logs::Inventory, "Inventory desynchronization. (charname: %s, source: %i, destination: %i)", GetName(), move_slots->from_slot, move_slots->to_slot);
+	Message(CC_Yellow, "Inventory Desynchronization detected: Resending slot data...");
 
 	if((move_slots->from_slot >= EmuConstants::EQUIPMENT_BEGIN && move_slots->from_slot <= EmuConstants::CURSOR_BAG_END) || move_slots->from_slot == MainPowerSource) {
 		int16 resync_slot = (Inventory::CalcSlotId(move_slots->from_slot) == INVALID_INDEX) ? move_slots->from_slot : Inventory::CalcSlotId(move_slots->from_slot);
@@ -1411,9 +1492,9 @@ void Client::SwapItemResync(MoveItem_Struct* move_slots) {
 				safe_delete(outapp);
 			}
 			safe_delete(token_inst);
-			Message(14, "Source slot %i resyncronized.", move_slots->from_slot);
+			Message(CC_LightGreen, "Source slot %i resynchronized.", move_slots->from_slot);
 		}
-		else { Message(CC_Red, "Could not resyncronize source slot %i.", move_slots->from_slot); }
+		else { Message(CC_Red, "Could not resynchronize source slot %i.", move_slots->from_slot); }
 	}
 	else {
 		int16 resync_slot = (Inventory::CalcSlotId(move_slots->from_slot) == INVALID_INDEX) ? move_slots->from_slot : Inventory::CalcSlotId(move_slots->from_slot);
@@ -1426,11 +1507,11 @@ void Client::SwapItemResync(MoveItem_Struct* move_slots) {
 				SendItemPacket(resync_slot, m_inv[resync_slot], ItemPacketTrade);
 
 				safe_delete(token_inst);
-				Message(14, "Source slot %i resyncronized.", move_slots->from_slot);
+				Message(CC_LightGreen, "Source slot %i resynchronized.", move_slots->from_slot);
 			}
-			else { Message(CC_Red, "Could not resyncronize source slot %i.", move_slots->from_slot); }
+			else { Message(CC_Red, "Could not resynchronize source slot %i.", move_slots->from_slot); }
 		}
-		else { Message(CC_Red, "Could not resyncronize source slot %i.", move_slots->from_slot); }
+		else { Message(CC_Red, "Could not resynchronize source slot %i.", move_slots->from_slot); }
 	}
 
 	if((move_slots->to_slot >= EmuConstants::EQUIPMENT_BEGIN && move_slots->to_slot <= EmuConstants::CURSOR_BAG_END) || move_slots->to_slot == MainPowerSource) {
@@ -1453,9 +1534,9 @@ void Client::SwapItemResync(MoveItem_Struct* move_slots) {
 				safe_delete(outapp);
 			}
 			safe_delete(token_inst);
-			Message(14, "Destination slot %i resyncronized.", move_slots->to_slot);
+			Message(CC_LightGreen, "Destination slot %i resynchronized.", move_slots->to_slot);
 		}
-		else { Message(CC_Red, "Could not resyncronize destination slot %i.", move_slots->to_slot); }
+		else { Message(CC_Red, "Could not resynchronize destination slot %i.", move_slots->to_slot); }
 	}
 	else {
 		int16 resync_slot = (Inventory::CalcSlotId(move_slots->to_slot) == INVALID_INDEX) ? move_slots->to_slot : Inventory::CalcSlotId(move_slots->to_slot);
@@ -1468,11 +1549,11 @@ void Client::SwapItemResync(MoveItem_Struct* move_slots) {
 				SendItemPacket(resync_slot, m_inv[resync_slot], ItemPacketTrade);
 
 				safe_delete(token_inst);
-				Message(14, "Destination slot %i resyncronized.", move_slots->to_slot);
+				Message(CC_LightGreen, "Destination slot %i resynchronized.", move_slots->to_slot);
 			}
-			else { Message(CC_Red, "Could not resyncronize destination slot %i.", move_slots->to_slot); }
+			else { Message(CC_Red, "Could not resynchronize destination slot %i.", move_slots->to_slot); }
 		}
-		else { Message(CC_Red, "Could not resyncronize destination slot %i.", move_slots->to_slot); }
+		else { Message(CC_Red, "Could not resynchronize destination slot %i.", move_slots->to_slot); }
 	}
 }
 
@@ -1488,35 +1569,35 @@ void Client::QSSwapItemAuditor(MoveItem_Struct* move_in, bool postaction_call) {
 	if(m_inv[from_slot_id]) { move_count += m_inv[from_slot_id]->GetTotalItemCount(); }
 	if(to_slot_id != from_slot_id) { if(m_inv[to_slot_id]) { move_count += m_inv[to_slot_id]->GetTotalItemCount(); } }
 
-	ServerPacket* qspack = new ServerPacket(ServerOP_QSPlayerLogMoves, sizeof(QSPlayerLogMove_Struct) + (sizeof(QSMoveItems_Struct) * move_count));
-	QSPlayerLogMove_Struct* qsaudit = (QSPlayerLogMove_Struct*)qspack->pBuffer;
+	ServerPacket* pack = new ServerPacket(ServerOP_QSPlayerLogItemMoves, sizeof(QSPlayerLogItemMove_Struct) + (sizeof(QSMoveItems_Struct) * move_count));
+	QSPlayerLogItemMove_Struct* QS = (QSPlayerLogItemMove_Struct*)pack->pBuffer;
 
-	qsaudit->char_id	= character_id;
-	qsaudit->stack_size = move_amount;
-	qsaudit->char_count = move_count;
-	qsaudit->postaction = postaction_call;
-	qsaudit->from_slot	= from_slot_id;
-	qsaudit->to_slot	= to_slot_id;
+	QS->char_id = character_id;
+	QS->stack_size = move_amount;
+	QS->char_count = move_count;
+	QS->postaction = postaction_call;
+	QS->from_slot = from_slot_id;
+	QS->to_slot = to_slot_id;
 
 	move_count = 0;
 
 	const ItemInst* from_inst = m_inv[postaction_call?to_slot_id:from_slot_id];
 
 	if(from_inst) {
-		qsaudit->items[move_count].from_slot	= from_slot_id;
-		qsaudit->items[move_count].to_slot		= to_slot_id;
-		qsaudit->items[move_count].item_id		= from_inst->GetID();
-		qsaudit->items[move_count++].charges		= from_inst->GetCharges();
+		QS->items[move_count].from_slot = from_slot_id;
+		QS->items[move_count].to_slot = to_slot_id;
+		QS->items[move_count].item_id = from_inst->GetID();
+		QS->items[move_count++].charges = from_inst->GetCharges();
 
 		if(from_inst->IsType(ItemClassContainer)) {
 			for(uint8 bag_idx = SUB_BEGIN; bag_idx < from_inst->GetItem()->BagSlots; bag_idx++) {
 				const ItemInst* from_baginst = from_inst->GetItem(bag_idx);
 
 				if(from_baginst) {
-					qsaudit->items[move_count].from_slot	= Inventory::CalcSlotId(from_slot_id, bag_idx);
-					qsaudit->items[move_count].to_slot		= Inventory::CalcSlotId(to_slot_id, bag_idx);
-					qsaudit->items[move_count].item_id		= from_baginst->GetID();
-					qsaudit->items[move_count++].charges		= from_baginst->GetCharges();
+					QS->items[move_count].from_slot = Inventory::CalcSlotId(from_slot_id, bag_idx);
+					QS->items[move_count].to_slot = Inventory::CalcSlotId(to_slot_id, bag_idx);
+					QS->items[move_count].item_id = from_baginst->GetID();
+					QS->items[move_count++].charges = from_baginst->GetCharges();
 				}
 			}
 		}
@@ -1526,20 +1607,20 @@ void Client::QSSwapItemAuditor(MoveItem_Struct* move_in, bool postaction_call) {
 		const ItemInst* to_inst = m_inv[postaction_call?from_slot_id:to_slot_id];
 
 		if(to_inst) {
-			qsaudit->items[move_count].from_slot	= to_slot_id;
-			qsaudit->items[move_count].to_slot		= from_slot_id;
-			qsaudit->items[move_count].item_id		= to_inst->GetID();
-			qsaudit->items[move_count++].charges		= to_inst->GetCharges();
+			QS->items[move_count].from_slot = to_slot_id;
+			QS->items[move_count].to_slot = from_slot_id;
+			QS->items[move_count].item_id = to_inst->GetID();
+			QS->items[move_count++].charges = to_inst->GetCharges();
 
 			if(to_inst->IsType(ItemClassContainer)) {
 				for(uint8 bag_idx = SUB_BEGIN; bag_idx < to_inst->GetItem()->BagSlots; bag_idx++) {
 					const ItemInst* to_baginst = to_inst->GetItem(bag_idx);
 
 					if(to_baginst) {
-						qsaudit->items[move_count].from_slot	= Inventory::CalcSlotId(to_slot_id, bag_idx);
-						qsaudit->items[move_count].to_slot		= Inventory::CalcSlotId(from_slot_id, bag_idx);
-						qsaudit->items[move_count].item_id		= to_baginst->GetID();
-						qsaudit->items[move_count++].charges		= to_baginst->GetCharges();
+						QS->items[move_count].from_slot = Inventory::CalcSlotId(to_slot_id, bag_idx);
+						QS->items[move_count].to_slot = Inventory::CalcSlotId(from_slot_id, bag_idx);
+						QS->items[move_count].item_id = to_baginst->GetID();
+						QS->items[move_count++].charges = to_baginst->GetCharges();
 					}
 				}
 			}
@@ -1547,11 +1628,11 @@ void Client::QSSwapItemAuditor(MoveItem_Struct* move_in, bool postaction_call) {
 	}
 
 	if(move_count && worldserver.Connected()) {
-		qspack->Deflate();
-		worldserver.SendPacket(qspack);
+		pack->Deflate();
+		worldserver.SendPacket(pack);
 	}
 
-	safe_delete(qspack);
+	safe_delete(pack);
 }
 
 bool Client::DecreaseByID(uint32 type, uint8 amt) {
@@ -1791,8 +1872,9 @@ void Client::RemoveDuplicateLore(bool client_update) {
 
 		for (auto iter = local_2.begin(); iter != local_2.end(); ++iter) {
 			auto inst = *iter;
-			if ((inst->GetItem()->Lore[0] != '*') ||
-				((inst->GetItem()->Lore[0] == '*') && (m_inv.HasItem(inst->GetID(), 0, invWhereCursor) == INVALID_INDEX))) {
+			if ((inst->GetItem()->Lore[0] != '*' && inst->GetItem()->Lore[0] != '#') ||
+				((inst->GetItem()->Lore[0] == '*') && (m_inv.HasItem(inst->GetID(), 0, invWhereCursor) == INVALID_INDEX)) ||
+				((inst->GetItem()->Lore[0] == '#') && (m_inv.HasArtifactItem() == INVALID_INDEX))) {
 				
 				m_inv.PushCursor(*inst);
 			}

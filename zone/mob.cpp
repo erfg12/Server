@@ -265,12 +265,6 @@ Mob::Mob(const char* in_name,
 		SpellProcs[j].spellID = SPELL_UNKNOWN;
 		SpellProcs[j].chance = 0;
 		SpellProcs[j].base_spellID = SPELL_UNKNOWN;
-		DefensiveProcs[j].spellID = SPELL_UNKNOWN;
-		DefensiveProcs[j].chance = 0;
-		DefensiveProcs[j].base_spellID = SPELL_UNKNOWN;
-		RangedProcs[j].spellID = SPELL_UNKNOWN;
-		RangedProcs[j].chance = 0;
-		RangedProcs[j].base_spellID = SPELL_UNKNOWN;
 	}
 
 	for (i = 0; i < _MaterialCount; i++)
@@ -315,6 +309,7 @@ Mob::Mob(const char* in_name,
 	SetPetID(0);
 	SetOwnerID(0);
 	typeofpet = petCharmed;		//default to charmed...
+	summonerid = 0;
 	petpower = 0;
 	held = false;
 	nocast = false;
@@ -1593,8 +1588,6 @@ void Mob::GMMove(float x, float y, float z, float heading, bool SendUpdate) {
 	m_Position.z = z;
 	if (m_Position.w != 0.01)
 		this->m_Position.w = heading;
-	if(IsNPC())
-		CastToNPC()->SaveGuardSpot();
 	if(SendUpdate)
 		SendPosition();
 }
@@ -1871,8 +1864,8 @@ Mob* Mob::GetOwnerOrSelf() {
 
 Mob* Mob::GetOwner() {
 	Mob* owner = entity_list.GetMob(this->GetOwnerID());
-	if (owner && owner->GetPetID() == this->GetID()) {
-
+	if (owner)
+	{
 		return owner;
 	}
 	if(IsNPC() && CastToNPC()->GetSwarmInfo()){
@@ -1911,14 +1904,8 @@ float Mob::MobAngle(Mob *other, float ourx, float oury) const {
 	float angle, lengthb, vectorx, vectory, dotp;
 	float mobx = -(other->GetX());	// mob xloc (inverse because eq)
 	float moby = other->GetY();		// mob yloc
-	float heading = other->GetHeading();	// mob heading
-	heading = (heading * 360.0f) / 256.0f;	// convert to degrees
-	if (heading < 270)
-		heading += 90;
-	else
-		heading -= 270;
+	float heading = other->GetHeadingRadians();	// mob heading
 
-	heading = heading * 3.1415f / 180.0f;	// convert to radians
 	vectorx = mobx + (10.0f * cosf(heading));	// create a vector based on heading
 	vectory = moby + (10.0f * sinf(heading));	// of mob length 10
 
@@ -2207,7 +2194,7 @@ bool Mob::HateSummon() {
 			entity_list.MessageClose(this, true, 500, MT_Say, "%s says,'You will not evade me, %s!' ", GetCleanName(), target->GetCleanName() );
 
 			if (target->IsClient()) {
-				target->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), m_Position.x, m_Position.y, m_Position.z, target->GetHeading(), 0, SummonPC);
+				target->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), m_Position.x, m_Position.y, m_Position.z, target->GetHeading() * 2, 0, SummonPC);
 			}
 			else {
 				target->GMMove(m_Position.x, m_Position.y, m_Position.z, target->GetHeading());
@@ -2721,28 +2708,15 @@ void Mob::ExecWeaponProc(const ItemInst *inst, uint16 spell_id, Mob *on) {
 		}
 	}
 
-	bool twinproc = false;
-	int32 twinproc_chance = 0;
-
-	if(IsClient())
-		twinproc_chance = CastToClient()->GetFocusEffect(focusTwincast, spell_id);
-
-	if(twinproc_chance && zone->random.Roll(twinproc_chance))
-		twinproc = true;
-
 	if ((inst && inst->GetID() == 14811) ||	// Iron Bound Tome was bugged during this era and would proc on self
 		(IsBeneficialSpell(spell_id) &&
 		(!IsNPC() || CastToNPC()->GetInnateProcSpellId() != spell_id)))		// innate NPC procs always hit the target
 	{
 		SpellFinished(spell_id, this, 10, 0, -1, spells[spell_id].ResistDiff, true);
-		if(twinproc)
-			SpellOnTarget(spell_id, this, false, false, 0, true);
 	}
 	else if(!(on->IsClient() && on->CastToClient()->dead)) //dont proc on dead clients
 	{ 
 		SpellFinished(spell_id, on, 10, 0, -1, spells[spell_id].ResistDiff, true);
-		if(twinproc)
-			SpellOnTarget(spell_id, on, false, false, 0, true);
 	}
 	return;
 }
@@ -2900,42 +2874,6 @@ int Mob::GetSnaredAmount()
 	return worst_snare;
 }
 
-void Mob::TriggerDefensiveProcs(const ItemInst* weapon, Mob *on, uint16 hand, int damage)
-{
-	if (!on)
-		return;
-
-	on->TryDefensiveProc(weapon, this, hand);
-
-	//Defensive Skill Procs
-	if (damage < 0 && damage >= -4) {
-		uint16 skillinuse = 0;
-		switch (damage) {
-			case (-1):
-				skillinuse = SkillBlock;
-			break;
-
-			case (-2):
-				skillinuse = SkillParry;
-			break;
-
-			case (-3):
-				skillinuse = SkillRiposte;
-			break;
-
-			case (-4):
-				skillinuse = SkillDodge;
-			break;
-		}
-
-		if (on->HasSkillProcs())
-			on->TrySkillProc(this, skillinuse, 0, false, hand, true);
-
-		if (on->HasSkillProcSuccess())
-			on->TrySkillProc(this, skillinuse, 0, true, hand, true);
-	}
-}
-
 void Mob::SetEntityVariable(const char *id, const char *m_var)
 {
 	std::string n_m_var = m_var;
@@ -3000,104 +2938,6 @@ void Mob::SetNimbusEffect(uint32 nimbus_effect)
 	}
 }
 
-void Mob::TryTriggerOnCast(uint32 spell_id, bool aa_trigger)
-{
-	if(!IsValidSpell(spell_id))
-			return;
-
-	if (aabonuses.SpellTriggers[0] || spellbonuses.SpellTriggers[0] || itembonuses.SpellTriggers[0]){
-
-		for(int i = 0; i < MAX_SPELL_TRIGGER; i++){
-
-			if(aabonuses.SpellTriggers[i] && IsClient())
-				TriggerOnCast(aabonuses.SpellTriggers[i], spell_id,1);
-
-			if(spellbonuses.SpellTriggers[i])
-				TriggerOnCast(spellbonuses.SpellTriggers[i], spell_id,0);
-
-			if(itembonuses.SpellTriggers[i])
-				TriggerOnCast(spellbonuses.SpellTriggers[i], spell_id,0);
-		}
-	}
-}
-
-
-void Mob::TriggerOnCast(uint32 focus_spell, uint32 spell_id, bool aa_trigger)
-{
-	if(!IsValidSpell(focus_spell) || !IsValidSpell(spell_id))
-		return;
-
-	uint32 trigger_spell_id = 0;
-
-	if (aa_trigger && IsClient()){
-		//focus_spell = aaid
-		trigger_spell_id = CastToClient()->CalcAAFocus(focusTriggerOnCast, focus_spell, spell_id);
-
-		if(IsValidSpell(trigger_spell_id) && GetTarget())
-			SpellFinished(trigger_spell_id, GetTarget(), 10, 0, -1, spells[trigger_spell_id].ResistDiff);
-	}
-
-	else{
-		trigger_spell_id = CalcFocusEffect(focusTriggerOnCast, focus_spell, spell_id);
-
-		if(IsValidSpell(trigger_spell_id) && GetTarget()){
-			SpellFinished(trigger_spell_id, GetTarget(),10, 0, -1, spells[trigger_spell_id].ResistDiff);
-			CheckNumHitsRemaining(NUMHIT_MatchingSpells,0, focus_spell);
-		}
-	}
-}
-
-bool Mob::TrySpellTrigger(Mob *target, uint32 spell_id, int effect)
-{
-	if(!target || !IsValidSpell(spell_id))
-		return false;
-
-	int spell_trig = 0;
-	// Count all the percentage chances to trigger for all effects
-	for(int i = 0; i < EFFECT_COUNT; i++)
-	{
-		if (spells[spell_id].effectid[i] == SE_SpellTrigger)
-			spell_trig += spells[spell_id].base[i];
-	}
-	// If all the % add to 100, then only one of the effects can fire but one has to fire.
-	if (spell_trig == 100)
-	{
-		int trig_chance = 100;
-		for(int i = 0; i < EFFECT_COUNT; i++)
-		{
-			if (spells[spell_id].effectid[i] == SE_SpellTrigger)
-			{
-				if(zone->random.Int(0, trig_chance) <= spells[spell_id].base[i])
-				{
-					// If we trigger an effect then its over.
-					if (IsValidSpell(spells[spell_id].base2[i])){
-						SpellFinished(spells[spell_id].base2[i], target, 10, 0, -1, spells[spells[spell_id].base2[i]].ResistDiff);
-						return true;
-					}
-				}
-				else
-				{
-					// Increase the chance to fire for the next effect, if all effects fail, the final effect will fire.
-					trig_chance -= spells[spell_id].base[i];
-				}
-			}
-
-		}
-	}
-	// if the chances don't add to 100, then each effect gets a chance to fire, chance for no trigger as well.
-	else
-	{
-		if(zone->random.Int(0, 100) <= spells[spell_id].base[effect])
-		{
-			if (IsValidSpell(spells[spell_id].base2[effect])){
-				SpellFinished(spells[spell_id].base2[effect], target, 10, 0, -1, spells[spells[spell_id].base2[effect]].ResistDiff);
-				return true; //Only trigger once of these per spell effect.
-			}
-		}
-	}
-	return false;
-}
-
 void Mob::TryTriggerOnValueAmount(bool IsHP, bool IsMana, bool IsEndur, bool IsPet)
 {
 	/*
@@ -3124,13 +2964,13 @@ void Mob::TryTriggerOnValueAmount(bool IsHP, bool IsMana, bool IsEndur, bool IsP
 
 		int buff_count = GetMaxTotalSlots();
 
-		for(int e = 0; e < buff_count; e++){
+		for (int e = 0; e < buff_count; e++){
 
 			uint32 spell_id = buffs[e].spellid;
 
 			if (IsValidSpell(spell_id)){
 
-				for(int i = 0; i < EFFECT_COUNT; i++){
+				for (int i = 0; i < EFFECT_COUNT; i++){
 
 					if ((spells[spell_id].effectid[i] == SE_TriggerOnReqTarget) || (spells[spell_id].effectid[i] == SE_TriggerOnReqCaster)) {
 
@@ -3138,7 +2978,7 @@ void Mob::TryTriggerOnValueAmount(bool IsHP, bool IsMana, bool IsEndur, bool IsP
 						bool use_spell = false;
 
 						if (IsHP){
-							if ((base2 >= 500 && base2 <= 520) && GetHPRatio() < (base2 - 500)*5)
+							if ((base2 >= 500 && base2 <= 520) && GetHPRatio() < (base2 - 500) * 5)
 								use_spell = true;
 
 							else if (base2 = 1004 && GetHPRatio() < 80)
@@ -3146,7 +2986,7 @@ void Mob::TryTriggerOnValueAmount(bool IsHP, bool IsMana, bool IsEndur, bool IsP
 						}
 
 						else if (IsMana){
-							if ( (base2 = 521 && GetManaRatio() < 20) || (base2 = 523 && GetManaRatio() < 40))
+							if ((base2 = 521 && GetManaRatio() < 20) || (base2 = 523 && GetManaRatio() < 40))
 								use_spell = true;
 
 							else if (base2 = 38311 && GetManaRatio() < 10)
@@ -3169,51 +3009,9 @@ void Mob::TryTriggerOnValueAmount(bool IsHP, bool IsMana, bool IsEndur, bool IsP
 						if (use_spell){
 							SpellFinished(spells[spell_id].base[i], this, 10, 0, -1, spells[spell_id].ResistDiff);
 
-							if(!TryFadeEffect(e))
+							if (!TryFadeEffect(e))
 								BuffFadeBySlot(e);
 						}
-					}
-				}
-			}
-		}
-	}
-}
-
-
-//Twincast Focus effects should stack across different types (Spell, AA - when implemented ect)
-void Mob::TryTwincast(Mob *caster, Mob *target, uint32 spell_id)
-{
-	if(!IsValidSpell(spell_id))
-		return;
-
-	if(IsClient())
-	{
-		int32 focus = CastToClient()->GetFocusEffect(focusTwincast, spell_id);
-
-		if (focus > 0)
-		{
-			if(zone->random.Roll(focus))
-			{
-				Message(MT_Spells,"You twincast %s!",spells[spell_id].name);
-				SpellFinished(spell_id, target, 10, 0, -1, spells[spell_id].ResistDiff);
-			}
-		}
-	}
-
-	//Retains function for non clients
-	else if (spellbonuses.FocusEffects[focusTwincast] || itembonuses.FocusEffects[focusTwincast])
-	{
-		int buff_count = GetMaxTotalSlots();
-		for(int i = 0; i < buff_count; i++)
-		{
-			if(IsEffectInSpell(buffs[i].spellid, SE_FcTwincast))
-			{
-				int32 focus = CalcFocusEffect(focusTwincast, buffs[i].spellid, spell_id);
-				if(focus > 0)
-				{
-					if(zone->random.Roll(focus))
-					{
-						SpellFinished(spell_id, target, 10, 0, -1, spells[spell_id].ResistDiff);
 					}
 				}
 			}
@@ -3347,40 +3145,6 @@ bool Mob::TryFadeEffect(int slot)
 		}
 	}
 	return false;
-}
-
-void Mob::TrySympatheticProc(Mob *target, uint32 spell_id)
-{
-	if(target == nullptr || !IsValidSpell(spell_id))
-		return;
-
-	int focus_spell = CastToClient()->GetSympatheticFocusEffect(focusSympatheticProc,spell_id);
-
-		if(IsValidSpell(focus_spell)){
-			int focus_trigger = spells[focus_spell].base2[0];
-			// For beneficial spells, if the triggered spell is also beneficial then proc it on the target
-			// if the triggered spell is detrimental, then it will trigger on the caster(ie cursed items)
-			if(IsBeneficialSpell(spell_id))
-			{
-				if(IsBeneficialSpell(focus_trigger))
-					SpellFinished(focus_trigger, target);
-
-				else
-					SpellFinished(focus_trigger, this, 10, 0, -1, spells[focus_trigger].ResistDiff);
-			}
-			// For detrimental spells, if the triggered spell is beneficial, then it will land on the caster
-			// if the triggered spell is also detrimental, then it will land on the target
-			else
-			{
-				if(IsBeneficialSpell(focus_trigger))
-					SpellFinished(focus_trigger, this);
-
-				else
-					SpellFinished(focus_trigger, target, 10, 0, -1, spells[focus_trigger].ResistDiff);
-			}
-
-			CheckNumHitsRemaining(NUMHIT_MatchingSpells, 0, focus_spell);
-		}
 }
 
 int32 Mob::GetItemStat(uint32 itemid, const char *identifier)
@@ -3974,29 +3738,6 @@ void Mob::TrySpellOnKill(uint8 level, uint16 spell_id)
 			}
 		}
 	}
-
-	if (!aabonuses.SpellOnKill[0] && !itembonuses.SpellOnKill[0] && !spellbonuses.SpellOnKill[0])
-		return;
-
-	// Allow to check AA, items and buffs in all cases. Base2 = Spell to fire | Base1 = % chance | Base3 = min level
-	for(int i = 0; i < MAX_SPELL_TRIGGER*3; i+=3) {
-
-		if(aabonuses.SpellOnKill[i] && IsValidSpell(aabonuses.SpellOnKill[i]) && (level >= aabonuses.SpellOnKill[i + 2])) {
-			if(zone->random.Roll(static_cast<int>(aabonuses.SpellOnKill[i + 1])))
-				SpellFinished(aabonuses.SpellOnKill[i], this, 10, 0, -1, spells[aabonuses.SpellOnKill[i]].ResistDiff);
-		}
-
-		if(itembonuses.SpellOnKill[i] && IsValidSpell(itembonuses.SpellOnKill[i]) && (level >= itembonuses.SpellOnKill[i + 2])){
-			if(zone->random.Roll(static_cast<int>(itembonuses.SpellOnKill[i + 1])))
-				SpellFinished(itembonuses.SpellOnKill[i], this, 10, 0, -1, spells[aabonuses.SpellOnKill[i]].ResistDiff);
-		}
-
-		if(spellbonuses.SpellOnKill[i] && IsValidSpell(spellbonuses.SpellOnKill[i]) && (level >= spellbonuses.SpellOnKill[i + 2])) {
-			if(zone->random.Roll(static_cast<int>(spellbonuses.SpellOnKill[i + 1])))
-				SpellFinished(spellbonuses.SpellOnKill[i], this, 10, 0, -1, spells[aabonuses.SpellOnKill[i]].ResistDiff);
-		}
-
-	}
 }
 
 bool Mob::TrySpellOnDeath()
@@ -4032,20 +3773,6 @@ bool Mob::TrySpellOnDeath()
 	//You should not be able to use this effect and survive (ALWAYS return false),
 	//attempting to place a heal in these effects will still result
 	//in death because the heal will not register before the script kills you.
-}
-
-int16 Mob::GetCritDmgMob(uint16 skill)
-{
-	int critDmg_mod = 0;
-
-	// All skill dmg mod + Skill specific
-	critDmg_mod += itembonuses.CritDmgMob[HIGHEST_SKILL+1] + spellbonuses.CritDmgMob[HIGHEST_SKILL+1] + aabonuses.CritDmgMob[HIGHEST_SKILL+1] +
-					itembonuses.CritDmgMob[skill] + spellbonuses.CritDmgMob[skill] + aabonuses.CritDmgMob[skill];
-
-	if(critDmg_mod < -100)
-		critDmg_mod = -100;
-
-	return critDmg_mod;
 }
 
 void Mob::SetGrouped(bool v)
@@ -5391,6 +5118,41 @@ float Mob::GetPlayerHeight(uint16 race)
 		default:
 			return 6;
 	}
+}
+
+float Mob::GetHeadingRadians()
+{
+	float headingRadians = GetHeading();
+	headingRadians = (headingRadians * 360.0f) / 256.0f;	// convert to degrees first; heading range is 0-255
+	if (headingRadians < 270)
+		headingRadians += 90;
+	else
+		headingRadians -= 270;
+	
+	return headingRadians * 3.141592f / 180.0f;
+}
+
+bool Mob::IsFacingTarget()
+{
+	if (!target)
+		return false;
+
+	float heading = GetHeadingRadians();
+	float headingUnitVx = cosf(heading);
+	float headingUnitVy = sinf(heading);
+
+	float toTargetVx = -GetTarget()->GetPosition().x - -m_Position.x;
+	float toTargetVy = GetTarget()->GetPosition().y - m_Position.y;
+
+	float distance = sqrtf(toTargetVx * toTargetVx + toTargetVy * toTargetVy);
+
+	float dotp = headingUnitVx * (toTargetVx / distance) +
+		headingUnitVy * (toTargetVy / distance);
+
+	if (dotp > 0.95f)
+		return true;
+
+	return false;
 }
 
 bool Mob::CanCastBindAffinity()

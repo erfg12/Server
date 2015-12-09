@@ -206,6 +206,7 @@ public:
 	virtual bool IsClient() const { return true; }
 	void	CompleteConnect();
 	bool	TryStacking(ItemInst* item, uint8 type = ItemPacketTrade, bool try_worn = true, bool try_cursor = true);
+	int16	GetStackSlot(ItemInst* item, bool try_worn = true, bool try_cursor = true);
 	void	SendTraderPacket(Client* trader, uint32 Unknown72 = 51);
 	GetItems_Struct* GetTraderItems();
 	GetItem_Struct* RefetchItem(uint16 item_id);
@@ -373,13 +374,13 @@ public:
 	inline virtual int32 GetAC() const { return AC; }
 	inline virtual int32 GetATK() const { return ATK + itembonuses.ATK + spellbonuses.ATK + ((GetSTR() + GetSkill(SkillOffense)) * 9 / 10); }
 	inline virtual int32 GetATKBonus() const { return itembonuses.ATK + spellbonuses.ATK; }
-	virtual int32 GetOffense(int hand = MainPrimary);
-	inline int32 GetOffense(SkillUseTypes weaponSkill);
-	virtual int32 GetToHit(int hand = MainPrimary);
-	inline int32 GetToHit(SkillUseTypes weaponSkill);
+	virtual int GetOffense(int hand = MainPrimary);
+	inline int GetOffense(SkillUseTypes weaponSkill);
+	virtual int GetToHit(int hand = MainPrimary);
+	inline int GetToHit(SkillUseTypes weaponSkill);
 	uint32 RollDamageMultiplier(uint32 offense);
-	virtual int32 GetMitigation();
-	virtual int32 GetAvoidance();
+	virtual int GetMitigation();
+	virtual int GetAvoidance();
 	int32 GetEffectiveWornAC();
 	inline virtual int GetHaste() const { return Haste; }
 	int GetRawACNoShield(int &shield_ac, int spell_mod = 1) const;
@@ -430,7 +431,6 @@ public:
 	inline virtual int32 GetStrikeThrough() const { return itembonuses.StrikeThrough; }
 	inline virtual int32 GetAvoidanceMod() const { return itembonuses.AvoidMeleeChance; }
 	inline virtual int32 GetAccuracy() const { return itembonuses.HitChance; }
-	inline virtual int32 GetCombatEffects() const { return itembonuses.ProcChance; }
 	inline virtual int32 GetDS() const { return itembonuses.DamageShield; }
 	// Mod3
 	inline virtual int32 GetSingMod() const { return itembonuses.singingMod; }
@@ -963,6 +963,8 @@ public:
 
 	void SendMerchantEnd();
 	float GetPortHeading(uint16 newx, uint16 newy);
+	void RefreshSpellIcon(bool disableslot = false);
+	void SendCancelTrade(Mob* with);
 
 protected:
 	friend class Mob;
@@ -1130,7 +1132,7 @@ private:
 	Timer shield_timer;
 	Timer fishing_timer;
 	Timer endupkeep_timer;
-	Timer forget_timer; // our 2 min everybody forgets you timer
+	Timer forget_timer; // 10 min feign forget timer since hate lists don't have feigned players
 	Timer autosave_timer;
 	Timer scanarea_timer;
 	Timer	proximity_timer;

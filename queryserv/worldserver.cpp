@@ -16,7 +16,6 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-
 #include "../common/global_define.h"
 #include "../common/eqemu_logsys.h"
 #include "../common/md5.h"
@@ -39,15 +38,12 @@ extern WorldServer worldserver;
 extern const queryservconfig *Config;
 extern Database database;
 
-WorldServer::WorldServer()
-: WorldConnection(EmuTCPConnection::packetModeQueryServ, Config->SharedKey.c_str())
+WorldServer::WorldServer() : WorldConnection(EmuTCPConnection::packetModeQueryServ, Config->SharedKey.c_str())
 {
 	pTryReconnect = true;
 }
 
-WorldServer::~WorldServer()
-{
-}
+WorldServer::~WorldServer() {}
 
 void WorldServer::OnConnected()
 {
@@ -89,16 +85,16 @@ void WorldServer::Process()
 				database.LogPlayerNPCKill(QS, Members);
 				break;
 			}
-			case ServerOP_QSPlayerLogDeletes: {
-				QSPlayerLogDelete_Struct *QS = (QSPlayerLogDelete_Struct*)pack->pBuffer;
+			case ServerOP_QSPlayerLogItemDeletes: {
+				QSPlayerLogItemDelete_Struct *QS = (QSPlayerLogItemDelete_Struct*)pack->pBuffer;
 				uint32 Items = QS->char_count;
-				database.LogPlayerDelete(QS, Items);
+				database.LogPlayerItemDelete(QS, Items);
 				break;
 			}
-			case ServerOP_QSPlayerLogMoves: {
-				QSPlayerLogMove_Struct *QS = (QSPlayerLogMove_Struct*)pack->pBuffer;
+			case ServerOP_QSPlayerLogItemMoves: {
+				QSPlayerLogItemMove_Struct *QS = (QSPlayerLogItemMove_Struct*)pack->pBuffer;
 				uint32 Items = QS->char_count;
-				database.LogPlayerMove(QS, Items);
+				database.LogPlayerItemMove(QS, Items);
 				break;
 			}
 			case ServerOP_QSPlayerLogMerchantTransactions: {
@@ -106,6 +102,42 @@ void WorldServer::Process()
 				uint32 Items = QS->char_count + QS->merchant_count;
 				database.LogMerchantTransaction(QS, Items);
 				break; 
+			}
+			case ServerOP_QSPlayerAARateHourly: {
+				QSPlayerAARateHourly_Struct *QS = (QSPlayerAARateHourly_Struct*)pack->pBuffer;
+				uint32 Items = QS->charid;
+				database.LogPlayerAARateHourly(QS, Items);
+				break;
+			}
+			case ServerOP_QSPlayerAAPurchase: {
+				QSPlayerAAPurchase_Struct *QS = (QSPlayerAAPurchase_Struct*)pack->pBuffer;
+				uint32 Items = QS->charid;
+				database.LogPlayerAAPurchase(QS, Items);
+				break;
+			}
+			case ServerOP_QSPlayerDeathBy: {
+				QSPlayerDeathBy_Struct *QS = (QSPlayerDeathBy_Struct*)pack->pBuffer;
+				uint32 Items = QS->charid;
+				database.LogPlayerDeathBy(QS, Items);
+				break;
+			}
+			case ServerOP_QSPlayerTSEvents: {
+				QSPlayerTSEvents_Struct *QS = (QSPlayerTSEvents_Struct*)pack->pBuffer;
+				uint32 Items = QS->charid;
+				database.LogPlayerTSEvents(QS, Items);
+				break;
+			}
+			case ServerOP_QSPlayerQGlobalUpdates: {
+				QSPlayerQGlobalUpdate_Struct *QS = (QSPlayerQGlobalUpdate_Struct*)pack->pBuffer;
+				uint32 Items = QS->charid;
+				database.LogPlayerQGlobalUpdates(QS, Items);
+				break;
+			}
+			case ServerOP_QSPlayerLootRecords: {
+				QSPlayerLootRecords_struct *QS = (QSPlayerLootRecords_struct*)pack->pBuffer;
+				uint32 Items = QS->charid;
+				database.LogPlayerLootRecords(QS, Items);
+				break;
 			}
 			case ServerOP_QueryServGeneric: {
 				/* 
@@ -135,9 +167,15 @@ void WorldServer::Process()
 
 				switch(Type)
 				{
+					case 0:
+					{
+						break;
+					}
 					default:
+					{
 						Log.Out(Logs::Detail, Logs::QS_Server, "Received unhandled ServerOP_QueryServGeneric", Type);
 						break;
+					}
 				}
 				break;
 			}

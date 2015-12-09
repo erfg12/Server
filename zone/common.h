@@ -38,10 +38,6 @@
 #define CON_YELLOW		15
 #define CON_RED			13
 
-//Spell specialization parameters, not sure of a better place for them
-#define SPECIALIZE_FIZZLE 11		//% fizzle chance reduce at 200 specialized
-#define SPECIALIZE_MANA_REDUCE 12	//% mana cost reduction at 200 specialized
-
 //these are large right now because the x,y,z coords of the zone
 //lines do not make a lot of sense
 //Maximum distance from a zone point given that the request didnt
@@ -133,7 +129,8 @@ enum {
 	ALLOW_TO_TANK = 41,
 	PROX_AGGRO = 42,
 	ALWAYS_CALL_HELP = 43,
-	MAX_SPECIAL_ATTACK = 44
+	USE_WARRIOR_SKILLS = 44,
+	MAX_SPECIAL_ATTACK = 45
 	
 };
 
@@ -291,8 +288,6 @@ struct StatBonuses {
 	int32	DamageModifier[HIGHEST_SKILL+2];	//i
 	int32	DamageModifier2[HIGHEST_SKILL+2];	//i
 	int32	MinDamageModifier[HIGHEST_SKILL+2]; //i
-	int32	ProcChance;							// ProcChance/10 == % increase i = CombatEffects
-	int32	ProcChanceSPA;						// ProcChance from spell effects
 	int32	ExtraAttackChance;
 	int32	DoTShielding;
 	int32	DivineSaveChance[2];				// Second Chance (base1 = chance, base2 = spell on trigger)
@@ -318,7 +313,6 @@ struct StatBonuses {
 	bool	AntiGate;							// spell effect that prevents gating
 	bool	MagicWeapon;						// spell effect that makes weapon magical
 	int32	IncreaseBlockChance;				// overall block chance modifier
-	uint32	PersistantCasting;					// chance to continue casting through a stun
 	int	XPRateMod;							//i
 	int		HPPercCap[2];						//Spell effect that limits you to being healed/regening beyond a % of your max
 	int		ManaPercCap[2];						// ^^ 0 = % Cap 1 = Flat Amount Cap
@@ -327,22 +321,15 @@ struct StatBonuses {
 	//uint16	BlockSpellEffect[EFFECT_COUNT];		// Prevents spells with certain effects from landing on you *no longer used
 	bool	ImmuneToFlee;						// Bypass the fleeing flag
 	uint32	VoiceGraft;							// Stores the ID of the mob with which to talk through
-	int32	SpellProcChance;					// chance to proc from sympathetic spell effects
 	int32	CharmBreakChance;					// chance to break charm
 	int32	SongRange;							// increases range of beneficial bard songs
 	uint32	HPToManaConvert;					// Uses HP to cast spells at specific conversion
 	uint32	FocusEffects[HIGHEST_FOCUS+1];		// Stores the focus effectid for each focustype you have.
 	bool	NegateEffects;						// Check if you contain a buff with negate effect. (only spellbonuses)
 	int32	SkillDamageAmount2[HIGHEST_SKILL+2];	// Adds skill specific damage
-	uint32	NegateAttacks[3];					// 0 = bool HasEffect 1 = Buff Slot 2 = Max damage absorbed per hit
 	uint32	MitigateMeleeRune[4];				// 0 = Mitigation value 1 = Buff Slot 2 = Max mitigation per hit 3 = Rune Amt
-	uint32	MeleeThresholdGuard[3];				// 0 = Mitigation value 1 = Buff Slot 2 = Min damage to trigger.
-	uint32	SpellThresholdGuard[3];				// 0 = Mitigation value 1 = Buff Slot 2 = Min damage to trigger.
 	uint32	MitigateSpellRune[4];				// 0 = Mitigation value 1 = Buff Slot 2 = Max mitigation per spell 3 = Rune Amt
 	uint32	MitigateDotRune[4];					// 0 = Mitigation value 1 = Buff Slot 2 = Max mitigation per tick 3 = Rune Amt
-	bool	TriggerMeleeThreshold;				// Has Melee Threshhold
-	bool	TriggerSpellThreshold;				// Has Spell Threshhold
-	uint32	ManaAbsorbPercentDamage[2];			// 0 = Mitigation value 1 = Buff Slot
 	int32	ShieldBlock;						// Chance to Shield Block
 	int32	BlockBehind;						// Chance to Block Behind (with our without shield)
 	bool	CriticalRegenDecay;					// increase critical regen chance, decays based on spell level cast
@@ -352,7 +339,6 @@ struct StatBonuses {
 	bool	DistanceRemoval;					// Check if Cancle if Moved effect is present
 	int32	ImprovedTaunt[3];					// 0 = Max Level 1 = Aggro modifier 2 = buffid
 	int8	Root[2];							// The lowest buff slot a root can be found. [0] = Bool if has root [1] = buff slot
-	int32	FrenziedDevastation;				// base1= AArank(used) base2= chance increase spell criticals + all DD spells 2x mana.
 	uint32	AbsorbMagicAtt[2];					// 0 = magic rune value 1 = buff slot
 	uint32	MeleeRune[2];						// 0 = rune value 1 = buff slot
 	bool	NegateIfCombat;						// Bool Drop buff if cast or melee
@@ -368,8 +354,6 @@ struct StatBonuses {
 	int32   FactionModPct;						// Modifies amount of faction gained.
 	int32	MeleeVulnerability;					// Weakness/mitigation to melee damage
 	bool	LimitToSkill[HIGHEST_SKILL+2];		// Determines if we need to search for a skill proc.
-	uint32  SkillProc[MAX_SKILL_PROCS];			// Max number of spells containing skill_procs.
-	uint32  SkillProcSuccess[MAX_SKILL_PROCS];	// Max number of spells containing skill_procs_success.
 
 	// AAs
 	int8	Packrat;							//weight reduction for items, 1 point = 10%
@@ -392,8 +376,6 @@ struct StatBonuses {
 	bool	SecondaryDmgInc;					// Allow off hand weapon to recieve damage bonus.
 	uint32	GiveDoubleAttack;					// Allow classes to double attack with a specified chance.
 	int32	SlayUndead[2];						// Allow classes to do extra damage verse undead.(base1 = rate, base2 = damage mod)
-	int32	PetCriticalHit;						// Allow pets to critical hit with % value.
-	int32	PetAvoidance;						// Pet avoidance chance.
 	int32	CombatStability;					// Melee damage mitigation.
 	int32	DoubleRiposte;						// Chance to double riposte
 	int32	GiveDoubleRiposte[3];				// 0=Regular Chance, 1=Skill Attack Chance, 2=Skill
@@ -414,7 +396,6 @@ struct StatBonuses {
 	int32	ShieldEquipHateMod;					// Hate mod when shield equiped.
 	int32	ShieldEquipDmgMod[2];				// Damage mod when shield equiped. 0 = damage modifier 1 = Unknown
 	bool	TriggerOnValueAmount;				// Triggers off various different conditions, bool to check if client has effect.
-	int8	StunBashChance;						// chance to stun with bash.	
 	int8	IncreaseChanceMemwipe;				// increases chance to memory wipe
 	int8	CriticalMend;						// chance critical monk mend
 	int32	ImprovedReclaimEnergy;				// Modifies amount of mana returned from reclaim energy

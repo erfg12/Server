@@ -1107,43 +1107,6 @@ bool RequiresComponents(uint16 spell_id)
 	return false;
 }
 
-uint32 GetPartialMeleeRuneReduction(uint32 spell_id)
-{
-	for (int i = 0; i < EFFECT_COUNT; ++i)
-		if (spells[spell_id].effectid[i] == SE_MitigateMeleeDamage)
-			return spells[spell_id].base[i];
-
-	return 0;
-}
-
-uint32 GetPartialMagicRuneReduction(uint32 spell_id)
-{
-	for (int i = 0; i < EFFECT_COUNT; ++i)
-		if (spells[spell_id].effectid[i] == SE_MitigateSpellDamage)
-			return spells[spell_id].base[i];
-
-	return 0;
-}
-
-uint32 GetPartialMeleeRuneAmount(uint32 spell_id)
-{
-	for (int i = 0; i < EFFECT_COUNT; ++i)
-		if (spells[spell_id].effectid[i] == SE_MitigateMeleeDamage)
-			return spells[spell_id].max[i];
-
-	return 0;
-}
-
-uint32 GetPartialMagicRuneAmount(uint32 spell_id)
-{
-	for (int i = 0; i < EFFECT_COUNT; ++i)
-		if (spells[spell_id].effectid[i] == SE_MitigateSpellDamage)
-			return spells[spell_id].max[i];
-
-	return 0;
-}
-
-
 bool DetrimentalSpellAllowsRest(uint16 spell_id)
 {
 	if (IsValidSpell(spell_id))

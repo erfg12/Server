@@ -485,6 +485,49 @@ int16 Inventory::HasItem(int16 item_id, uint8 quantity, uint8 where)
 	return slot_id;
 }
 
+int16 Inventory::HasArtifactItem()
+{
+	int16 slot_id = INVALID_INDEX;
+
+	for (int16 i = MainCursor; i <= EmuConstants::GENERAL_END; i++) 
+	{
+		if (GetItem(i) && GetItem(i)->GetItem()->Lore[0] == '#')
+			return i;
+	}
+
+	for (int16 i = EmuConstants::GENERAL_BAGS_BEGIN; i <= EmuConstants::GENERAL_BAGS_END; i++) 
+	{
+		if (GetItem(i) && GetItem(i)->GetItem()->Lore[0] == '#')
+			return i;
+	}
+
+	for (int16 i = EmuConstants::BANK_BEGIN; i <= EmuConstants::BANK_END; i++) 
+	{
+		if (GetItem(i) && GetItem(i)->GetItem()->Lore[0] == '#')
+			return i;
+	}
+
+	for (int16 i = EmuConstants::BANK_BAGS_BEGIN; i <= EmuConstants::BANK_BAGS_END; i++) 
+	{
+		if (GetItem(i) && GetItem(i)->GetItem()->Lore[0] == '#')
+			return i;
+	}
+
+	for (int16 i = EmuConstants::TRADE_BEGIN; i <= EmuConstants::TRADE_END; i++) 
+	{
+		if (GetItem(i) && GetItem(i)->GetItem()->Lore[0] == '#')
+			return i;
+	}
+
+	for (int16 i = EmuConstants::TRADE_BAGS_BEGIN; i <= EmuConstants::TRADE_BAGS_END; i++) 
+	{
+		if (GetItem(i) && GetItem(i)->GetItem()->Lore[0] == '#')
+			return i;
+	}
+
+	return slot_id;
+}
+
 //this function has the same quantity flaw mentioned above in HasItem()
 int16 Inventory::HasItemByUse(uint8 use, uint8 quantity, uint8 where)
 {
@@ -1369,18 +1412,10 @@ bool ItemInst::IsStackable() const
 	if (!m_item)
 		return false;
 
+	if(m_item->Lore[0] == '*' || m_item->Lore[0] == '#')
+		return false;
+
 	return m_item->Stackable;
-}
-
-bool ItemInst::IsCharged() const
-{
-	if (!m_item)
-		return false;
-
-	if (m_item->MaxCharges > 1)
-		return true;
-	else
-		return false;
 }
 
 // Can item be equipped?

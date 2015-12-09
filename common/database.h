@@ -422,7 +422,7 @@ public:
 	const char *GetRaidLeaderName(uint32 rid);
 
 	/*
-	* Database Setup for boostraps only.
+	* Database Setup for bootstraps only.
 	*/
 	bool DBSetup();
 	bool DBSetup_webdata_character();

@@ -37,106 +37,49 @@ int32 Client::GetMaxStat() const {
 	if((RuleI(Character, StatCap)) > 0)
 		return (RuleI(Character, StatCap));
 
-	int level = GetLevel();
-
-	int32 base = 0;
-
-	if (level < 61) {
-		base = 255;
-	}
-	else if (level < 71) {
-		base = 255 + 5 * (level - 60);
-	}
-	else {
-		base = 330;
-	}
-
-	return(base);
+	return 255;
 }
 
 int32 Client::GetMaxResist() const
 {
-	int level = GetLevel();
-
-	int32 base = 500;
-
-	if(level > 60)
-		base += ((level - 60) * 5);
-
-	return base;
+	return 500;
 }
 
 int32 Client::GetMaxSTR() const {
-	return GetMaxStat()
-		+ itembonuses.STRCapMod
-		+ spellbonuses.STRCapMod
-		+ aabonuses.STRCapMod;
+	return GetMaxStat() + aabonuses.STRCapMod;
 }
 int32 Client::GetMaxSTA() const {
-	return GetMaxStat()
-		+ itembonuses.STACapMod
-		+ spellbonuses.STACapMod
-		+ aabonuses.STACapMod;
+	return GetMaxStat() + aabonuses.STACapMod;
 }
 int32 Client::GetMaxDEX() const {
-	return GetMaxStat()
-		+ itembonuses.DEXCapMod
-		+ spellbonuses.DEXCapMod
-		+ aabonuses.DEXCapMod;
+	return GetMaxStat() + aabonuses.DEXCapMod;
 }
 int32 Client::GetMaxAGI() const {
-	return GetMaxStat()
-		+ itembonuses.AGICapMod
-		+ spellbonuses.AGICapMod
-		+ aabonuses.AGICapMod;
+	return GetMaxStat() + aabonuses.AGICapMod;
 }
 int32 Client::GetMaxINT() const {
-	return GetMaxStat()
-		+ itembonuses.INTCapMod
-		+ spellbonuses.INTCapMod
-		+ aabonuses.INTCapMod;
+	return GetMaxStat() + aabonuses.INTCapMod;
 }
 int32 Client::GetMaxWIS() const {
-	return GetMaxStat()
-		+ itembonuses.WISCapMod
-		+ spellbonuses.WISCapMod
-		+ aabonuses.WISCapMod;
+	return GetMaxStat() + aabonuses.WISCapMod;
 }
 int32 Client::GetMaxCHA() const {
-	return GetMaxStat()
-		+ itembonuses.CHACapMod
-		+ spellbonuses.CHACapMod
-		+ aabonuses.CHACapMod;
+	return GetMaxStat() + aabonuses.CHACapMod;
 }
 int32 Client::GetMaxMR() const {
-	return GetMaxResist()
-		+ itembonuses.MRCapMod
-		+ spellbonuses.MRCapMod
-		+ aabonuses.MRCapMod;
+	return GetMaxResist() + aabonuses.MRCapMod;
 }
 int32 Client::GetMaxPR() const {
-	return GetMaxResist()
-		+ itembonuses.PRCapMod
-		+ spellbonuses.PRCapMod
-		+ aabonuses.PRCapMod;
+	return GetMaxResist() + aabonuses.PRCapMod;
 }
 int32 Client::GetMaxDR() const {
-	return GetMaxResist()
-		+ itembonuses.DRCapMod
-		+ spellbonuses.DRCapMod
-		+ aabonuses.DRCapMod;
+	return GetMaxResist() + aabonuses.DRCapMod;
 }
 int32 Client::GetMaxCR() const {
-	return GetMaxResist()
-		+ itembonuses.CRCapMod
-		+ spellbonuses.CRCapMod
-		+ aabonuses.CRCapMod;
+	return GetMaxResist() + aabonuses.CRCapMod;
 }
 int32 Client::GetMaxFR() const {
-	return GetMaxResist()
-		+ itembonuses.FRCapMod
-		+ spellbonuses.FRCapMod
-		+ aabonuses.FRCapMod;
+	return GetMaxResist() + aabonuses.FRCapMod;
 }
 
 int32 Client::LevelRegen()

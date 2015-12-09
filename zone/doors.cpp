@@ -257,7 +257,12 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 				if(lockpicks->GetItem()->ItemType == ItemTypeLockPick)
 				{
 					float modskill=sender->GetSkill(SkillPickLock);
-					
+
+					// Lockpicks will be on the cursor and not equipped, so we need to manually get any skillmod they may have.
+					if(lockpicks->GetItem()->SkillModType == SkillPickLock) 
+					{
+						modskill += modskill * (static_cast<float>(lockpicks->GetItem()->SkillModValue)/100.0);
+					}
 
 					Log.Out(Logs::General, Logs::Skills, "Client has lockpicks: skill=%f", modskill);
 

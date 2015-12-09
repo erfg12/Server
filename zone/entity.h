@@ -244,6 +244,7 @@ public:
 	void	DestroyTempPets(Mob *owner);
 	int16	CountTempPets(Mob *owner);
 	bool	GetZommPet(Mob *owner, NPC* &pet);
+	uint16	GetSummonedPetID(Mob *summoner);
 	void	AddTempPetsToHateList(Mob *owner, Mob* other, bool bFrenzy = false);
 	Entity *GetEntityMob(uint16 id);
 	Entity *GetEntityMerc(uint16 id);
@@ -407,7 +408,7 @@ public:
 	uint8 GetClientCountByBoatID(uint32 boatid);
 	bool TransferPrimaryAggro(Mob* other);
 	void SendMerchantEnd(Mob* merchant);
-	void SendMerchantInventory(Mob* merchant);
+	void SendMerchantInventory(Mob* merchant, int32 slotid = -1, bool isdelete = false);
 
 
 protected:

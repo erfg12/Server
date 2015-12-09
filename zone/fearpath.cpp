@@ -47,10 +47,10 @@ int Mob::GetFleeRatio()
 
 	if (GetLevel() <= hateTopLevel)
 	{
-		if (hateTopLevel > 25 && (hateTopLevel - GetLevel()) > (GetLevel() / 2))
+		if (hateTopLevel > 25 && (hateTopLevel - GetLevel()) > (hateTopLevel / 2))
 		{
 			// deep green con runs much earlier
-			return fleeRatio * 2;
+			return 50;
 		}
 	}
 	else
@@ -110,25 +110,7 @@ void Mob::CheckFlee() {
 		(!RuleB(Combat, FleeIfNotAlone) && (entity_list.GetHatedCountByFaction(hate_top, this) == 0))
 		)
 	{
-		if (roamer || IsWarriorClass() || zone->GetZoneExpansion() == ClassicEQ || GetMana() < 70 || GetLevel() < 30
-			|| !IsNPC() || DistanceSquared(CastToNPC()->GetSpawnPoint(), GetPosition()) < 40000
-		)
-		{
-			StartFleeing();
-		}
-		else if (!IsCasting())
-		{
-			if (IsMoving())
-			{
-				SetRunAnimSpeed(0);
-				SendPosition();
-				SetMoving(false);
-			}
-
-			entity_list.MessageClose_StringID(this, true, 200, MT_Spells, BEGIN_GATE, this->GetCleanName());
-			CastSpell(SEPLL_GATE, GetID(), 1, 5000, 70);
-			flee_timer.Start(4000);
-		}
+		StartFleeing();
 	}
 }
 

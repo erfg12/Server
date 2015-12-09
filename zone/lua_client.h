@@ -155,6 +155,7 @@ public:
 	void SummonItem(uint32 item_id, int charges);
 	void SummonItem(uint32 item_id, int charges, bool attuned);
 	void SummonItem(uint32 item_id, int charges, bool attuned, int to_slot);
+	void SummonItem(uint32 item_id, int charges, bool attuned, int to_slot, bool force_charges);
 	void DropItem(int slot_id);
 	void BreakInvis();
 	void LeaveGroup();

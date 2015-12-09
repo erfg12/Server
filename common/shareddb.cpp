@@ -577,7 +577,7 @@ void SharedDatabase::LoadItems(void *data, uint32 size, int32 items, uint32 max_
 		item.NoPet = (atoi(row[ItemField::nopet]) == 0) ? false : true;
 		item.StackSize = (uint16)atoi(row[ItemField::stacksize]);
 		item.NoTransfer = disableNoTransfer ? false : (atoi(row[ItemField::notransfer]) == 0) ? false : true;
-		item.Stackable = (atoi(row[ItemField::stackable]) == 3) ? false : true;
+		item.Stackable = (atoi(row[ItemField::stackable]) == 1) ? true : false;
 		item.Stackable_ = (uint8)atoul(row[ItemField::stackable]);
 		item.Click.Effect = (uint32)atoul(row[ItemField::clickeffect]);
 		item.Click.Type = (uint8)atoul(row[ItemField::clicktype]);

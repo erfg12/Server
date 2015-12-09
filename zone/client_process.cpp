@@ -313,7 +313,7 @@ bool Client::Process() {
 					}
 
 					//triple attack: rangers, monks, warriors over level 60
-					if((((GetClass() == MONK || GetClass() == WARRIOR || GetClass() == RANGER)
+					if((((GetClass() == MONK || GetClass() == WARRIOR)
 						&& GetLevel() >= 60) || GetSpecialAbility(SPECATK_TRIPLE))
 						&& CheckDoubleAttack(true))
 					{
@@ -512,7 +512,8 @@ bool Client::Process() {
 			safe_delete(outapp);
 		}
 
-		if (tic_timer.Check() && !dead) {
+		if (tic_timer.Check() && !dead) 
+		{
 			CalcMaxHP();
 			CalcMaxMana();
 			CalcATK();
@@ -522,13 +523,20 @@ bool Client::Process() {
 			DoManaRegen();
 			DoEnduranceRegen();
 			BuffProcess();
-			DoStaminaUpdate();
+			RefreshSpellIcon();
 
-			if (fishing_timer.Check()) {
+			if(stamina_timer.Check()) 
+			{
+				DoStaminaUpdate();
+			}
+
+			if (fishing_timer.Check()) 
+			{
 				GoFish();
 			}
 
-			if (autosave_timer.Check()) {
+			if (autosave_timer.Check()) 
+			{
 				Save(0);
 			}
 
@@ -633,11 +641,11 @@ bool Client::Process() {
 			LinkDead();
 		}
 	}
-	// Feign Death 2 minutes and zone forgets you
+	// Repurposed the two minute timer into a 10 minute forget timer
+	// because our hate lists don't have feigned players, unlike Sony's
 	if (forget_timer.Check()) {
 		forget_timer.Disable();
 		entity_list.ClearZoneFeignAggro(this);
-		//Message(CC_Default,"Your enemies have forgotten you!");
 	}
 
 	return ret;
@@ -1010,12 +1018,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid)
 			int charges = 1;
 			if(database.ItemQuantityType(item->ID) == Quantity_Charges)
 			{
-				if(ml.charges > 0)
-				{
-					charges = zone->GetTempMerchantQtyNoSlot(npcid, item->ID);
-				}
-				else
-					charges = 1;
+				charges = zone->GetTempMerchantQtyNoSlot(npcid, item->ID);
 			}
 			ItemInst* inst = database.CreateItem(item, charges);
 			if (inst) {
@@ -1026,10 +1029,8 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid)
 					inst->SetPrice((item->Price * (RuleR(Merchant, SellCostMod)) * item->SellRate));
 				inst->SetMerchantSlot(ml.slot);
 				inst->SetMerchantCount(ml.charges);
-				if(charges > 0)
-					inst->SetCharges(charges);
-				else
-					inst->SetCharges(1);
+				inst->SetCharges(charges);
+		
 				if(inst) 
 				{
 					std::string packet = inst->Serialize(ml.slot-1);
@@ -1056,12 +1057,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid)
 	delitem->npcid = entityid;
 	delitem->playerid = GetID();
 	delitempacket->priority = 6;
-
-	if(merch)
-		entity_list.QueueClients(merch, delitempacket); //que for anyone that could be using the merchant so they see the update
-	else
-		QueuePacket(delitempacket);
-
+	QueuePacket(delitempacket);
 	safe_delete(delitempacket);
 	Log.Out(Logs::General, Logs::Trading, "Cleared last merchant slot %d", lastslot);
 
@@ -1176,6 +1172,8 @@ void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 I
 		else if (spells[SpellID].base[0] == 100 && PendingRezzXP > 0) {
 			SetEXP((GetEXP() + PendingRezzXP), GetAAXP(), true);
 		}
+
+		entity_list.RemoveFromTargets(this);
 
 		//Was sending the packet back to initiate client zone...
 		//but that could be abusable, so lets go through proper channels
@@ -1836,9 +1834,6 @@ void Client::DoManaRegen() {
 
 
 void Client::DoStaminaUpdate() {
-
-	if(!stamina_timer.Check())
-		return;
 
 	//Change timers based on race. The shorter the timer, the more food is consumed.
 	if(stamina_timer.GetDuration() == 40000)

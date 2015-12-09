@@ -187,6 +187,7 @@ public:
 	// Check whether item exists in inventory
 	// where argument specifies OR'd list of invWhere constants to look
 	int16 HasItem(int16 item_id, uint8 quantity = 0, uint8 where = 0xFF);
+	int16 HasArtifactItem();
 
 	// Check whether item exists in inventory
 	// where argument specifies OR'd list of invWhere constants to look
@@ -290,7 +291,6 @@ public:
 
 	// Can item be stacked?
 	bool IsStackable() const;
-	bool IsCharged() const;
 
 	// Can item be equipped by/at?
 	bool IsEquipable(uint16 race, uint16 class_) const;

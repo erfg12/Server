@@ -344,6 +344,7 @@
 #define DUNGEON_SEALED				5141	//The gateway to the dungeon is sealed off to you.  Perhaps you would be able to enter if you needed to adventure there.
 #define PET_ATTACKING				5501	//%1 tells you, 'Attacking %2 Master.'
 #define FATAL_BOW_SHOT				5745	//%1 performs a FATAL BOW SHOT!!
+#define AVOID_STUN					5753	//You avoid the stunning blow.
 #define MELEE_SILENCE				5806	//You *CANNOT* use this melee ability, you are suffering from amnesia!
 #define DISCIPLINE_REUSE_MSG		5807	//You can use the ability %1 again in %2 hour(s) %3 minute(s) %4 seconds.
 #define DISCIPLINE_REUSE_MSG2		5808	//You can use the ability %1 again in %2 minute(s) %3 seconds.

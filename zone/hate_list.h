@@ -56,7 +56,7 @@ public:
 	// gets any on the list
 	Mob *GetRandom();
 	// get closest mob or nullptr if list empty
-	Mob *GetClosest(Mob *hater);
+	Mob *GetClosest(Mob *hater = nullptr);
 	// gets top mob or nullptr if hate list empty
 	Mob *GetDamageTop(Mob *hater);
 	// used to check if mob is on hatelist

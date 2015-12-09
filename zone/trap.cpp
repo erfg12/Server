@@ -211,7 +211,7 @@ void Trap::Trigger(Mob* trigger)
 				int dmg = zone->random.Int(effectvalue, effectvalue2);
 				trigger->SetHP(trigger->GetHP() - dmg);
 				a->damage = dmg;
-				a->sequence = (float)zone->random.Int(0, 1234567);
+				a->sequence = (float)zone->random.Int(0, 511);
 				a->source = GetHiddenTrigger()!=nullptr ? GetHiddenTrigger()->GetID() : trigger->GetID();
 				a->spellid = 0;
 				a->target = trigger->GetID();

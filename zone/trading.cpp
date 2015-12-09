@@ -27,11 +27,9 @@
 
 #include "quest_parser_collection.h"
 #include "string_ids.h"
-#include "worldserver.h"
 
 class QueryServ;
 
-extern WorldServer worldserver;
 extern QueryServ* QServ;
 
 // The maximum amount of a single bazaar transaction expressed in copper.
@@ -294,7 +292,6 @@ void Trade::LogTrade()
 	}
 }
 
-
 void Trade::DumpTrade()
 {
 	Mob* with = With();
@@ -328,7 +325,6 @@ void Trade::DumpTrade()
 
 	Log.Out(Logs::Detail, Logs::Trading, "\tpp:%i, gp:%i, sp:%i, cp:%i", pp, gp, sp, cp);
 }
-
 
 void Client::ResetTrade() {
 	AddMoneyToPP(trade->cp, trade->sp, trade->gp, trade->pp, true);
@@ -935,7 +931,7 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 								}
 								else if (RuleB(NPC, ReturnNonQuestItems)) 
 								{
-									SummonItem(baginst->GetID(), baginst->GetCharges(), false, MainQuest);
+									SummonItem(baginst->GetID(), baginst->GetCharges(), false, MainQuest, true);
 									if(npc->CanTalk())
 										npc->Say_StringID(NO_NEED_FOR_ITEM, GetName());
 								}
@@ -964,7 +960,7 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 				else if (RuleB(NPC, ReturnNonQuestItems)) 
 				{
 					DeleteItemInInventory(i);
-					SummonItem(inst->GetID(), inst->GetCharges(), false, MainQuest);
+					SummonItem(inst->GetID(), inst->GetCharges(), false, MainQuest, true);
 					if(npc->CanTalk())
 						npc->Say_StringID(NO_NEED_FOR_ITEM, GetName());
 				}
@@ -1499,7 +1495,6 @@ void Client::TradeRequestFailed(const EQApplicationPacket* app) {
 	safe_delete(outapp);
 }
 
-
 static void BazaarAuditTrail(const char *seller, const char *buyer, const char *itemName, int quantity, int totalCost, int tranType) {
 
 	std::string query = StringFormat("INSERT INTO `trader_audit` "
@@ -1508,8 +1503,6 @@ static void BazaarAuditTrail(const char *seller, const char *buyer, const char *
                                     seller, buyer, itemName, quantity, totalCost, tranType);
 	database.QueryDatabase(query);
 }
-
-
 
 void Client::BuyTraderItem(TraderBuy_Struct* tbs,Client* Trader,const EQApplicationPacket* app){
 
