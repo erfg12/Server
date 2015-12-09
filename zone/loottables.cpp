@@ -306,6 +306,7 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 		const Item_Struct* compitem = nullptr;
 		bool found = false; // track if we found an empty slot we fit into
 		int32 foundslot = -1; // for multi-slot items
+		bool upgrade = false;
 
 		// Equip rules are as follows:
 		// If the item has the NoPet flag set it will not be equipped.
@@ -316,26 +317,44 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 		// If an item can fit into multiple slots we'll pick the last one where
 		// it is an improvement.
 
-		if (!item2->NoPet) {
-			for (int i = 0; !found && i<EmuConstants::EQUIPMENT_SIZE; i++) {
+		if (!item2->NoPet) 
+		{
+			for (int i = 0; !found && i<EmuConstants::EQUIPMENT_SIZE; i++) 
+			{
 				uint32 slots = (1 << i);
-				if (item2->Slots & slots) {
+
+				// If the item is ranged, and has other equip slots prefer to use another slot so
+				// the weapon graphic shows in-game.
+				if(i == MainRange && item2->Slots != slots)
+				{
+					continue;
+				}
+
+				if (item2->Slots & slots) 
+				{
 					if(equipment[i])
 					{
 						compitem = database.GetItem(equipment[i]);
-						if (item2->AC > compitem->AC ||
-							(item2->AC == compitem->AC && item2->HP > compitem->HP))
+						const Item_Struct* pri_item = nullptr;
+						if (item->pet == 0 &&
+							(i != MainPrimary && i != MainSecondary && (item2->AC > compitem->AC || (item2->AC == compitem->AC && item2->HP > compitem->HP))) ||
+							((i == MainPrimary || i == MainSecondary) && item2->Damage > compitem->Damage)
+							)
 						{
 							// item would be an upgrade
 							// check if we're multi-slot, if yes then we have to keep
 							// looking in case any of the other slots we can fit into are empty.
-							if (item2->Slots != slots) {
+							if (item2->Slots != slots) 
+							{
 								foundslot = i;
+								upgrade = true;
 							}
-							else {
+							else 
+							{
 								equipment[i] = item2->ID;
 								foundslot = i;
 								found = true;
+								upgrade = true;
 							}
 						} // end if ac
 					}
@@ -384,17 +403,22 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 				if (item2->Proc.Effect != 0)
 					CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
 
+				if(upgrade)
+				{
+					ServerLootItem_Struct* sitem = GetItem(foundslot);
+					if(sitem)
+						UnEquipItem(sitem->item_id, foundslot);
+				}
+
 				eslot = MaterialPrimary;
 				item->equip_slot = MainPrimary;
 			}
 		}
-		else if (foundslot == MainSecondary
-			&& (can_equip_secondary
-			&& GetLevel() >= DUAL_WIELD_LEVEL
-			&& (item2->ItemType == ItemType1HSlash || item2->ItemType == ItemType1HBlunt || item2->ItemType == ItemType1HPiercing)) 
-			|| (item2->ItemType == ItemTypeShield || item2->ItemType == ItemTypeMisc))
+		else if (foundslot == MainSecondary &&
+			((item2->ItemType == ItemTypeShield || item2->ItemType == ItemTypeMisc) ||
+			(can_equip_secondary && GetLevel() >= DUAL_WIELD_LEVEL &&
+			(item2->ItemType == ItemType1HSlash || item2->ItemType == ItemType1HBlunt || item2->ItemType == ItemType1HPiercing))))
 		{
-
 			if (item2->Proc.Effect!=0)
 				CastToMob()->AddProcToWeapon(item2->Proc.Effect, true);
 
@@ -406,37 +430,93 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 			else if(item2->ItemType != ItemTypeMisc)
 				can_dual_wield = true;
 
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
+
 			eslot = MaterialSecondary;
 			item->equip_slot = MainSecondary;
 		}
-		else if (foundslot == MainHead) {
+		else if (foundslot == MainHead) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialHead;
 			item->equip_slot = MainHead;
 		}
-		else if (foundslot == MainChest) {
+		else if (foundslot == MainChest) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialChest;
 			item->equip_slot = MainChest;
 		}
-		else if (foundslot == MainArms) {
+		else if (foundslot == MainArms) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialArms;
 			item->equip_slot = MainArms;
 		}
-		else if (foundslot == MainWrist1 || foundslot == MainWrist2) {
+		else if (foundslot == MainWrist1 || foundslot == MainWrist2) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialWrist;
 			if(foundslot == MainWrist1)
 				item->equip_slot = MainWrist1;
 			if(foundslot == MainWrist2)
 				item->equip_slot = MainWrist2;
 		}
-		else if (foundslot == MainHands) {
+		else if (foundslot == MainHands) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialHands;
 			item->equip_slot = MainHands;
 		}
-		else if (foundslot == MainLegs) {
+		else if (foundslot == MainLegs) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialLegs;
 			item->equip_slot = MainLegs;
 		}
-		else if (foundslot == MainFeet) {
+		else if (foundslot == MainFeet) 
+		{
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
 			eslot = MaterialFeet;
 			item->equip_slot = MainFeet;
 		}
@@ -444,7 +524,13 @@ void NPC::AddLootDrop(const Item_Struct *item2, ItemList* itemlist, int16 charge
 			foundslot == MainBack || foundslot == MainRange || foundslot == MainFinger1 || foundslot == MainFinger2 || foundslot == MainWaist ||
 			foundslot == MainAmmo)
 		{
-				item->equip_slot = foundslot;
+			if(upgrade)
+			{
+				ServerLootItem_Struct* sitem = GetItem(foundslot);
+				if(sitem)
+					UnEquipItem(sitem->item_id, foundslot);
+			}
+			item->equip_slot = foundslot;
 		}
 
 		//if we found an open slot it goes in...
@@ -749,4 +835,33 @@ bool NPC::IsEquipped(int16 itemid)
 	}
 
 	return false;
+}
+
+bool NPC::UnEquipItem(int16 itemid, uint16 slotid)
+{
+	bool found = false;
+	ItemList::iterator cur, end;
+	cur = itemlist.begin();
+	end = itemlist.end();
+	for (; cur != end; ++cur) {
+		ServerLootItem_Struct* sitem = *cur;
+		if (sitem && sitem->item_id == itemid && sitem->equip_slot == slotid) 
+		{
+			RemoveItem(sitem);
+			found = true;
+			break;
+		}
+	}
+
+	if(found)
+	{
+		ItemInst* inst = database.CreateItem(itemid);
+		if(inst)
+		{
+			const Item_Struct* item = inst->GetItem();
+			AddLootDrop(item, &itemlist, 0, 1, 127, false);
+		}
+	}
+
+	return found;
 }

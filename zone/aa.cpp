@@ -37,12 +37,10 @@ Copyright (C) 2001-2004 EQEMu Development Team (http://eqemulator.net)
 
 extern QueryServ* QServ;
 
-
 AA_DBAction AA_Actions[aaHighestID][MAX_AA_ACTION_RANKS];	//[aaid][rank]
 std::map<uint32, SendAA_Struct*>aas_send;
 std::map<uint32, std::map<uint32, AA_Ability> > aa_effects;	//stores the effects from the aa_effects table in memory
 std::map<uint32, AALevelCost_Struct> AARequiredLevelAndCost;
-
 
 int Client::GetAATimerID(aaID activate)
 {
@@ -1025,29 +1023,25 @@ void Client::BuyAA(AA_Action* action)
 		SendAATable();
 
 		/*
-		We are building these messages ourself instead of using the stringID to work around patch discrepencies
+		We are building these messages ourself instead of using the stringID to work around patch discrepancies
 		these are AA_GAIN_ABILITY	(410) & AA_IMPROVE (411), respectively, in both Titanium & SoF. not sure about 6.2
 		*/
-
+		char aa_type[8];
 		/* Initial purchase of an AA ability */
 		if (cur_level < 1){
 			Message(CC_Yellow, "You have gained the ability \"%s\" at a cost of %d ability %s.", aa2->name, real_cost, (real_cost>1) ? "points" : "point");
-
-			/* QS: Player_Log_AA_Purchases */
-			if (RuleB(QueryServ, PlayerLogAAPurchases)){
-				std::string event_desc = StringFormat("Initial AA Purchase :: aa_name:%s aa_id:%i at cost:%i in zoneid:%i instid:%i", aa2->name, aa2->id, real_cost, this->GetZoneID(), this->GetInstanceID());
-				QServ->PlayerLogEvent(Player_Log_AA_Purchases, this->CharacterID(), event_desc);
-			}
+			strncpy(aa_type, "Initial", 8);
 		}
 		/* Ranked purchase of an AA ability */
 		else{
 			Message(CC_Yellow, "You have improved %s %d at a cost of %d ability %s.", aa2->name, cur_level + 1, real_cost, (real_cost > 1) ? "points" : "point");
+			strncpy(aa_type, "Ranked", 8);
+		}
 
-			/* QS: Player_Log_AA_Purchases */
-			if (RuleB(QueryServ, PlayerLogAAPurchases)){
-				std::string event_desc = StringFormat("Ranked AA Purchase :: aa_name:%s aa_id:%i at cost:%i in zoneid:%i instid:%i", aa2->name, aa2->id, real_cost, this->GetZoneID(), this->GetInstanceID());
-				QServ->PlayerLogEvent(Player_Log_AA_Purchases, this->CharacterID(), event_desc);
-			}
+		/* QS: Player_Log_AA_Purchases */
+		if (RuleB(QueryServ, PlayerLogAAPurchases))
+		{
+			QServ->QSAAPurchases(this->CharacterID(), this->GetZoneID(), this->GetInstanceID(), aa_type, aa2->name, aa2->id, real_cost);
 		}
 
 		SendAAStats();
@@ -1147,6 +1141,7 @@ uint32 Client::GetAA(uint32 aa_id) const {
 	}
 	return(0);
 }
+
 bool Client::SetAA(uint32 aa_id, uint32 new_value) {
 	aa_points[aa_id] = new_value;
 	uint32 cur;

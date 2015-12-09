@@ -215,6 +215,7 @@ public:
 	void ClearNPCTypeCache(int npctype_id);
 	void SendDebug(std::string message, int level);
 	void ReloadZoneStaticData();
+	void QSQGlobalUpdate(int charid, const char* varname, const char* newvalue, uint32 zoneid, int32 instanceid);
 
 	Client *GetInitiator() const;
 	NPC *GetNPC() const;

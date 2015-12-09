@@ -165,12 +165,18 @@
 #define ServerOP_QSPlayerLogTrades					0x5010
 #define ServerOP_QSPlayerLogHandins					0x5011
 #define ServerOP_QSPlayerLogNPCKills				0x5012
-#define ServerOP_QSPlayerLogDeletes					0x5013
-#define ServerOP_QSPlayerLogMoves					0x5014
+#define ServerOP_QSPlayerLogItemDeletes				0x5013
+#define ServerOP_QSPlayerLogItemMoves				0x5014
 #define ServerOP_QSPlayerLogMerchantTransactions	0x5015
 #define ServerOP_QSSendQuery						0x5016
 #define ServerOP_CZSignalNPC						0x5017
 #define ServerOP_CZSetEntityVariableByNPCTypeID		0x5018
+#define ServerOP_QSPlayerAARateHourly				0x5019
+#define ServerOP_QSPlayerAAPurchase					0x5020
+#define ServerOP_QSPlayerDeathBy					0x5021
+#define ServerOP_QSPlayerTSEvents					0x5022
+#define ServerOP_QSPlayerQGlobalUpdates				0x5023
+#define ServerOP_QSPlayerLootRecords				0x5024
 
 #define ServerOP_WIRemoteCall 0x5001
 #define ServerOP_WIRemoteCallResponse 0x5002
@@ -307,6 +313,7 @@ struct ServerChangeWID_Struct {
 	uint32	charid;
 	uint32	newwid;
 };
+
 struct SendGroup_Struct{
 	uint8	grouptotal;
 	uint32	zoneid;
@@ -323,7 +330,6 @@ struct ServerGroupFollow_Struct {
 struct ServerGroupFollowAck_Struct {
 	char Name[64];
 };
-
 
 struct ServerChannelMessage_Struct {
 	char deliverto[64];
@@ -456,22 +462,26 @@ struct ServerLSStatus_Struct {
 	int32 num_players;
 	int32 num_zones;
 };
+
 struct ZoneInfo_Struct {
 	uint32 zone;
 	uint16 count;
 	uint32 zone_wid;
 };
+
 struct ZoneBoot_Struct {
 	uint32 zone;
 	uint32 instance;
 	char compile_time[25];
 	uint32 zone_wid;
 };
+
 struct ZoneShutdown_Struct {
 	uint32 zone;
 	uint32 instance;
 	uint32 zone_wid;
 };
+
 struct ServerLSZoneSleep_Struct {
 	uint32 zone;
 	uint32 instance;
@@ -493,6 +503,7 @@ struct ServerLSPlayerZoneChange_Struct {
 	uint32 from; // 0 = world
 	uint32 to; // 0 = world
 };
+
 struct ServerLSClientAuth {
 	uint32	lsaccount_id;	// ID# in login server's db
 	char	name[30];		// username in login server's db
@@ -606,10 +617,12 @@ struct WorldToZone_Struct {
 	uint32	account_id;
 	int8	response;
 };
+
 struct WorldShutDown_Struct {
 	uint32	time;
 	uint32	interval;
 };
+
 struct ServerSyncWorldList_Struct {
 	uint32	RemoteID;
 	uint32	ip;
@@ -742,6 +755,7 @@ typedef enum {
 	ZR_Restart,
 	ZR_Stop
 } ZoneRequestCommands;
+
 struct LauncherZoneRequest {
 	uint8 command;
 	char short_name[33];
@@ -753,7 +767,6 @@ struct LauncherZoneStatus {
 	uint32 start_count;
 	uint8 running;
 };
-
 
 struct ServerGuildID_Struct {
 	uint32 guild_id;
@@ -946,7 +959,7 @@ struct QSPlayerLogTrade_Struct {
 };
 
 struct QSHandinItems_Struct {
-	char action_type[7]; // handin, return or reward
+	char action_type[7]; // hand in, return or reward
 	uint16 char_slot;
 	uint32 item_id;
 	uint16 charges;
@@ -979,17 +992,20 @@ struct QSPlayerLogNPCKill_Struct{
 	QSPlayerLogNPCKillsPlayers_Struct Chars[0];
 };
 
-struct QSDeleteItems_Struct {
+//struct QSDeleteItems_Struct {
+//	uint16 char_slot;
+//	uint32 item_id;
+//	uint16 charges;
+//};
+
+struct QSPlayerLogItemDelete_Struct {
+	uint32 char_id;
+	uint16 stack_size; // '0' indicates full stack or non-stackable item move
+	uint16 char_count;
 	uint16 char_slot;
 	uint32 item_id;
 	uint16 charges;
-};
-
-struct QSPlayerLogDelete_Struct {
-	uint32					char_id;
-	uint16					stack_size; // '0' indicates full stack or non-stackable item move
-	uint16					char_count;
-	QSDeleteItems_Struct	items[0];
+	//QSDeleteItems_Struct	items[0];
 };
 
 struct QSMoveItems_Struct {
@@ -999,7 +1015,7 @@ struct QSMoveItems_Struct {
 	uint16 charges;
 };
 
-struct QSPlayerLogMove_Struct {
+struct QSPlayerLogItemMove_Struct {
 	uint32			char_id;
 	uint16			from_slot;
 	uint16			to_slot;
@@ -1009,21 +1025,79 @@ struct QSPlayerLogMove_Struct {
 	QSMoveItems_Struct items[0];
 };
 
-struct QSTransactionItems_Struct {
-	uint16 char_slot;
-	uint32 item_id;
-	uint16 charges;
-};
+//struct QSTransactionItems_Struct {
+//	uint16 char_slot;
+//	uint32 item_id;
+//	uint16 charges;
+//};
 
 struct QSMerchantLogTransaction_Struct {
+	uint32					char_id;
+	uint16					char_slot;
+	uint32					item_id;
+	uint16					charges;
 	uint32					zone_id;
 	uint32					merchant_id;
 	MoneyUpdate_Struct		merchant_money;
 	uint16					merchant_count;
-	uint32					char_id;
 	MoneyUpdate_Struct		char_money;
 	uint16					char_count;
-	QSTransactionItems_Struct items[0];
+	//QSTransactionItems_Struct items[0];
+};
+
+struct QSPlayerAARateHourly_Struct {
+	uint32 charid;
+	uint32 add_points;
+};
+
+struct QSPlayerAAPurchase_Struct {
+	uint32 charid;
+	char aatype[8];
+	char aaname[128];
+	uint32 aaid;
+	uint32 cost;
+	uint32 zone_id;
+	int32 instance_id;
+};
+
+struct QSPlayerDeathBy_Struct {
+	uint32 charid;
+	uint32 zone_id;
+	int32 instance_id;
+	char killed_by[128];
+	uint16 spell;
+	uint32 damage;
+};
+
+struct QSPlayerTSEvents_Struct {
+	uint32 charid;
+	uint32 zone_id;
+	int32 instance_id;
+	char results[8];
+	uint32 recipe_id;
+	uint32 tradeskill;
+	uint16 trivial;
+	float chance;
+};
+
+struct QSPlayerQGlobalUpdate_Struct {
+	uint32 charid;
+	char action[8];
+	uint32 zone_id;
+	int32 instance_id;
+	char varname[32];
+	char newvalue[32];
+};
+
+struct QSPlayerLootRecords_struct {
+	uint32 charid;
+	char corpse_name[64];
+	char type[12];
+	uint32 zone_id;
+	uint32 item_id;
+	char item_name[64];
+	int8 charges;
+	MoneyUpdate_Struct money;
 };
 
 struct QSGeneralQuery_Struct {

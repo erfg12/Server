@@ -557,7 +557,6 @@ namespace Mac {
 
 		}
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
-		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)*entrycount];
 		outapp->size = DeflatePacket((unsigned char*)out->pBuffer, out->size, outapp->pBuffer, sizeof(structs::Spawn_Struct)*entrycount);
 		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
 		delete[] __emu_buffer;
@@ -575,7 +574,6 @@ namespace Mac {
 		safe_delete(spawns);
 
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_NewSpawn, sizeof(structs::Spawn_Struct));
-		outapp->pBuffer = new uchar[sizeof(structs::Spawn_Struct)];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, __packet->size, outapp->pBuffer, sizeof(structs::Spawn_Struct));
 		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
 		dest->FastQueuePacket(&outapp, ack_req);

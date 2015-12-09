@@ -369,7 +369,7 @@ int Zone::SaveTempItem(uint32 merchantid, uint32 npcid, uint32 item, int32 charg
 				if (!ml.origslot)
 					ml.origslot = ml.slot;
 
-				if (charges > 0) //This is a save
+				if ((database.ItemQuantityType(item) != Quantity_Stacked && ml.quantity > 0) || charges > 0) //This is a save
 				{
 					database.SaveMerchantTemp(npcid, ml.origslot, item, ml.charges, ml.quantity);
 					tmp_merlist.push_back(ml);

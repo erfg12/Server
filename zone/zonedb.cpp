@@ -3633,8 +3633,9 @@ int8 ZoneDatabase::ItemQuantityType(int16 item_id)
 	const Item_Struct* item = database.GetItem(item_id);
 	if(item)
 	{
-		//Item does not have quantity and is not stackable (Normal item.)
-		if (item->MaxCharges < 1 && (item->StackSize < 1 || !item->Stackable)) 
+		// Item does not have quantity and is not stackable or is lore. (Normal item.)
+		if ((item->MaxCharges < 1 && (item->StackSize <= 1 || !item->Stackable)) || 
+			(item->MaxCharges == 1 && item->StackSize > 1 && item->Stackable && (item->Lore[0] == '*' || item->Lore[0] == '#')))
 		{ 
 			return Quantity_Normal;
 		}

@@ -60,7 +60,6 @@
 #include "map.h"
 #include "pathing.h"
 #include "qglobals.h"
-#include "queryserv.h"
 #include "quest_parser_collection.h"
 #include <stdlib.h>
 #include "string_ids.h"
@@ -68,19 +67,15 @@
 #include "water_map.h"
 #include "worldserver.h"
 
-extern QueryServ* QServ;
 extern WorldServer worldserver;
 void CatchSignal(int sig_num);
 
-
-
 //struct cl_struct *commandlist;	// the actual linked list of commands
-int commandcount;								// how many commands we have
+int commandcount;					// how many commands we have
 
 // this is the pointer to the dispatch function, updated once
 // init has been performed to point at the real function
 int(*command_dispatch)(Client *, char const *) = command_notavail;
-
 
 void command_bestz(Client *c, const Seperator *message);
 void command_pf(Client *c, const Seperator *message);
@@ -108,7 +103,6 @@ int command_notavail(Client *c, const char *message){
 /*****************************************************************************/
 
 /*
-
 Access Levels:
 
 0		Normal
@@ -127,7 +121,6 @@ Access Levels:
 180	* GM-Coder *
 200	* GM-Mgmt *
 250	* GM-Impossible *
-
 */
 
 int command_init(void){
@@ -259,7 +252,6 @@ int command_init(void){
 		command_add("iplookup", "[charname] - Look up IP address of charname.", 95, command_iplookup) ||
 		command_add("iteminfo", "- Get information about the item on your cursor.", 50, command_iteminfo) ||
 		command_add("itemsearch", "[search criteria] - Search for an item.", 100, command_itemsearch) ||
-		command_add("itemtest", "- merth's test function.", 255, command_itemtest) ||
 		command_add("keyring", "Displays target's keyring items.", 90, command_keyring) ||
 		command_add("kick", "[charname] - Disconnect charname.", 90, command_kick) ||
 		command_add("kill", "- Kill your target.", 150, command_kill) ||
@@ -594,13 +586,6 @@ int command_realdispatch(Client *c, const char *message){
 		return(-1);
 	}
 
-	/* QS: Player_Log_Issued_Commands */
-	if (RuleB(QueryServ, PlayerLogIssuedCommandes))
-	{
-		std::string event_desc = StringFormat("Issued command :: '%s' in zoneid:%i instid:%i", message, c->GetZoneID(), c->GetInstanceID());
-		QServ->PlayerLogEvent(Player_Log_Issued_Commands, c->CharacterID(), event_desc);
-	}
-
 	if(cur->access >= COMMANDS_LOGGING_MIN_STATUS)
 	{
 		const char* targetType = "notarget";
@@ -610,14 +595,12 @@ int command_realdispatch(Client *c, const char *message){
 			else if (c->GetTarget()->IsPet()) targetType = "pet";
 			else if (c->GetTarget()->IsNPC()) targetType = "NPC";
 			else if (c->GetTarget()->IsCorpse()) targetType = "Corpse";
-			//else if (c->GetTarget()->IsMob()) targetType = "mob"; //doesn't register correctly so all non-pet/non-players report as NPC
 			database.LogCommands(c->GetName(), c->AccountName(), c->GetY(), c->GetX(), c->GetZ(), message, targetType, c->GetTarget()->GetName(), c->GetTarget()->GetY(), c->GetTarget()->GetX(), c->GetTarget()->GetZ(), c->GetZoneID(), zone->GetShortName());
 		}
 		else
 		{
 			database.LogCommands(c->GetName(), c->AccountName(), c->GetY(), c->GetX(), c->GetZ(), message, targetType, targetType, 0, 0, 0, c->GetZoneID(), zone->GetShortName());
 		}
-		//Log.Out(Logs::General, Logs::Commands, "%s (%s) used command: %s (target=%s)", c->GetName(), c->AccountName(), message, c->GetTarget() ? c->GetTarget()->GetName() : "NONE");
 	}
 
 	if (cur->function == nullptr)
@@ -2069,24 +2052,6 @@ void command_spon(Client *c, const Seperator *sep){
 void command_spoff(Client *c, const Seperator *sep){
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ManaChange, 0);
 	outapp->priority = 5;
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
-}
-
-void command_itemtest(Client *c, const Seperator *sep){
-	char chBuffer[8192] = { 0 };
-	//Using this to determine new item layout
-	FILE* f = nullptr;
-	if (!(f = fopen("c:\\EQEMUcvs\\ItemDump.txt", "rb"))) {
-		c->Message(CC_Red, "Error: Could not open c:\\EQEMUcvs\\ItemDump.txt");
-		return;
-	}
-
-	fread(chBuffer, sizeof(chBuffer), sizeof(char), f);
-	fclose(f);
-
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ItemLinkResponse, strlen(chBuffer) + 5);
-	memcpy(&outapp->pBuffer[4], chBuffer, strlen(chBuffer));
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -4634,6 +4599,7 @@ void command_iteminfo(Client *c, const Seperator *sep){
 		c->Message(CC_Default, "ID: %i Name: %s", item->ID, item->Name);
 		c->Message(CC_Default, "  Lore: %s  ND: %i  NS: %i  Type: %i", item->Lore, item->NoDrop, item->NoRent, item->ItemClass);
 		c->Message(CC_Default, "  IDF: %s  Size: %i  Weight: %i  icon_id: %i  Price: %i", item->IDFile, item->Size, item->Weight, item->Icon, item->Price);
+		c->Message(CC_Default, "  QuantityType: %d (1 Normal, 2 Charges, 3 Stacked)", database.ItemQuantityType(inst->GetItem()->ID));
 		if (c->Admin() >= 200)
 			c->Message(CC_Default, "MinStatus: %i", item->MinStatus);
 		if (item->ItemClass == ItemClassBook)
@@ -5916,14 +5882,23 @@ void command_summonitem(Client *c, const Seperator *sep){
 
 		int16 charges = 0;
 		if (sep->argnum<2 || !sep->IsNumber(2))
-			charges = 0;
+		{
+			if(item && database.ItemQuantityType(itemid) == Quantity_Charges)
+			{
+				charges = item->MaxCharges;
+			}
+			else
+			{
+				charges = 0;
+			}
+		}
 		else
 			charges = atoi(sep->arg[2]);
 
 		if (item_status > c->Admin())
 			c->Message(CC_Red, "Error: Insufficient status to summon this item.");
 		else
-			c->SummonItem(itemid, charges);
+			c->SummonItem(itemid, charges, false, 0, true);
 	}
 }
 
@@ -5948,14 +5923,23 @@ void command_giveitem(Client *c, const Seperator *sep){
 
 		int16 charges = 0;
 		if (sep->argnum<2 || !sep->IsNumber(2))
-			charges = 0;
+		{
+			if(item && database.ItemQuantityType(itemid) == Quantity_Charges)
+			{
+				charges = item->MaxCharges;
+			}
+			else
+			{
+				charges = 0;
+			}
+		}
 		else
 			charges = atoi(sep->arg[2]);
 
 		if (item_status > c->Admin())
 			c->Message(CC_Red, "Error: Insufficient status to summon this item.");
 		else
-			t->SummonItem(itemid, charges);
+			t->SummonItem(itemid, charges, false, 0, true);
 	}
 }
 

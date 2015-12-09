@@ -341,8 +341,8 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 	/* Dont clear aggro until the zone is successful */
 	entity_list.RemoveFromHateLists(this);
 	 
-	if(this->GetPet())
-		entity_list.RemoveFromHateLists(this->GetPet());
+	// kill pet if it exists
+	DepopPet();
 
 	Log.Out(Logs::General, Logs::Status, "Zoning '%s' to: %s (%i) - (%i) x=%f, y=%f, z=%f", m_pp.name, database.GetZoneName(zone_id), zone_id, instance_id, dest_x, dest_y, dest_z);
 

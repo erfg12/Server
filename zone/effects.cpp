@@ -63,7 +63,6 @@ int32 NPC::GetActSpellDamage(uint16 spell_id, int32 value,  Mob* target) {
 		int ratio = 0;
 
 		if (spells[spell_id].buffduration == 0) {
-			chance += spellbonuses.CriticalSpellChance + spellbonuses.FrenziedDevastation;
 
 			if (chance && zone->random.Roll(chance)) {
 				ratio += spellbonuses.SpellCritDmgIncrease + spellbonuses.SpellCritDmgIncNoStack;
@@ -103,8 +102,6 @@ int32 Client::GetActSpellDamage(uint16 spell_id, int32 value, Mob* target) {
 
 	int chance = RuleI(Spells, BaseCritChance); //Wizard base critical chance is 2% (Does not scale with level)
 		chance += itembonuses.CriticalSpellChance + spellbonuses.CriticalSpellChance + aabonuses.CriticalSpellChance;
-
-		chance += itembonuses.FrenziedDevastation + spellbonuses.FrenziedDevastation + aabonuses.FrenziedDevastation;
 
 	if (chance > 0 || (GetClass() == WIZARD && GetLevel() >= RuleI(Spells, WizCritLevel))) {
 
@@ -342,72 +339,25 @@ int32 Client::GetActSpellHealing(uint16 spell_id, int32 value, Mob* target) {
 
 int32 Client::GetActSpellCost(uint16 spell_id, int32 cost)
 {
-	//FrenziedDevastation doubles mana cost of all DD spells
-	int16 FrenziedDevastation = itembonuses.FrenziedDevastation + spellbonuses.FrenziedDevastation + aabonuses.FrenziedDevastation;
-
-	if (FrenziedDevastation && IsPureNukeSpell(spell_id))
-		cost *= 2;
-
-	// Formula = Unknown exact, based off a random percent chance up to mana cost(after focuses) of the cast spell
-	if(spells[spell_id].classes[(GetClass()%16) - 1] >= GetLevel() - 5)
-	{
-		int16 mana_back = zone->random.Int(1, 100) / 100;
-		// Doesnt generate mana, so best case is a free spell
-		if(mana_back > cost)
-			mana_back = cost;
-
-		cost -= mana_back;
-	}
-
 	// This formula was derived from the following resource:
 	// http://www.eqsummoners.com/eq1/specialization-library.html
 	// WildcardX
-	float PercentManaReduction = 0;
+	float PercentManaReduction = 0.0f;
 	float SpecializeSkill = GetSpecializeSkillValue(spell_id);
-	int SuccessChance = zone->random.Int(0, 100);
 
-	float bonus = 1.0;
-	switch(GetAA(aaSpellCastingMastery))
+	if (SpecializeSkill > 0.0f)
 	{
-	case 1:
-		bonus += 0.05;
-		break;
-	case 2:
-		bonus += 0.15;
-		break;
-	case 3:
-		bonus += 0.30;
-		break;
-	}
-
-	bonus += 0.05f * GetAA(aaAdvancedSpellCastingMastery);
-
-	if(SuccessChance <= (SpecializeSkill * 0.3 * bonus))
-	{
-		PercentManaReduction = 1 + 0.05f * SpecializeSkill;
+		PercentManaReduction = 1 + SpecializeSkill / 20.0f;
 		switch(GetAA(aaSpellCastingMastery))
 		{
 		case 1:
-			PercentManaReduction += 2.5;
+			PercentManaReduction += 2.5f;
 			break;
 		case 2:
-			PercentManaReduction += 5.0;
+			PercentManaReduction += 5.0f;
 			break;
 		case 3:
-			PercentManaReduction += 10.0;
-			break;
-		}
-
-		switch(GetAA(aaAdvancedSpellCastingMastery))
-		{
-		case 1:
-			PercentManaReduction += 2.5;
-			break;
-		case 2:
-			PercentManaReduction += 5.0;
-			break;
-		case 3:
-			PercentManaReduction += 10.0;
+			PercentManaReduction += 10.0f;
 			break;
 		}
 	}
@@ -420,20 +370,6 @@ int32 Client::GetActSpellCost(uint16 spell_id, int32 cost)
 	}
 
 	cost -= (cost * (PercentManaReduction / 100));
-
-	// Gift of Mana - reduces spell cost to 1 mana
-	if(focus_redux >= 100) {
-		int buff_max = GetMaxTotalSlots();
-		for (int buffSlot = 0; buffSlot < buff_max; buffSlot++) {
-			if (buffs[buffSlot].spellid == 0 || buffs[buffSlot].spellid >= SPDAT_RECORDS)
-				continue;
-
-			if(IsEffectInSpell(buffs[buffSlot].spellid, SE_ReduceManaCost)) {
-				if(CalcFocusEffect(focusManaCost, buffs[buffSlot].spellid, spell_id) == 100)
-					cost = 1;
-			}
-		}
-	}
 
 	if(cost < 0)
 		cost = 0;
@@ -1061,7 +997,7 @@ void EntityList::AESpell(Mob *caster, Mob *center, uint16 spell_id, bool affect_
 				Log.Out(Logs::Detail, Logs::Spells, "Attempting to cast a detrimental AE spell/song on a player.");
 				continue;
 			}
-			if (!center->CheckLosFN(curmob))
+			if (!zone->SkipLoS() && !spells[spell_id].npc_no_los && curmob != caster && !center->CheckLosFN(curmob))
 				continue;
 		}
 		else { // check to stop casting beneficial ae buffs (to wit: bard songs) on enemies...

@@ -271,7 +271,7 @@ void Client::GoFish()
 
 	//if the bait isnt equipped, need to add its skill bonus
 	if(bslot >= EmuConstants::GENERAL_BEGIN && Bait != nullptr && Bait->GetItem()->SkillModType == SkillFishing) {
-		fishing_skill += Bait->GetItem()->SkillModValue;
+		fishing_skill += fishing_skill * (Bait->GetItem()->SkillModValue/100);
 	}
 
 	if (fishing_skill > 100)

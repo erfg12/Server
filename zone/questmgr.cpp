@@ -1153,9 +1153,9 @@ void QuestManager::setglobal(const char *varname, const char *newvalue, int opti
 	InsertQuestGlobal(qgCharid, qgNpcid, qgZoneid, varname, newvalue, QGVarDuration(duration));
 
 	/* QS: PlayerLogQGlobalUpdate */
-	if (RuleB(QueryServ, PlayerLogQGlobalUpdate) && qgCharid && qgCharid > 0 && initiator && initiator->IsClient()){
-		std::string event_desc = StringFormat("Update :: qglobal:%s to qvalue:%s zoneid:%i instid:%i", varname, newvalue, initiator->GetZoneID(), initiator->GetInstanceID());
-		QServ->PlayerLogEvent(Player_Log_QGlobal_Update, qgCharid, event_desc);
+	if (RuleB(QueryServ, PlayerLogQGlobalUpdate) && qgCharid && qgCharid > 0 && initiator && initiator->IsClient())
+	{
+		QServ->QSQGlobalUpdate(qgCharid, initiator->GetZoneID(), initiator->GetInstanceID(), varname, newvalue);
 	}
 }
 
@@ -1238,15 +1238,15 @@ void QuestManager::delglobal(const char *varname) {
 	int qgCharid = 0;
 	int qgNpcid = owner ? owner->GetNPCTypeID() : 0; // encounter scripts don't have an owner
 
-	if (initiator && initiator->IsClient()) // some events like waypoint and spawn don't have a player involved
+	if (initiator && initiator->IsClient()) // some events like way point and spawn don't have a player involved
 		qgCharid=initiator->CharacterID();
 	else
 		qgCharid=-qgNpcid;		// make char id negative npc id as a fudge
 
 	/* QS: PlayerLogQGlobalUpdate */
-	if (RuleB(QueryServ, PlayerLogQGlobalUpdate) && qgCharid && qgCharid > 0 && initiator && initiator->IsClient()){
-		std::string event_desc = StringFormat("Deleted :: qglobal:%s zoneid:%i instid:%i", varname, initiator->GetZoneID(), initiator->GetInstanceID());
-		QServ->PlayerLogEvent(Player_Log_QGlobal_Update, qgCharid, event_desc);
+	if (RuleB(QueryServ, PlayerLogQGlobalUpdate) && qgCharid && qgCharid > 0 && initiator && initiator->IsClient())
+	{
+		QServ->QSQGlobalUpdate(qgCharid, initiator->GetZoneID(), initiator->GetInstanceID(), varname, "deleted");
 	}
 
     std::string query = StringFormat("DELETE FROM quest_globals "
@@ -1632,6 +1632,7 @@ bool QuestManager::isdooropen(uint32 doorid) {
 	}
 	return false;
 }
+
 void QuestManager::npcrace(int race_id)
 {
 	QuestManagerCurrentQuestVars();
@@ -1643,11 +1644,13 @@ void QuestManager::npcgender(int gender_id)
 	QuestManagerCurrentQuestVars();
 	owner->SendIllusionPacket(owner->GetRace(), gender_id);
 }
+
 void QuestManager::npcsize(int newsize)
 {
 	QuestManagerCurrentQuestVars();
 	owner->ChangeSize(newsize, true);
 }
+
 void QuestManager::npctexture(int newtexture)
 {
 	QuestManagerCurrentQuestVars();

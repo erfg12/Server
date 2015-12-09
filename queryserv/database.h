@@ -29,6 +29,7 @@
 #include "../common/dbcore.h"
 #include "../common/linked_list.h"
 #include "../common/servertalk.h"
+
 #include <string>
 #include <vector>
 #include <map>
@@ -39,19 +40,62 @@
 class Database : public DBcore {
 public:
 	Database();
-	Database(const char* host, const char* user, const char* passwd, const char* database,uint32 port);
-	bool Connect(const char* host, const char* user, const char* passwd, const char* database,uint32 port);
 	~Database();
+	Database(const char* host, const char* user, const char* passwd, const char* database, uint32 port);
+	bool Connect(const char* host, const char* user, const char* passwd, const char* database, uint32 port);
 
+	void LogPlayerAARateHourly(QSPlayerAARateHourly_Struct* QS, uint32 items);
+	void LogPlayerAAPurchase(QSPlayerAAPurchase_Struct* QS, uint32 items);
+	void LogPlayerQGlobalUpdates(QSPlayerQGlobalUpdate_Struct* QS, uint32 items);
+	void LogPlayerDeathBy(QSPlayerDeathBy_Struct* QS, uint32 items);
+	void LogPlayerTSEvents(QSPlayerTSEvents_Struct* QS, uint32 items);
+
+	void LogMerchantTransaction(QSMerchantLogTransaction_Struct* QS, uint32 Items);
+
+	void LogPlayerNPCKill(QSPlayerLogNPCKill_Struct* QS, uint32 Members);
 	void LogPlayerTrade(QSPlayerLogTrade_Struct* QS, uint32 DetailCount);
 	void LogPlayerHandin(QSPlayerLogHandin_Struct* QS, uint32 DetailCount);
-	void LogPlayerNPCKill(QSPlayerLogNPCKill_Struct* QS, uint32 Members);
-	void LogPlayerDelete(QSPlayerLogDelete_Struct* QS, uint32 Items);
-	void LogPlayerMove(QSPlayerLogMove_Struct* QS, uint32 Items);
-	void LogMerchantTransaction(QSMerchantLogTransaction_Struct* QS, uint32 Items);
-	void GeneralQueryReceive(ServerPacket *pack);
+	void LogPlayerItemDelete(QSPlayerLogItemDelete_Struct* QS, uint32 Items);
+	void LogPlayerItemMove(QSPlayerLogItemMove_Struct* QS, uint32 Items);
+	void LogPlayerLootRecords(QSPlayerLootRecords_struct* QS, uint32 Items);
 
+	void GeneralQueryReceive(ServerPacket *pack);
 	void LoadLogSettings(EQEmuLogSys::LogSettings* log_settings);
+
+	/*
+	 * Database Setup for bootstraps only.
+	 */
+	bool DBSetup();
+	bool DBSetup_CheckLegacy();
+	bool DBSetup_PlayerAAPurchase();
+	bool DBSetup_PlayerDeathBy();
+	bool DBSetup_PlayerTSEvents();
+	bool DBSetup_PlayerQGlobalUpdates();
+	bool DBSetup_PlayerLootRecords();
+
+	bool Check_Trade_Tables();
+	bool Create_Trade_Table();
+	bool Copy_Trade_Record();
+
+	bool Check_Handin_Tables();
+	bool Create_Handin_Table();
+	bool Copy_Handin_Record();
+
+	bool Check_NPCKills_Tables();
+	bool Create_NPCKills_Table();
+	bool Copy_NPCKills_Record();
+
+	bool Check_Merchant_Tables();
+	bool Create_Merchant_Table();
+	bool Copy_Merchant_Record();
+
+	bool Check_Delete_Tables();
+	bool Create_Delete_Table();
+	bool Copy_Delete_Record();
+
+	bool Check_ItemMove_Tables();
+	bool Create_ItemMove_Table();
+	bool Copy_ItemMove_Record();
 
 protected:
 	void HandleMysqlError(uint32 errnum);

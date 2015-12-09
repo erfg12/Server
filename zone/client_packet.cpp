@@ -73,7 +73,7 @@ extern PetitionList petition_list;
 extern EntityList entity_list;
 typedef void (Client::*ClientPacketProc)(const EQApplicationPacket *app);
 
-//Use a map for connecting opcodes since it dosent get used a lot and is sparse
+//Use a map for connecting opcodes since it doesn't get used a lot and is sparse
 std::map<uint32, ClientPacketProc> ConnectingOpcodes;
 //Use a static array for connected, for speed
 ClientPacketProc ConnectedOpcodes[_maxEmuOpcode];
@@ -568,16 +568,6 @@ void Client::CompleteConnect()
 			case SE_WeaponProc:
 			{
 				AddProcToWeapon(GetProcID(buffs[j1].spellid, x1), false, 100 + spells[buffs[j1].spellid].base2[x1], buffs[j1].spellid);
-				break;
-			}
-			case SE_DefensiveProc:
-			{
-				AddDefensiveProc(GetProcID(buffs[j1].spellid, x1), 100 + spells[buffs[j1].spellid].base2[x1], buffs[j1].spellid);
-				break;
-			}
-			case SE_RangedProc:
-			{
-				AddRangedProc(GetProcID(buffs[j1].spellid, x1), 100 + spells[buffs[j1].spellid].base2[x1], buffs[j1].spellid);
 				break;
 			}
 			}
@@ -1427,8 +1417,8 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	strn0cpy(sze->Surname, lastname, 32);
 	sze->zoneID = zone->GetZoneID();
 	sze->x_pos = m_pp.x;
-	sze->y_pos = m_pp.y;				// X Position
-	sze->z_pos = m_pp.z;				// Z Position
+	sze->y_pos = m_pp.y;
+	sze->z_pos = m_pp.z;
 	sze->heading = m_pp.heading;
 	sze->race = m_pp.race;
 	sze->deity = m_pp.deity;
@@ -1437,8 +1427,8 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	sze->size = base_size;
 	sze->width = base_size;
 	
-	sze->NPC = IsBecomeNPC() ? 1 : 0;
-	sze->invis = invisible;
+	sze->NPC = IsBecomeNPC() ? 1 : 10;
+	sze->invis = invisible ? 1 : 0;
 	sze->sneaking = sneaking;
 	sze->animation = animation;
 	
@@ -1463,6 +1453,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		}
 	}
 	sze->AFK = AFK;
+	sze->anon = m_pp.anon;
 	sze->title = 0;
 	sze->anim_type = 0x64;
 	sze->bodytexture = texture;
@@ -1475,7 +1466,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		sze->helm = 0;
 	}
 
-	sze->GM = GetGM();
+	sze->GM = GetGM() ? 1 : 0;
 	sze->GuildID = GuildID();
 	if(sze->GuildID == 0)
 		sze->GuildID = 0xFFFF;
@@ -1505,7 +1496,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	sze->type = 0;
 	sze->petOwnerId = ownerid;
 
-	//sze->curHP = 1;
+	sze->curHP = 1;
 	sze->NPC = 0;
 	if(zone->zonemap)
 	{
@@ -1516,7 +1507,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		{
 			float bestz = zone->zonemap->FindBestZ(loc, nullptr);
 			if(bestz > -5000.0f && size > 0)
-				m_Position.z = bestz + (0.625 * (float)size);
+				m_Position.z = bestz + (0.625f * (float)size);
 		}
 		sze->z_pos = m_Position.z;
 	}
@@ -1524,7 +1515,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
 
-	//_log(EQMAC__LOG, "Spawns");
 	/* Zone Spawns Packet */
 	if (GetClientVersion() != EQClientTrilogy) {
 		entity_list.SendZoneSpawnsBulk(this);
@@ -1707,12 +1697,12 @@ void Client::Handle_OP_ApplyPoison(const EQApplicationPacket *app)
 	const ItemInst* SecondaryWeapon = GetInv().GetItem(MainSecondary);
 	const ItemInst* PoisonItemInstance = GetInv()[ApplyPoisonData->inventorySlot];
 
-	bool IsPoison = PoisonItemInstance != nullptr && (PoisonItemInstance->GetItem()->ItemType == ItemTypePoison);
+	bool IsPoison = PoisonItemInstance != nullptr && (PoisonItemInstance->GetItem()->ItemType == ItemTypePoison && PoisonItemInstance->GetCharges() > 0);
 
 	if (!IsPoison)
 	{
 		Log.Out(Logs::General, Logs::Skills, "Item %s used to cast spell effect from a poison item was missing from inventory slot %d after casting, or is not a poison! Item type is %d", PoisonItemInstance->GetItem()->Name, ApplyPoisonData->inventorySlot, PoisonItemInstance->GetItem()->ItemType);
-		Message(CC_Default, "Error: item not found for inventory slot #%i or is not a poison", ApplyPoisonData->inventorySlot);
+		Message_StringID(CC_Default, ITEM_OUT_OF_CHARGES);
 	}
 	else if (GetClass() == ROGUE)
 	{
@@ -5629,7 +5619,7 @@ void Client::Handle_OP_MoveItem(const EQApplicationPacket *app)
 		bool si = SwapItem(mi);
 		if (!si)
 		{
-			Log.Out(Logs::Detail, Logs::Inventory, "WTF Some shit failed. SwapItem: %i, IsValidSlot (from): %i, IsValidSlot (to): %i", SwapItem(mi), IsValidSlot(mi->from_slot), IsValidSlot(mi->to_slot));
+			Log.Out(Logs::Detail, Logs::Inventory, "WTF Some shit failed. SwapItem: %i, IsValidSlot (from): %i, IsValidSlot (to): %i", si, IsValidSlot(mi->from_slot), IsValidSlot(mi->to_slot));
 			SwapItemResync(mi);
 
 			bool error = false;
@@ -7256,14 +7246,7 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 	if (!item){
 		//error finding item, client didnt get the update packet for whatever reason, roleplay a tad
 		Message(CC_Default, "%s tells you 'Sorry, that item is for display purposes only.' as they take the item off the shelf.", tmp->GetCleanName());
-		EQApplicationPacket* delitempacket = new EQApplicationPacket(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
-		Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
-		delitem->itemslot = mp->itemslot;
-		delitem->npcid = mp->npcid;
-		delitem->playerid = mp->playerid;
-		delitempacket->priority = 6;
-		entity_list.QueueCloseClients(tmp, delitempacket); //que for anyone that could be using the merchant so they see the update
-		safe_delete(delitempacket);
+		entity_list.SendMerchantInventory(tmp, mp->itemslot, true);
 		return;
 	}
 	if (CheckLoreConflict(item))
@@ -7304,9 +7287,8 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 	mpo->itemslot = mp->itemslot;
 
 	int16 freeslotid = INVALID_INDEX;
-	uint8 charges = quantity;
 
-	ItemInst* inst = database.CreateItem(item, charges);
+	ItemInst* inst = database.CreateItem(item, quantity);
 
 	int SinglePrice = 0;
 	if (RuleB(Merchant, UsePriceMod))
@@ -7396,16 +7378,12 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 			new_charges = quantity_left - mp->quantity;
 			zone->SaveMerchantItem(merchantid,item_id, new_charges, mp->itemslot);
 		}
-		if (new_charges <= 0)
+
+		int8 new_quantity = zone->GetTempMerchantQtyNoSlot(tmp->GetNPCTypeID(), item_id);
+		if ((database.ItemQuantityType(item_id) == Quantity_Charges && new_quantity < 0) ||
+			(database.ItemQuantityType(item_id) != Quantity_Charges && new_charges <= 0))
 		{
-			EQApplicationPacket* delitempacket = new EQApplicationPacket(OP_ShopDelItem, sizeof(Merchant_DelItem_Struct));
-			Merchant_DelItem_Struct* delitem = (Merchant_DelItem_Struct*)delitempacket->pBuffer;
-			delitem->itemslot = mp->itemslot;
-			delitem->npcid = mp->npcid;
-			delitem->playerid = mp->playerid;
-			delitempacket->priority = 6;
-			entity_list.QueueClients(tmp, delitempacket); //que for anyone that could be using the merchant so they see the update
-			safe_delete(delitempacket);
+			entity_list.SendMerchantInventory(tmp, mp->itemslot, true);
 		}
 		else 
 		{
@@ -7421,34 +7399,11 @@ void Client::Handle_OP_ShopPlayerBuy(const EQApplicationPacket *app)
 
 	// start QS code
 	// stacking purchases not supported at this time - entire process will need some work to catch them properly
-	if (RuleB(QueryServ, PlayerLogMerchantTransactions)) {
-		ServerPacket* qspack = new ServerPacket(ServerOP_QSPlayerLogMerchantTransactions, sizeof(QSMerchantLogTransaction_Struct) + sizeof(QSTransactionItems_Struct));
-		QSMerchantLogTransaction_Struct* qsaudit = (QSMerchantLogTransaction_Struct*)qspack->pBuffer;
-
-		qsaudit->zone_id = zone->GetZoneID();
-		qsaudit->merchant_id = tmp->CastToNPC()->MerchantType;
-		qsaudit->merchant_money.platinum = 0;
-		qsaudit->merchant_money.gold = 0;
-		qsaudit->merchant_money.silver = 0;
-		qsaudit->merchant_money.copper = 0;
-		qsaudit->merchant_count = 1;
-		qsaudit->char_id = character_id;
-		qsaudit->char_money.platinum = (mpo->price / 1000);
-		qsaudit->char_money.gold = (mpo->price / 100) % 10;
-		qsaudit->char_money.silver = (mpo->price / 10) % 10;
-		qsaudit->char_money.copper = mpo->price % 10;
-		qsaudit->char_count = 0;
-
-		qsaudit->items[0].char_slot = freeslotid == INVALID_INDEX ? 0 : freeslotid;
-		qsaudit->items[0].item_id = item->ID;
-		qsaudit->items[0].charges = mpo->quantity;
-
-		if (freeslotid == INVALID_INDEX) {
-		}
-
-		qspack->Deflate();
-		if (worldserver.Connected()) { worldserver.SendPacket(qspack); }
-		safe_delete(qspack);
+	if (RuleB(QueryServ, PlayerLogMerchantTransactions))
+	{
+		QServ->QSMerchantTransactions(character_id, zone->GetZoneID(), freeslotid == INVALID_INDEX ? 0 : freeslotid,
+			item->ID, mpo->quantity, tmp->CastToNPC()->MerchantType, 0, 0, 0, 0, 1,
+			mpo->price / 1000, (mpo->price / 100) % 10, (mpo->price / 10) % 10, mpo->price % 10, 0);
 	}
 	// end QS code
 
@@ -7507,7 +7462,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	}
 
 	int cost_quantity = mp->quantity;
-	if (inst->IsCharged())
+	if (database.ItemQuantityType(inst->GetID()) == Quantity_Charges)
 		int cost_quantity = 1; //Always sell items to merchants for base cost
 
 	if (RuleB(Merchant, UsePriceMod))
@@ -7522,7 +7477,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 		if (mp->quantity > i_quan)
 			mp->quantity = i_quan;
 	}
-	else if(inst->IsCharged())
+	else if(database.ItemQuantityType(inst->GetID()) == Quantity_Charges)
 	{
 		int8 final_charges = zone->GetTempMerchantQtyNoSlot(vendor->GetNPCTypeID(), item->ID);
 		mp->quantity = (final_charges < 0 ? inst->GetCharges() : final_charges);
@@ -7537,7 +7492,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 
 	int charges = mp->quantity;
 	int freeslot = 0;
-	if (charges > 0 && (freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(), itemid, charges, true)) > 0){
+	if (charges >= 0 && (freeslot = zone->SaveTempItem(vendor->CastToNPC()->MerchantType, vendor->GetNPCTypeID(), itemid, charges, true)) > 0){
 		ItemInst* inst2 = inst->Clone();
 		if (RuleB(Merchant, UsePriceMod)){
 			inst2->SetPrice(item->Price*(RuleR(Merchant, SellCostMod))*item->SellRate*Client::CalcPriceMod(vendor, false));
@@ -7559,31 +7514,11 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	}
 
 	// start QS code
-	if (RuleB(QueryServ, PlayerLogMerchantTransactions)) {
-		ServerPacket* qspack = new ServerPacket(ServerOP_QSPlayerLogMerchantTransactions, sizeof(QSMerchantLogTransaction_Struct) + sizeof(QSTransactionItems_Struct));
-		QSMerchantLogTransaction_Struct* qsaudit = (QSMerchantLogTransaction_Struct*)qspack->pBuffer;
-
-		qsaudit->zone_id = zone->GetZoneID();
-		qsaudit->merchant_id = vendor->CastToNPC()->MerchantType;
-		qsaudit->merchant_money.platinum = (price / 1000);
-		qsaudit->merchant_money.gold = (price / 100) % 10;
-		qsaudit->merchant_money.silver = (price / 10) % 10;
-		qsaudit->merchant_money.copper = price % 10;
-		qsaudit->merchant_count = 0;
-		qsaudit->char_id = character_id;
-		qsaudit->char_money.platinum = 0;
-		qsaudit->char_money.gold = 0;
-		qsaudit->char_money.silver = 0;
-		qsaudit->char_money.copper = 0;
-		qsaudit->char_count = 1;
-
-		qsaudit->items[0].char_slot = mp->itemslot;
-		qsaudit->items[0].item_id = itemid;
-		qsaudit->items[0].charges = charges;
-
-		qspack->Deflate();
-		if (worldserver.Connected()) { worldserver.SendPacket(qspack); }
-		safe_delete(qspack);
+	if (RuleB(QueryServ, PlayerLogMerchantTransactions))
+	{
+		QServ->QSMerchantTransactions(character_id, zone->GetZoneID(), mp->itemslot,
+			itemid, charges, vendor->CastToNPC()->MerchantType, price / 1000, (price / 100) % 10,
+			(price / 10) % 10, price % 10, 0, 0, 0, 0, 0, 1);
 	}
 	// end QS code
 
@@ -7594,7 +7529,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 		this->DeleteItemInInventory(mp->itemslot, mp->quantity, false);
 
 	//This forces the price to show up correctly for charged items.
-	if (inst->IsCharged())
+	if (database.ItemQuantityType(inst->GetID()) == Quantity_Charges)
 		mp->quantity = 1;
 
 	EQApplicationPacket* outapp = new EQApplicationPacket(OP_ShopPlayerSell, sizeof(OldMerchant_Purchase_Struct));
@@ -8041,7 +7976,7 @@ void Client::Handle_OP_TargetCommand(const EQApplicationPacket *app)
 		Log.Out(Logs::General, Logs::Error, "OP size error: OP_TargetMouse expected:%i got:%i", sizeof(ClientTarget_Struct), app->size);
 		return;
 	}
-	if (IsAIControlled())
+	if (IsAIControlled() && !has_zomm)
 		return;
 
 	ClientTarget_Struct* ct = (ClientTarget_Struct*)app->pBuffer;
@@ -8310,27 +8245,27 @@ void Client::Handle_OP_TradeAcceptClick(const EQApplicationPacket *app)
 
 					event_entry._detail_count = event_details.size();
 
-					ServerPacket* qs_pack = new ServerPacket(ServerOP_QSPlayerLogTrades, sizeof(QSPlayerLogTrade_Struct) + (sizeof(QSTradeItems_Struct)* event_entry._detail_count));
-					QSPlayerLogTrade_Struct* qs_buf = (QSPlayerLogTrade_Struct*)qs_pack->pBuffer;
+					ServerPacket* pack = new ServerPacket(ServerOP_QSPlayerLogTrades, sizeof(QSPlayerLogTrade_Struct) + (sizeof(QSTradeItems_Struct)* event_entry._detail_count));
+					QSPlayerLogTrade_Struct* QS = (QSPlayerLogTrade_Struct*)pack->pBuffer;
 
-					memcpy(qs_buf, &event_entry, sizeof(QSPlayerLogTrade_Struct));
+					memcpy(QS, &event_entry, sizeof(QSPlayerLogTrade_Struct));
 
 					int offset = 0;
 
 					for (std::list<void*>::iterator iter = event_details.begin(); iter != event_details.end(); ++iter, ++offset) {
 						QSTradeItems_Struct* detail = reinterpret_cast<QSTradeItems_Struct*>(*iter);
-						qs_buf->items[offset] = *detail;
+						QS->items[offset] = *detail;
 						safe_delete(detail);
 					}
 
 					event_details.clear();
 
-					qs_pack->Deflate();
+					pack->Deflate();
 
 					if (worldserver.Connected())
-						worldserver.SendPacket(qs_pack);
+						worldserver.SendPacket(pack);
 
-					safe_delete(qs_pack);
+					safe_delete(pack);
 					// end QS code
 				}
 				else {
@@ -8349,6 +8284,14 @@ void Client::Handle_OP_TradeAcceptClick(const EQApplicationPacket *app)
 	}
 	// Trading with a Mob object that is not a Client.
 	else if (with) {
+
+		if(with->IsNPC() && with->IsEngaged())
+		{
+			SendCancelTrade(with);
+			Log.Out(Logs::General, Logs::Trading, "Cancelled in-progress trade due to %s being in combat.", with->GetCleanName());
+			return;
+		}
+
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_FinishTrade, 0);
 		QueuePacket(outapp);
 		safe_delete(outapp);
@@ -8369,10 +8312,10 @@ void Client::Handle_OP_TradeAcceptClick(const EQApplicationPacket *app)
 
 				event_entry._detail_count = event_details.size();
 
-				ServerPacket* qs_pack = new ServerPacket(ServerOP_QSPlayerLogHandins, sizeof(QSPlayerLogHandin_Struct) + (sizeof(QSHandinItems_Struct)* event_entry._detail_count));
-				QSPlayerLogHandin_Struct* qs_buf = (QSPlayerLogHandin_Struct*)qs_pack->pBuffer;
+				ServerPacket* pack = new ServerPacket(ServerOP_QSPlayerLogHandins, sizeof(QSPlayerLogHandin_Struct) + (sizeof(QSHandinItems_Struct)* event_entry._detail_count));
+				QSPlayerLogHandin_Struct* QS = (QSPlayerLogHandin_Struct*)pack->pBuffer;
 
-				memcpy(qs_buf, &event_entry, sizeof(QSPlayerLogHandin_Struct));
+				memcpy(QS, &event_entry, sizeof(QSPlayerLogHandin_Struct));
 
 				int offset = 0;
 
@@ -8381,19 +8324,19 @@ void Client::Handle_OP_TradeAcceptClick(const EQApplicationPacket *app)
 					QSHandinItems_Struct* detail = reinterpret_cast<QSHandinItems_Struct*>(*iter);
 					if (detail != nullptr)
 					{
-						qs_buf->items[offset] = *detail;
+						QS->items[offset] = *detail;
 						safe_delete(detail);
 					}
 				}
 
 				event_details.clear();
 
-				qs_pack->Deflate();
+				pack->Deflate();
 
 				if (worldserver.Connected())
-					worldserver.SendPacket(qs_pack);
+					worldserver.SendPacket(pack);
 
-				safe_delete(qs_pack);
+				safe_delete(pack);
 			}
 			else {
 				FinishTrade(with->CastToNPC());
@@ -8642,10 +8585,22 @@ void Client::Handle_OP_TradeRequest(const EQApplicationPacket *app)
 	TradeRequest_Struct* msg = (TradeRequest_Struct*)app->pBuffer;
 	Mob* tradee = entity_list.GetMob(msg->to_mob_id);
 
-	if (tradee && tradee->IsClient()) {
+	if (tradee && tradee->IsClient()) 
+	{
 		tradee->CastToClient()->QueuePacket(app);
 	}
-	else if (tradee && tradee->IsNPC()) {
+	else if (tradee && tradee->IsNPC()) 
+	{
+		
+		if(tradee->IsEngaged())
+		{
+			EQApplicationPacket* outapp = new EQApplicationPacket(OP_CancelTrade, sizeof(CancelTrade_Struct));
+			CancelTrade_Struct* ct = (CancelTrade_Struct*) outapp->pBuffer;
+			ct->fromid = tradee->GetID();
+			FastQueuePacket(&outapp);
+			Log.Out(Logs::General, Logs::Trading, "Cancelled trade request due to %s being in combat.", tradee->GetCleanName());
+			return;
+		}
 
 		//npcs always accept
 		trade->Start(msg->to_mob_id);

@@ -154,7 +154,7 @@ enum {	//timer settings, all in milliseconds
 	ClientProximity_interval = 150,
 	CombatEventTimer_expire = 12000,
 	ZoneTimerResolution = 3,			//sleep time between zone main loop runs (milliseconds)
-	FeignMemoryDuration = 120000, // Duration player must feign death to clear zonewide agro.
+	FeignMemoryDuration = 600000,		// two minute timer repurposed into 10 minute hatelist wipe timer
 	EnragedTimer = 360000,
 	EnragedDurationTimer = 10000
 };

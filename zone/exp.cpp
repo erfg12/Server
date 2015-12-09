@@ -32,7 +32,6 @@
 
 extern QueryServ* QServ;
 
-
 float Mob::GetBaseEXP()
 {
 	float exp = EXP_FORMULA;
@@ -97,7 +96,7 @@ void Client::AddEXP(uint32 in_add_exp, uint8 conlevel, bool resexp) {
 
 		//figure out how much of this goes to AAs
 		add_aaxp = add_exp * m_epp.perAA / 100;
-		//take that ammount away from regular exp
+		//take that amount away from regular exp
 		add_exp -= add_aaxp;
 
 		float totalmod = 1.0;
@@ -167,7 +166,7 @@ void Client::AddQuestEXP(uint32 in_add_exp) {
 
 	//figure out how much of this goes to AAs
 	add_aaxp = add_exp * m_epp.perAA / 100;
-	//take that ammount away from regular exp
+	//take that amount away from regular exp
 	add_exp -= add_aaxp;
 
 	uint32 exp = GetEXP() + add_exp;
@@ -208,7 +207,7 @@ void Client::SetEXP(uint32 set_exp, uint32 set_aaxp, bool isrezzexp) {
 	}
 
 	//check_level represents the level we should be when we have
-	//this ammount of exp (once these loops complete)
+	//this amount of exp (once these loops complete)
 	uint16 check_level = GetLevel()+1;
 	//see if we gained any levels
 	bool level_increase = true;
@@ -244,12 +243,12 @@ void Client::SetEXP(uint32 set_exp, uint32 set_aaxp, bool isrezzexp) {
 			Note: AA exp is stored differently than normal exp.
 			Exp points are only stored in m_pp.expAA until you
 			gain a full AA point, once you gain it, a point is
-			added to m_pp.aapoints and the ammount needed to gain
+			added to m_pp.aapoints and the amount needed to gain
 			that point is subtracted from m_pp.expAA
 
 			then, once they spend an AA point, it is subtracted from
 			m_pp.aapoints. In theory it then goes into m_pp.aapoints_spent,
-			but im not sure if we have that in the right spot.
+			but I'm not sure if we have that in the right spot.
 		*/
 		//record how many points we have
 		uint32 last_unspentAA = m_pp.aapoints;
@@ -273,12 +272,10 @@ void Client::SetEXP(uint32 set_exp, uint32 set_aaxp, bool isrezzexp) {
 		Message_StringID(CC_Yellow, GAIN_ABILITY_POINT,ConvertArray(m_pp.aapoints, val1),m_pp.aapoints == 1 ? "" : "(s)");	//You have gained an ability point! You now have %1 ability point%2.
 		
 		/* QS: PlayerLogAARate */
-		if (RuleB(QueryServ, PlayerLogAARate)){
-			int add_points = (m_pp.aapoints - last_unspentAA);
-			std::string query = StringFormat("INSERT INTO `qs_player_aa_rate_hourly` (char_id, aa_count, hour_time) VALUES (%i, %i, UNIX_TIMESTAMP() - MOD(UNIX_TIMESTAMP(), 3600)) ON DUPLICATE KEY UPDATE `aa_count` = `aa_count` + %i", this->CharacterID(), add_points, add_points);
-			QServ->SendQuery(query.c_str());
+		if (RuleB(QueryServ, PlayerLogAARate))
+		{
+			QServ->QSAARate(this->CharacterID(), m_pp.aapoints, last_unspentAA);
 		}
-
 		//Message(CC_Yellow, "You now have %d skill points available to spend.", m_pp.aapoints);
 	}
 
@@ -354,7 +351,7 @@ void Client::SetEXP(uint32 set_exp, uint32 set_aaxp, bool isrezzexp) {
 	} else
 		SendAAStats();	//otherwise, send them an AA update
 
-	//send the expdata in any case so the xp bar isnt stuck after leveling
+	//send the expdata in any case so the xp bar isn't stuck after leveling
 	uint32 tmpxp1 = GetEXPForLevel(GetLevel()+1);
 	uint32 tmpxp2 = GetEXPForLevel(GetLevel());
 	// Quag: crash bug fix... Divide by zero when tmpxp1 and 2 equalled each other, most likely the error case from GetEXPForLevel() (invalid class, etc)
@@ -691,7 +688,7 @@ void Group::SplitExp(uint32 exp, Mob* other) {
 	}
 
 	// This loop figures out the split, and sends XP for each player that qualifies. (NPC is not green to the player, player is in the 
-	// zone where the kill occured, is in range of the corpse, and is in level range with the rest of the group.)
+	// zone where the kill occurred, is in range of the corpse, and is in level range with the rest of the group.)
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++) 
 	{
 		if (members[i] != nullptr && members[i]->IsClient()) // If Group Member is Client

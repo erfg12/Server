@@ -692,6 +692,7 @@ static const uint32 MAX_PP_AA_ARRAY		= 240;
 static const uint32 MAX_GROUP_MEMBERS	= 6;
 static const uint32 MAX_RECAST_TYPES	= 20;
 
+// This should be treated as an internal struct
 struct PlayerProfile_Struct
 {
 /*0000*/	uint32				checksum;			// Checksum from CRC32::SetEQChecksum

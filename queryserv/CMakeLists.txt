@@ -2,6 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 SET(qserv_sources
 	database.cpp
+	dbupdate.cpp
 	queryserv.cpp
 	queryservconfig.cpp
 	worldserver.cpp
