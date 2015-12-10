@@ -458,6 +458,46 @@ namespace Trilogy {
 		FINISH_ENCODE();
 	}
 
+	DECODE(OP_GuildInvite)
+	{
+		SETUP_DIRECT_DECODE(GuildCommand_Struct, structs::GuildCommand_Struct);
+		strcpy(emu->myname, eq->myname);
+		strcpy(emu->othername,eq->othername);
+		IN(guildeqid);
+		IN(officer);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_GuildInvite) 
+	{
+		SETUP_DIRECT_ENCODE(GuildCommand_Struct, structs::GuildCommand_Struct);
+		strn0cpy(eq->myname,emu->myname, 30);
+		strn0cpy(eq->othername,emu->othername, 30);
+		OUT(guildeqid);
+		OUT(officer);
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_GuildRemove)
+	{
+		SETUP_DIRECT_DECODE(GuildCommand_Struct, structs::GuildCommand_Struct);
+		strcpy(emu->myname, eq->myname);
+		strcpy(emu->othername,eq->othername);
+		IN(guildeqid);
+		IN(officer);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_GuildRemove) 
+	{
+		SETUP_DIRECT_ENCODE(GuildCommand_Struct, structs::GuildCommand_Struct);
+		strn0cpy(eq->myname,emu->myname, 30);
+		strn0cpy(eq->othername,emu->othername, 30);
+		OUT(guildeqid);
+		OUT(officer);
+		FINISH_ENCODE();
+	}
+
 	DECODE(OP_GuildInviteAccept)
 	{
 		SETUP_DIRECT_DECODE(GuildInviteAccept_Struct, structs::GuildInviteAccept_Struct);
@@ -2048,7 +2088,6 @@ namespace Trilogy {
 		ENCODE_LENGTH_EXACT(Animation_Struct);
 		SETUP_DIRECT_ENCODE(Animation_Struct, structs::Animation_Struct);
 		OUT(spawnid);
-		OUT(target);
 		OUT(action);
 		OUT(value);
 		OUT(unknown10);
@@ -2294,8 +2333,8 @@ namespace Trilogy {
 	{
 		ENCODE_LENGTH_EXACT(GroupInvite_Struct);
 		SETUP_DIRECT_ENCODE(GroupInvite_Struct, structs::GroupInvite_Struct);
-		strcpy(eq->invitee_name,emu->invitee_name);
-		strcpy(eq->inviter_name,emu->inviter_name);
+		strn0cpy(eq->invitee_name,emu->invitee_name, 30);
+		strn0cpy(eq->inviter_name,emu->inviter_name, 30);
 		FINISH_ENCODE();
 	}
 
@@ -2306,6 +2345,95 @@ namespace Trilogy {
 		SETUP_DIRECT_DECODE(GroupInvite_Struct, structs::GroupInvite_Struct);
 		strcpy(emu->invitee_name,eq->invitee_name);
 		strcpy(emu->inviter_name,eq->inviter_name);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_GroupFollow)
+	{
+		ENCODE_LENGTH_EXACT(GroupGeneric_Struct);
+		SETUP_DIRECT_ENCODE(GroupGeneric_Struct, structs::GroupGeneric_Struct);
+		strn0cpy(eq->name1,emu->name1, 30);
+		strn0cpy(eq->name2,emu->name2, 30);
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_GroupFollow) 
+	{
+		DECODE_LENGTH_EXACT(structs::GroupGeneric_Struct);
+		SETUP_DIRECT_DECODE(GroupGeneric_Struct, structs::GroupGeneric_Struct);
+		strcpy(emu->name1,eq->name1);
+		strcpy(emu->name2,eq->name2);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_GroupUpdate)
+	{
+		ENCODE_LENGTH_ATLEAST(GroupJoin_Struct);
+		SETUP_DIRECT_ENCODE(GroupUpdate_Struct, structs::GroupUpdate_Struct);
+		strn0cpy(eq->yourname,emu->yourname, 32);
+
+		if (emu->action == 8)
+		{
+			// groupActMakeLeader = 8
+			strn0cpy(eq->othername,emu->leadersname, 32);
+			eq->action = 1;
+		} else if (emu->action == 6) {
+			// groupActDisband = 6
+			strn0cpy(eq->othername,emu->yourname, 32);
+			eq->action = 4;
+		} else {
+			strn0cpy(eq->othername,emu->membername[0], 32);
+		}
+		// Trilogy
+		// #define	ADD_MEMBER		0
+		// #define  NEW_LEADER		1
+		// #define	REMOVE_MEMBER	3
+		// #define	GROUP_QUIT		4
+		// Group Full 5
+
+		// groupActLeave = 1
+		if (emu->action == 1)
+			eq->action = 3;
+		
+			
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GroupCancelInvite)
+	{
+		ENCODE_LENGTH_EXACT(GroupCancel_Struct);
+		SETUP_DIRECT_ENCODE(GroupCancel_Struct, structs::GroupCancel_Struct);
+		strn0cpy(eq->name1,emu->name1, 30);
+		strn0cpy(eq->name2,emu->name2, 30);
+		OUT(toggle);
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_GroupCancelInvite) 
+	{
+		DECODE_LENGTH_EXACT(structs::GroupCancel_Struct);
+		SETUP_DIRECT_DECODE(GroupCancel_Struct, structs::GroupCancel_Struct);
+		strcpy(emu->name1,eq->name1);
+		strcpy(emu->name2,eq->name2);
+		IN(toggle);
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_GroupDisband)
+	{
+		ENCODE_LENGTH_EXACT(GroupGeneric_Struct);
+		SETUP_DIRECT_ENCODE(GroupGeneric_Struct, structs::GroupGeneric_Struct);
+		strn0cpy(eq->name1,emu->name1, 30);
+		strn0cpy(eq->name2,emu->name2, 30);
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_GroupDisband) 
+	{
+		DECODE_LENGTH_EXACT(structs::GroupGeneric_Struct);
+		SETUP_DIRECT_DECODE(GroupGeneric_Struct, structs::GroupGeneric_Struct);
+		strcpy(emu->name1,eq->name1);
+		strcpy(emu->name2,eq->name2);
 		FINISH_DIRECT_DECODE();
 	}
 

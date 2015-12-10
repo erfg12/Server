@@ -1117,7 +1117,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	m_Position.x = m_pp.x;
 	m_Position.y = m_pp.y;
 	m_Position.z = m_pp.z;
-	m_Position.w = m_pp.heading * 255 / 512;
+	m_Position.w = m_pp.heading * 255.0f / 512.0f;
 	race = m_pp.race;
 	base_race = m_pp.race;
 	gender = m_pp.gender;
