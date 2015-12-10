@@ -41,7 +41,11 @@ BaseGuildManager::~BaseGuildManager() {
 	ClearGuilds();
 }
 
-
+uint32 BaseGuildManager::GuildCount() {
+	if (m_guilds.empty())
+		return 0;
+	return static_cast<uint32>(m_guilds.rbegin()->first);
+}
 
 bool BaseGuildManager::LoadGuilds() {
 
@@ -948,24 +952,29 @@ unsigned char *BaseGuildManager::MakeOldGuildList(uint32 &length) const {
 	int32 size = 4;
 	OldGuildsList_Struct* gl = new struct OldGuildsList_Struct;
 	memset(gl,0,sizeof(OldGuildsList_Struct));
+	uint32 maxguilds = m_guilds.rbegin()->first;
+	if (maxguilds > RuleI(Guild, MaxGuilds))
+		maxguilds = RuleI(Guild, MaxGuilds);
+	if (maxguilds > 512)
+		maxguilds = 512;
 
-	for (int16 r = 1; r <= RuleI(Guild, MaxGuilds); r++) {
+	for (uint32 r = 1; r <= maxguilds; r++) {
 		std::string tmp;
 		if(GetGuildNameByID(r,tmp))
 		{
-			memcpy(gl->Guilds[r].name,tmp.c_str(),64);
-			gl->Guilds[r].guildID = r;
-			gl->Guilds[r].exists = 1;
-			Log.Out(Logs::Detail, Logs::Guilds, "Added Guild: %i (%s)", gl->Guilds[r].guildID, gl->Guilds[r].name);
+			memcpy(gl->Guilds[r-1].name,tmp.c_str(),64);
+			gl->Guilds[r-1].guildID = r;
+			gl->Guilds[r-1].exists = 1;
+			Log.Out(Logs::Detail, Logs::Guilds, "Added Guild: %i (%s)", gl->Guilds[r-1].guildID, gl->Guilds[r-1].name);
 		}
 		else
 		{
-			gl->Guilds[r].guildID = r;
-			gl->Guilds[r].exists = 0;
+			gl->Guilds[r-1].guildID = r;
+			gl->Guilds[r-1].exists = 0;
 		}
 
-		gl->Guilds[r].unknown1 = 0xFFFFFFFF;
-		gl->Guilds[r].unknown3 = 0xFFFFFFFF;
+		gl->Guilds[r-1].unknown1 = 0xFFFFFFFF;
+		gl->Guilds[r-1].unknown3 = 0xFFFFFFFF;
 		size += sizeof(OldGuildsListEntry_Struct);
 	}
 	length = size;

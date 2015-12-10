@@ -3807,7 +3807,7 @@ void EntityList::SendGroupLeader(uint32 gid, const char *lname, const char *oldl
 					GroupJoin_Struct* gj = (GroupJoin_Struct*) outapp->pBuffer;
 					gj->action = groupActMakeLeader;
 					strcpy(gj->membername, lname);
-					strcpy(gj->yourname, oldlname);
+					strcpy(gj->yourname, it->second->GetName());
 					it->second->QueuePacket(outapp);
 					Log.Out(Logs::Detail, Logs::Group, "SendGroupLeader(): Entity loop leader update packet sent to: %s .", it->second->GetName());
 					safe_delete(outapp);

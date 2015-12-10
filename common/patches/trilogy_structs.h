@@ -607,9 +607,9 @@ struct ZoneChange_Struct
 struct Animation_Struct
 {
 	/*00*/	uint32 spawnid;
-	/*04*/  uint32 target;
-	/*08*/	uint8  action;
-	/*09*/  uint8  value;
+	/*04*/	uint8  action;
+	/*05*/  uint8  value;
+	/*06*/	uint32 unknown06;
 	/*10*/	uint16 unknown10; // 80 3F
 };
 
@@ -1285,25 +1285,34 @@ struct ZoneUnavail_Struct
 	/*016*/	short int unknown[4];	// Comment: 
 };
 
-struct GroupInvite_Struct 
-{
-	/*000*/	char invitee_name[64];		// Comment: 
-	/*064*/	char inviter_name[64];		// Comment: 
-	/*128*/	char unknown[65];		// Comment: 
-	/*193*/	
+struct GroupGeneric_Struct {
+	char name1[30];
+	char name2[30];
 };
 
+struct GroupCancel_Struct {
+	char	name1[30];
+	char	name2[30];
+	uint8	toggle;
+};
+
+struct GroupInvite_Struct 
+{
+	/*000*/	char invitee_name[30];		// Comment: 
+	/*064*/	char inviter_name[30];		// Comment: 
+	/*128*/	char unknown[31];		// Comment: 
+	/*193*/	
+};
 
 /* Do not touch this please.  Used to add and 
 	* remove group members from a group. Maybe more.*/
 struct GroupUpdate_Struct
 {
-	/*000*/	char	receiverName[32];	//Member who needs new info;
-	/*032*/	char	senderName[32];		//Member with new info;
-	/*064*/	char	senderName2[32];	//? testing, but not working yet
-	/*096*/	uint8	unknown01[128];		
-	/*224*/	uint8	action;				//0: Player joins the group; 1: ?? 2: ?? 3: Player leaves the group 4: You leave the group;	
-	/*225*/	
+	/*0000*/	char	yourname[32];
+	/*0032*/	char	othername[32];
+	/*0064*/	char	membername[5][32];
+	/*0224*/	uint32	action;				//0: Player joins the group; 1: ?? 2: ?? 3: Player leaves the group 4: You leave the group;	
+	/*0228*/	
 };
 
 struct GroupFollow_Struct
@@ -1836,20 +1845,20 @@ struct Guild_Struct
 };
 
 struct GuildMOTD_Struct{
-	/*000*/	char	name[64];
-	/*064*/	uint32	unknown64;
-	/*068*/	char	motd[512];
-	/*580*/	
+	/*000*/	char	name[32];
+	/*032*/	uint32	unknown64;
+	/*036*/	char	motd[512];
+	/*548*/	
 };
 
 struct GuildInviteAccept_Struct
 {
-	/*000*/	char inviter[64];
-	/*064*/	char newmember[64];
-	/*128*/	uint32 response;
-	/*132*/	uint16 guildeqid;
-	/*134*/	uint16 unknown;
-	/*136*/	
+	/*000*/	char inviter[30];
+	/*030*/	char newmember[30];
+	/*060*/	uint32 response;
+	/*064*/	uint16 guildeqid;
+	/*066*/	uint16 unknown;
+	/*068*/	
 };
 
 struct GuildsListEntry_Struct 
@@ -1880,22 +1889,12 @@ struct GuildUpdate_Struct
 // Guild invite, remove
 struct GuildCommand_Struct
 {
-	/*000*/	char Invitee[30];			// Comment: Person who is being invited
-	/*030*/	char Inviter[30];			// Comment: Person who did /guildinvite
+	/*000*/	char othername[30];			// Comment: Person who is being invited
+	/*030*/	char myname[30];			// Comment: Person who did /guildinvite
 	/*060*/	uint16 guildeqid;			// Comment: 
 	/*062*/	uint8 unknown[2];			// Comment: for guildinvite all 0's, for remove 0=0x56, 2=0x02
-	/*064*/	uint32 rank;					// rank
+	/*064*/	uint32 officer;					// rank
 	/*068*/	
-};
-
-struct GuildInvite_Struct
-{
-	/*000*/	char Invitee[64];
-	/*064*/	char Inviter[64];
-	/*128*/	uint16 guildeqid;
-	/*130*/	uint8 unknown[2];
-	/*132*/	uint32 rank;
-	/*136*/	
 };
 
 struct GuildRemove_Struct

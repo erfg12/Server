@@ -661,7 +661,8 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 		}
 		case OP_GuildsList:
 		{
-			SendGuildList();
+			if (guild_mgr.GuildCount() > 0)
+				SendGuildList();
 			return true;
 		}
 		case OP_WorldLogout:
