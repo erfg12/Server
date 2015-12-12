@@ -7891,13 +7891,13 @@ void command_acceptrules(Client *c, const Seperator *sep){
 }
 
 void command_guildcreate(Client *c, const Seperator *sep){
-	if (strlen(sep->argplus[1])>4 && strlen(sep->argplus[1])<16)
+	if (strlen(sep->argplus[1])>4 && strlen(sep->argplus[1])<32)
 	{
 		guild_mgr.AddGuildApproval(sep->argplus[1], c);
 	}
 	else
 	{
-		c->Message(CC_Default, "Guild name must be more than 4 characters and less than 16.");
+		c->Message(CC_Default, "Guild name must be more than 4 characters and less than 32.");
 	}
 }
 

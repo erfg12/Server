@@ -178,6 +178,7 @@ public:
 	void	SendGuildSpawnAppearance(uint32 guild_id);
 	void	RefreshAllGuildInfo(uint32 guild_id);
 	void	SendGuildList();
+	void	SendGuildUpdate(uint32 guild_id);
 	void	CheckGroupList (const char *fname, const int fline);
 	void	GroupProcess();
 	void	RaidProcess();
