@@ -36,7 +36,6 @@ public:
 	void SetDatabase(Database *db) { m_db = db; }
 
 	bool LoadGuilds();
-	uint32 GuildCount();
 	bool RefreshGuild(uint32 guild_id);
 
 	//guild edit actions.

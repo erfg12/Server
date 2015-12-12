@@ -273,8 +273,8 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack) {
 		}
 
 		if(s->name_change) {
-			//until we figure out the guild update packet, we resend the whole guild list.
-			entity_list.SendGuildList();
+			//Update guild name.
+			entity_list.SendGuildUpdate(s->guild_id);
 		}
 
 		if(s->rank_change) {

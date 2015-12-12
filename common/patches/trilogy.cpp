@@ -1344,7 +1344,6 @@ namespace Trilogy {
 		//store away the emu struct
 		unsigned char *__emu_buffer = in->pBuffer;
 		OldGuildsList_Struct *old_guildlist_pkt=(OldGuildsList_Struct *)__emu_buffer;
-		OldGuildsListEntry_Struct *old_entry = old_guildlist_pkt->Guilds;
 		int num_guilds = (in->size - 4) / sizeof(OldGuildsListEntry_Struct);
 		Log.Out(Logs::Detail, Logs::Zone_Server, "GuildList size %i", num_guilds);
 
@@ -1352,26 +1351,36 @@ namespace Trilogy {
 			delete in;
 			return;
 		}
-		if (num_guilds > 512)
-			num_guilds = 512;
+		if (num_guilds > 511)
+			num_guilds = 511;
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_GuildsList, 4 + sizeof(structs::GuildsListEntry_Struct) * num_guilds);
 		structs::GuildsList_Struct *new_list = (structs::GuildsList_Struct *)outapp->pBuffer;
-		structs::GuildsListEntry_Struct *new_entry = new_list->Guilds;
-		new_list->head[0] = old_guildlist_pkt->head[0];
-		new_list->head[1] = old_guildlist_pkt->head[1];
-		new_list->head[2] = old_guildlist_pkt->head[2];
-		new_list->head[3] = old_guildlist_pkt->head[3];
+		memset(new_list, 0, outapp->size);
 		memcpy(new_list->head, old_guildlist_pkt->head, 4);
 		for (int i = 0; i < num_guilds; i++)
 		{
-			new_entry[i].guildID = old_entry[i].guildID;
-			strn0cpy(new_entry[i].name, old_entry[i].name, 32);
-			memcpy(&new_entry[i].unknown1, &old_entry[i].unknown1, 24);
+			new_list->Guilds[i].guildID = old_guildlist_pkt->Guilds[i].guildID;
+			strn0cpy(new_list->Guilds[i].name, old_guildlist_pkt->Guilds[i].name, 32);
+			new_list->Guilds[i].unknown1 = 0xFFFFFFFF;
+			new_list->Guilds[i].unknown3 = 0xFFFFFFFF;
 		};
 		delete[] __emu_buffer;
 		dest->FastQueuePacket(&outapp);
 
 	}
+
+	ENCODE(OP_GuildAdded)
+	{
+		SETUP_DIRECT_ENCODE(OldGuildUpdate_Struct, structs::GuildUpdate_Struct);
+		OUT(guildID);
+		eq->entry.exists = emu->entry.exists;
+		eq->entry.guildID = emu->entry.guildID;
+		strn0cpy(eq->entry.name, emu->entry.name, 32);
+		eq->entry.unknown1 = 0xFFFFFFFF;
+		eq->entry.unknown3 = 0xFFFFFFFF;
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_NewSpawn)
 	{
 		SETUP_DIRECT_ENCODE(Spawn_Struct, structs::Spawn_Struct);

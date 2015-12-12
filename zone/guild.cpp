@@ -180,3 +180,31 @@ void EntityList::SendGuildList() {
 		++it;
 	}
 }
+
+void EntityList::SendGuildUpdate(uint32 guild_id) {
+
+	if (client_list.size() == 0)
+		return;
+
+	std::string tmp;
+		
+	if(guild_mgr.GetGuildNameByID(guild_id,tmp))
+	{
+		EQApplicationPacket *outapp = new EQApplicationPacket(OP_GuildAdded, sizeof(OldGuildUpdate_Struct));
+		OldGuildUpdate_Struct* gu=(OldGuildUpdate_Struct*)outapp->pBuffer;
+		Log.Out(Logs::Detail, Logs::Guilds, "SendGuildUpdate(): GUID: %d Name: %s", guild_id, tmp.c_str());
+		gu->guildID=guild_id;
+		memcpy(gu->entry.name,tmp.c_str(),64);
+		gu->entry.guildID=guild_id;
+		gu->entry.exists=1;
+		gu->entry.unknown1=0xFFFFFFFF;
+		gu->entry.unknown3=0xFFFFFFFF;
+		auto it = client_list.begin();
+		while (it != client_list.end()) {
+			Client *client = it->second;
+			client->QueuePacket(outapp);
+			++it;
+		}
+		safe_delete(outapp);
+	}
+}
