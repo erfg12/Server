@@ -705,9 +705,10 @@ bool Client::CheckFizzle(uint16 spell_id)
 	 * 
 	 * This is not precise.  It's a model that tries to fit the limited data available.
 	 */
+    int maxSpellDifficulty = RuleI(Spells, MaxSpellDifficulty);
 	int spellDifficulty = spells[spell_id].classes[GetClass() - 1] * 5;
-	if (spellDifficulty > 255)
-		spellDifficulty = 255;
+	if (spellDifficulty > maxSpellDifficulty)
+		spellDifficulty = maxSpellDifficulty;
 
 	int casterSkill;
 	int casterLevel = GetLevel();
