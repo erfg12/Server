@@ -120,7 +120,7 @@ void QueryServ::QSDeathBy(uint32 char_id, uint32 zone_id, int32 instance_id, cha
 	safe_delete(pack);
 }
 
-void QueryServ::QSTSEvents(uint32 char_id, uint32 zone_id, int32 instance_id, char results[8], uint32 recipe, uint32 tradeskill, uint16 trivial, float chance)
+void QueryServ::QSTSEvents(uint32 char_id, uint32 zone_id, int32 instance_id, const char results[8], uint32 recipe, uint32 tradeskill, uint16 trivial, float chance)
 {
 	ServerPacket* pack = new ServerPacket(ServerOP_QSPlayerTSEvents, sizeof(QSPlayerTSEvents_Struct));
 	QSPlayerTSEvents_Struct* QS = (QSPlayerTSEvents_Struct*)pack->pBuffer;
