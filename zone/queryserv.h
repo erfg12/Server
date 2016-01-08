@@ -32,7 +32,7 @@ class QueryServ {
 		void QSAAPurchases(uint32 char_id, uint32 zone_id, int32 instance_id, char aa_type[8], char aa_name[128], uint32 aa_id, uint32 cost);
 		void QSAARate(uint32 char_id, uint32 aapoints, uint32 last_unspentAA);
 		void QSDeathBy(uint32 char_id, uint32 zone_id, int32 instance_id, char killed_by[128], uint16 spell, int32 damage);
-		void QSTSEvents(uint32 char_id, uint32 zone_id, int32 instance_id, char results[8], uint32 recipe, uint32 tradeskill, uint16 trivial, float chance);
+		void QSTSEvents(uint32 char_id, uint32 zone_id, int32 instance_id, const char results[8], uint32 recipe, uint32 tradeskill, uint16 trivial, float chance);
 		void QSMerchantTransactions(uint32 char_id, uint32 zone_id, int16 slot_id, uint32 item_id, uint8 charges,
 			uint32 merchant_id, int32 merchant_plat, int32 merchant_gold, int32 merchant_silver, int32 merchant_copper, uint16 merchant_count,
 			int32 char_plat, int32 char_gold, int32 char_silver, int32 char_copper, uint16 char_count);

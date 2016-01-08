@@ -2506,6 +2506,11 @@ float WallIntersect(glm::vec3 &p1, glm::vec3 &pv, glm::vec3 &hitLocation, glm::v
 */
 float NPC::ApplyPushVector(bool noglance)
 {
+    // if mob is perma rooted do not push
+    if (GetRunspeed() <=0.0 && GetWalkspeed() <= 0.0) {
+        return 0.0f;
+    }
+
 	if (!zone->zonemap)
 	{
 		return 0.0f;

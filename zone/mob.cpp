@@ -3624,6 +3624,9 @@ int Mob::QGVarDuration(const char *fmt)
 
 bool Mob::DoKnockback(Mob *caster, float pushback, float pushup)
 {
+    if (GetRunspeed() <= 0.0 && GetWalkspeed() <= 0.0) {
+        return false;
+    }
 	// This method should only be used for spell effects.
 
 	glm::vec3 newloc(GetX(), GetY(), GetZ() + pushup);
@@ -3665,6 +3668,9 @@ bool Mob::DoKnockback(Mob *caster, float pushback, float pushup)
 
 bool Mob::CombatPush(Mob* attacker, float pushback)
 {
+    if (GetRunspeed() <= 0.0 && GetWalkspeed() <= 0.0) {
+        return false;
+    }
 	// Use this method for stun/combat pushback.
 
 	glm::vec3 newloc(GetX(), GetY(), GetZ());
