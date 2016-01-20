@@ -2744,9 +2744,9 @@ int Mob::CheckStackConflict(uint16 spellid1, int caster_level1, uint16 spellid2,
 	case 756:		// 'Resurrection Effects'
 	case 757:		// 'Resurrection Effect'
 	case 5249:		// 'Resurrection Sickness' (not in TAKP spell file)
-		if (IsBeneficialSpell(spellid2) && IsEffectInSpell(spellid2, SE_STR))
+		if (IsBeneficialSpell(spellid2) && spells[spellid2].effectid[0] == SE_STR)
 		{
-			Log.Out(Logs::Detail, Logs::Spells, "Beneficial Strength modifiers do not stack with rez effects.");
+			Log.Out(Logs::Detail, Logs::Spells, "Beneficial Strength modifiers (in slot 1) do not stack with rez effects.");
 			return -1;
 		}
 		else
