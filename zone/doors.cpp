@@ -332,15 +332,18 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 	}
 
 	entity_list.QueueClients(sender, outapp, false);
-	if(!IsDoorOpen() || (opentype == 58))
+	if (strcmp(door_name, "HOWLER") != 0)
 	{
-		close_timer.Start();
-		SetOpenState(true);
-	}
-	else
-	{
-		close_timer.Disable();
-		SetOpenState(false);
+		if (!IsDoorOpen() || (opentype == 58))
+		{
+			close_timer.Start();
+			SetOpenState(true);
+		}
+		else
+		{
+			close_timer.Disable();
+			SetOpenState(false);
+		}
 	}
 
 	//everything past this point assumes we opened the door
