@@ -332,7 +332,7 @@ void Doors::HandleClick(Client* sender, uint8 trigger)
 	}
 
 	entity_list.QueueClients(sender, outapp, false);
-	if(!IsDoorOpen() || (opentype == 58))
+	if (!IsDoorOpen())
 	{
 		close_timer.Start();
 		SetOpenState(true);
