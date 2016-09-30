@@ -137,7 +137,16 @@ WorldServer* ServerManager::GetServerByAddress(unsigned int address)
 EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 {
 
-	unsigned int packet_size = sizeof(ServerList_Struct);
+	//unsigned int packet_size = sizeof(ServerList_Struct); //mac
+
+	//trilogy
+	unsigned int packet_size = 0;
+	if (c->GetClientVersion() == cv_tri)
+		packet_size = sizeof(ServerList_Trilogy_Struct);
+	else
+		packet_size = sizeof(ServerList_Struct);
+	//
+
 	unsigned int server_count = 0;
 	in_addr in;
 	in.s_addr = c->GetConnection()->GetRemoteIP();
@@ -176,6 +185,12 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 	packet_size += 1; // flags and unknowns
 	EQApplicationPacket *outapp = new EQApplicationPacket(OP_ServerListRequest, packet_size);
 	ServerList_Struct *sl = (ServerList_Struct*)outapp->pBuffer;
+
+	//trilogy
+	if (c->GetClientVersion() == cv_tri)
+		ServerList_Trilogy_Struct *sl = (ServerList_Trilogy_Struct*)outapp->pBuffer;
+	//
+
 	sl->numservers = server_count;
 
 	uint8 showcount = 0x0;
@@ -189,7 +204,13 @@ EQApplicationPacket* ServerManager::CreateOldServerListPacket(Client* c)
 	sl->showusercount = showcount;
 
 	unsigned char *data_ptr = outapp->pBuffer;
-	data_ptr += sizeof(ServerList_Struct);
+
+	//trilogy
+	if (c->GetClientVersion() == cv_tri)
+		data_ptr += sizeof(ServerList_Trilogy_Struct);
+	else
+		data_ptr += sizeof(ServerList_Struct);
+	//
 
 	iter = world_servers.begin();
 	while(iter != world_servers.end())
