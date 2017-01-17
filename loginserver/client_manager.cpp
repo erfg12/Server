@@ -51,13 +51,12 @@ ClientManager::ClientManager()
 	}
 
 	//Trilogy
-	int trilogy_port = atoi(server.config->GetVariable("Trilogy", "port").c_str());
+	int trilogy_port = atoul(db.LoadServerSettings("Trilogy", "port").c_str());
 	trilogy_stream = new EQStreamFactory(OldStream, trilogy_port);
 	trilogy_ops = new RegularOpcodeManager;
-	if (!trilogy_ops->LoadOpcodes(server.config->GetVariable("Trilogy", "opcodes").c_str()))
+	if (!trilogy_ops->LoadOpcodes(db.LoadServerSettings("Trilogy", "opcodes").c_str()))
 	{
-		server_log->Log(log_error, "ClientManager fatal error: couldn't load opcodes for Trilogy file %s.",
-			server.config->GetVariable("Trilogy", "opcodes").c_str());
+		server_log->Log(log_error, "ClientManager fatal error: couldn't load opcodes for Trilogy file %s.", db.LoadServerSettings("Trilogy", "opcodes").c_str());
 		run_server = false;
 	}
 	if (trilogy_stream->Open())

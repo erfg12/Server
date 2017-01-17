@@ -48,6 +48,7 @@ public:
 	std::string LoadOption(std::string title, std::string parameter, std::string filename);
 	void WriteDBini();
 	void UpdateSettings();
+	//std::string GetVariable(std::string title, std::string parameter);
 
 protected:
 	std::map<std::string, std::map<std::string, std::string> > vars;

@@ -309,7 +309,7 @@ public:
 	void	AddHealAggro(Mob* target, Mob* caster, uint16 hate);
 	Mob*	FindDefenseNPC(uint32 npcid);
 	void	OpenDoorsNear(NPC* opener);
-	void	OpenDoorsNearCoords(NPC* opener, glm::vec4 position);
+	void	OpenDoorsNearCoords(NPC* opener, const glm::vec4 &position);
 	void	UpdateWho(bool iSendFullUpdate = false);
 	void	SendPositionUpdates(Client* client, uint32 cLastUpdate = 0, Entity* alwayssend = 0, Entity* alwayssend2 = 0, bool iSendEvenIfNotChanged = false);
 	char*	MakeNameUnique(char* name);

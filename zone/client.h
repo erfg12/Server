@@ -358,7 +358,7 @@ public:
 	inline bool GetInside(uint16 entity_id) { return dynamic_positions[entity_id].inside; }
 	inline void SetInside(uint16 entity_id, bool state) { dynamic_positions[entity_id].inside = state; }
 	inline glm::vec4 GetLastPosition(uint16 entity_id) { return dynamic_positions[entity_id].l_Position; }
-	inline void SetLastPosition(uint16 entity_id, glm::vec4 pos) { dynamic_positions[entity_id].l_Position = pos; }
+	inline void SetLastPosition(uint16 entity_id, const glm::vec4 &pos) { dynamic_positions[entity_id].l_Position = pos; }
 
 	inline float ProximityX() const { return m_Proximity.x; }
 	inline float ProximityY() const { return m_Proximity.y; }
