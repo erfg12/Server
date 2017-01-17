@@ -32,17 +32,17 @@ ClientManager::ClientManager()
 	server_log->Trace("ClientManager Got port value from db.");
 	server_log->Trace("ClientManager Got opcode value from db.");
 
-	int old_port = atoul(db.LoadServerSettings("Old", "port").c_str());
+	int old_port = atoul(db.LoadServerSettings("Trilogy", "port").c_str());
 	old_stream = new EQStreamFactory(OldStream, old_port);
 	old_ops = new RegularOpcodeManager;
-	if (!old_ops->LoadOpcodes(db.LoadServerSettings("Old", "opcodes").c_str()))
+	if (!old_ops->LoadOpcodes(db.LoadServerSettings("Trilogy", "opcodes").c_str()))
 	{
-		server_log->Log(log_error, "ClientManager fatal error: couldn't load opcodes for Old file %s.", db.LoadServerSettings("Old", "opcodes").c_str());
+		server_log->Log(log_error, "ClientManager fatal error: couldn't load opcodes for Trilogy file %s.", db.LoadServerSettings("Trilogy", "opcodes").c_str());
 		run_server = false;
 	}
 	if(old_stream->Open())
 	{
-		server_log->Log(log_network, "ClientManager listening on Old stream with port: %s.", std::to_string(old_port).c_str());
+		server_log->Log(log_network, "ClientManager listening on Trilogy stream with port: %s.", std::to_string(old_port).c_str());
 	}
 	else
 	{
@@ -51,7 +51,7 @@ ClientManager::ClientManager()
 	}
 
 	//Trilogy
-	int trilogy_port = atoul(db.LoadServerSettings("Trilogy", "port").c_str());
+	/*int trilogy_port = atoul(db.LoadServerSettings("Trilogy", "port").c_str());
 	trilogy_stream = new EQStreamFactory(OldStream, trilogy_port);
 	trilogy_ops = new RegularOpcodeManager;
 	if (!trilogy_ops->LoadOpcodes(db.LoadServerSettings("Trilogy", "opcodes").c_str()))
@@ -67,7 +67,7 @@ ClientManager::ClientManager()
 	{
 		server_log->Log(log_error, "ClientManager fatal error: couldn't open Trilogy stream.");
 		run_server = false;
-	}
+	}*/
 }
 
 ClientManager::~ClientManager()
@@ -82,7 +82,7 @@ ClientManager::~ClientManager()
 		delete old_ops;
 	}
 
-	if (trilogy_stream)
+	/*if (trilogy_stream)
 	{
 		trilogy_stream->Close();
 		delete trilogy_stream;
@@ -90,7 +90,7 @@ ClientManager::~ClientManager()
 	if (trilogy_ops)
 	{
 		delete trilogy_ops;
-	}
+	}*/
 }
 
 void ClientManager::Process()
@@ -104,12 +104,12 @@ void ClientManager::Process()
 		server_log->Log(log_network, "New client connection from %s:%d", inet_ntoa(in), ntohs(oldcur->GetRemotePort()));
 
 		oldcur->SetOpcodeManager(&old_ops);
-		Client *c = new Client(oldcur, cv_old);
+		Client *c = new Client(oldcur, cv_tri/*cv_old*/);
 		clients.push_back(c);
 		oldcur = old_stream->PopOld();
 	}
 
-	oldcur = trilogy_stream->PopOld();
+	/*oldcur = trilogy_stream->PopOld();
 	while (oldcur)
 	{
 		struct in_addr in;
@@ -120,7 +120,7 @@ void ClientManager::Process()
 		Client *c = new Client(oldcur, cv_tri);
 		clients.push_back(c);
 		oldcur = trilogy_stream->PopOld();
-	}
+	}*/
 	
 	list<Client*>::iterator iter = clients.begin();
 	while (iter != clients.end())

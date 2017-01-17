@@ -126,7 +126,7 @@ struct CharacterSelect_Struct {
 /*1682*/	uint8	eyecolor1[10];			// Characters Eye Color
 /*1692*/	uint8	eyecolor2[10];			// Characters Eye 2 Color
 /*1702*/	uint8	level[10];				// Characters Levels
-/*1712*/
+/*1712*/	char	zonename[10][20];		// For Trilogy
 };
 
 /*
@@ -253,7 +253,7 @@ union
 		 };
 /*0384*/ uint8	lfg;			// 0=off, 1=lfg on
 /*0385*/ uint32 zoneID; // for mac.
-
+char  zonename[15]; //For trilogy.
 };
 
 struct LFG_Struct {

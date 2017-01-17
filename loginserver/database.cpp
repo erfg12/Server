@@ -170,7 +170,7 @@ bool Database::CreateServerSettings()
 			"('account_table', '', 'schema', 'location of all client account info for login server only.', 'tblLoginServerAccounts'),"
 			"('auto_account_activate', '', 'options', 'set this to TRUE to allow new accounts to log in.', 'TRUE'),"
 			"('auto_account_create', '', 'options', 'set this to TRUE to auto create accounts on player first log in.', 'TRUE'),"
-			"('port', '', 'Old', 'port for clients to connect to.', '6000'),"
+			"('port', '', 'Trilogy', 'port for clients to connect to.', '6000'),"
 			"('dump_packets_in', '', 'options', 'debugging', 'FALSE'),"
 			"('dump_packets_out', '', 'options', 'debugging', 'FALSE'),"
 			"('failed_login_log', '', 'options', 'set this to TRUE to log failed log in attempts.', 'TRUE'),"
@@ -179,7 +179,7 @@ bool Database::CreateServerSettings()
 			"('local_network', '', 'options', 'set to the network ip that world server is on.', '127.0.0.1'),"
 			"('mode', '', 'security', 'encryption mode the plugin uses.', '5'),"
 			"('network_ip', '', 'options', 'set to the network ip that world server is on.', '127.0.0.1'),"
-			"('opcodes', '', 'Old', 'opcode file for client compatibility. (Old means classic/mac)', 'login_opcodes_oldver.conf'),"
+			"('opcodes', '', 'Trilogy', 'opcode file for client compatibility. (Old means classic/mac)', 'login_opcodes_oldver.conf'),"
 			"('plugin', '', 'security', 'the encryption type the login server uses.', 'EQEmuAuthCrypto'),"
 			"('pop_count', '', 'options', '0 to only display UP or DOWN or 1 to show population count in server select.', '0'),"
 			"('reject_duplicate_servers', '', 'options', 'set this to TRUE to force unique server name connections.', 'TRUE'),"
@@ -206,7 +206,7 @@ bool Database::CreateServerSettings()
 		failed |= !SetServerSettings("account_table", "schema", "tblLoginServerAccounts");
 		failed |= !SetServerSettings("auto_account_activate", "options", "TRUE");
 		failed |= !SetServerSettings("auto_account_create", "options", "TRUE");
-		failed |= !SetServerSettings("port", "Old", "6000");
+		failed |= !SetServerSettings("port", "Trilogy", "6000");
 		failed |= !SetServerSettings("dump_packets_in", "options", "FALSE");
 		failed |= !SetServerSettings("dump_packets_out", "options", "FALSE");
 		failed |= !SetServerSettings("failed_login_log", "options", "TRUE");
@@ -215,7 +215,7 @@ bool Database::CreateServerSettings()
 		failed |= !SetServerSettings("local_network", "options", "127.0.0.1");
 		failed |= !SetServerSettings("mode", "security", "5");
 		failed |= !SetServerSettings("network_ip", "options", "127.0.0.1");
-		failed |= !SetServerSettings("opcodes", "Old", "login_opcodes_oldver.conf");
+		failed |= !SetServerSettings("opcodes", "Trilogy", "login_opcodes_oldver.conf");
 		failed |= !SetServerSettings("plugin", "security", "EQEmuAuthCrypto");
 		failed |= !SetServerSettings("pop_count", "options", "0");
 		failed |= !SetServerSettings("reject_duplicate_servers", "options", "TRUE");
