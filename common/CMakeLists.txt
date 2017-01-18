@@ -69,6 +69,7 @@ SET(common_sources
 	platform.cpp
 	patches/patches.cpp
 	patches/mac.cpp
+	patches/trilogy.cpp
 	patches/evolution.cpp
 	SocketLib/Base64.cpp
 	SocketLib/File.cpp
@@ -193,6 +194,10 @@ SET(common_headers
 	patches/mac_constants.h
 	patches/mac_structs.h
 	patches/mac_ops.h
+	patches/trilogy.h
+	patches/trilogy_constants.h
+	patches/trilogy_structs.h
+	patches/trilogy_ops.h
 	patches/evolution.h
 	patches/evolution_structs.h
 	patches/evolution_ops.h
@@ -227,6 +232,11 @@ SOURCE_GROUP(Patches FILES
 	patches/mac_ops.h
 	patches/mac_structs.h
 	patches/mac_constants.h
+	patches/trilogy.cpp
+	patches/trilogy.h
+	patches/trilogy_ops.h
+	patches/trilogy_structs.h
+	patches/trilogy_constants.h
 	patches/evolution.cpp
 	patches/evolution.h
 	patches/evolution_structs.h
@@ -279,7 +289,7 @@ ADD_LIBRARY(common ${common_sources} ${common_headers})
 
 IF(UNIX)
 	ADD_DEFINITIONS(-fPIC)
-	SET_SOURCE_FILES_PROPERTIES("patches/mac.cpp" "patches/evolution.cpp" PROPERTIES COMPILE_FLAGS -O0)
+	SET_SOURCE_FILES_PROPERTIES("patches/mac.cpp" "patches/trilogy.cpp" "patches/evolution.cpp" PROPERTIES COMPILE_FLAGS -O0)
 ENDIF(UNIX)
 
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
