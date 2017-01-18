@@ -282,13 +282,11 @@ void EQStreamIdentifier::Process() {
 }
 
 void EQStreamIdentifier::AddStream(EQStream *&eqs) {
-	Log.Out(Logs::General, Logs::World_Server, "AddStream starting...");
 	m_streams.push_back(new Record(eqs));
 	eqs = nullptr;
 }
 
 void EQStreamIdentifier::AddOldStream(EQOldStream *&eqs) {
-	Log.Out(Logs::General, Logs::World_Server, "AddOldStream starting...");
 	m_oldstreams.push_back(new OldRecord(eqs));
 	eqs = nullptr;
 }

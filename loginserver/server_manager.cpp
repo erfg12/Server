@@ -281,7 +281,7 @@ void ServerManager::SendOldUserToWorldRequest(const char* server_id, unsigned in
 			utwr->worldid = (*iter)->GetRuntimeID();
 
 			utwr->lsaccountid = client_account_id;
-			utwr->ip = ip;
+			//utwr->ip = ip;
 			(*iter)->GetConnection()->SendPacket(outapp);
 			found = true;
 

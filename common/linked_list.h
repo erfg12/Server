@@ -405,6 +405,7 @@ void LinkedList<TYPE>::Append(const TYPE& data)
 template<class TYPE>
 void LinkedList<TYPE>::Insert(const TYPE& data)
 {
+	//std::cout << "DEBUG :: Inserting client to zone?" << std::endl;
 	ListElement<TYPE>* new_element = new ListElement<TYPE>(data);
 
 	new_element->SetNext(first);

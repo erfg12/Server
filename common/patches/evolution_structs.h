@@ -31,9 +31,10 @@ enum SKILLTYPE : uint8
 // Added this struct for eqemu and started eimplimentation ProcessOP_SendLoginInfo
 //TODO: confirm everything in this struct
 struct LoginInfo_Struct {
-/*000*/	char	AccountName[127];	// Length confirmed - Dark-Prince 22/12/2007
-/*127*/	char	Password[13];		// Length confirmed - Dark-Prince 22/12/2007
-/*140*/
+	/*000*/	char	AccountName[127];	// Length confirmed - Dark-Prince 22/12/2007
+	/*064*/	uint8	Password[24];		// Length confirmed - Dark-Prince 22/12/2007
+	/*189*/	uint8	unknown189[19];		//TODO: Find out wtf is this one and confirm size
+	/*196*/
 };
 
 struct SetDataRate_Struct 

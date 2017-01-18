@@ -1754,9 +1754,9 @@ namespace Trilogy {
 
 		if (item)
 		{
-			structs::Item_Struct* mac_item = TrilogyItem((ItemInst*)int_struct->inst, int_struct->slot_id);
+			structs::Item_Struct* trilogy_item = TrilogyItem((ItemInst*)int_struct->inst, int_struct->slot_id);
 
-			if (mac_item == 0)
+			if (trilogy_item == 0)
 			{
 				delete in;
 				return;
@@ -1766,7 +1766,7 @@ namespace Trilogy {
 			structs::TradeItemsPacket_Struct* myitem = (structs::TradeItemsPacket_Struct*) outapp->pBuffer;
 			myitem->fromid = old_item_pkt->fromid;
 			myitem->slotid = int_struct->slot_id;
-			memcpy(&myitem->item, mac_item, sizeof(structs::Item_Struct));
+			memcpy(&myitem->item, trilogy_item, sizeof(structs::Item_Struct));
 
 			if (outapp->size != sizeof(structs::TradeItemsPacket_Struct))
 				Log.Out(Logs::Detail, Logs::Zone_Server, "Invalid size on OP_TradeItemPacket packet. Expected: %i, Got: %i", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
@@ -1800,24 +1800,24 @@ namespace Trilogy {
 
 		InternalSerializedItem_Struct *eq = (InternalSerializedItem_Struct *)in->pBuffer;
 		//do the transform...
-		std::string mac_item_string;
+		std::string trilogy_item_string;
 		int r;
-		//std::string mac_item_string;
+		//std::string trilogy_item_string;
 		for (r = 0; r < itemcount; r++, eq++)
 		{
-			structs::Item_Struct* mac_item = TrilogyItem((ItemInst*)eq->inst, eq->slot_id);
+			structs::Item_Struct* trilogy_item = TrilogyItem((ItemInst*)eq->inst, eq->slot_id);
 
-			if (mac_item != 0)
+			if (trilogy_item != 0)
 			{
-				char *mac_item_char = reinterpret_cast<char*>(mac_item);
-				mac_item_string.append(mac_item_char, sizeof(structs::Item_Struct));
-				safe_delete(mac_item);
+				char *trilogy_item_char = reinterpret_cast<char*>(trilogy_item);
+				trilogy_item_string.append(trilogy_item_char, sizeof(structs::Item_Struct));
+				safe_delete(trilogy_item);
 			}
 		}
 		int32 length = 5000;
 		int buffer = 2;
 
-		memcpy(pi->packets, mac_item_string.c_str(), mac_item_string.length());
+		memcpy(pi->packets, trilogy_item_string.c_str(), trilogy_item_string.length());
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_CharInventory, length);
 		outapp->size = buffer + DeflatePacket((uchar*)pi->packets, itemcount * sizeof(structs::Item_Struct), &outapp->pBuffer[buffer], length - buffer);
 		outapp->pBuffer[0] = itemcount;
@@ -1848,18 +1848,18 @@ namespace Trilogy {
 
 		InternalSerializedItem_Struct *eq = (InternalSerializedItem_Struct *)in->pBuffer;
 		//do the transform...
-		std::string mac_item_string;
+		std::string trilogy_item_string;
 		int r = 0;
 		for (r = 0; r < itemcount; r++, eq++)
 		{
-			structs::Item_Struct* mac_item = TrilogyItem((ItemInst*)eq->inst, eq->slot_id, 1);
+			structs::Item_Struct* trilogy_item = TrilogyItem((ItemInst*)eq->inst, eq->slot_id, 1);
 
-			if (mac_item != 0)
+			if (trilogy_item != 0)
 			{
 				int pisize = ITEM_STRUCT_SIZE;
-				if (mac_item->ItemClass == ItemClassBook)
+				if (trilogy_item->ItemClass == ItemClassBook)
 					pisize = SHORT_BOOK_ITEM_STRUCT_SIZE;
-				else if (mac_item->ItemClass == ItemClassContainer)
+				else if (trilogy_item->ItemClass == ItemClassContainer)
 					pisize = SHORT_CONTAINER_ITEM_STRUCT_SIZE;
 
 				EQApplicationPacket* outapp = new EQApplicationPacket();
@@ -1867,11 +1867,11 @@ namespace Trilogy {
 				outapp->size = pisize + 5;
 				outapp->pBuffer = new unsigned char[outapp->size];
 				structs::MerchantItems_Struct* pi = (structs::MerchantItems_Struct*) outapp->pBuffer;
-				memcpy(&pi->item, mac_item, pisize);
-				pi->itemtype = mac_item->ItemClass;
+				memcpy(&pi->item, trilogy_item, pisize);
+				pi->itemtype = trilogy_item->ItemClass;
 				dest->FastQueuePacket(&outapp);
 
-				safe_delete(mac_item);
+				safe_delete(trilogy_item);
 			}
 		}
 		delete[] __emu_buffer;
@@ -2825,8 +2825,8 @@ namespace Trilogy {
 			return 0;
 
 		unsigned char *buffer = new unsigned char[sizeof(structs::Item_Struct)];
-		structs::Item_Struct *mac_pop_item = (structs::Item_Struct *)buffer;
-		memset(mac_pop_item, 0, sizeof(structs::Item_Struct));
+		structs::Item_Struct *trilogy_pop_item = (structs::Item_Struct *)buffer;
+		memset(trilogy_pop_item, 0, sizeof(structs::Item_Struct));
 
 		if (item->GMFlag == -1)
 			Log.Out(Logs::Moderate, Logs::EQMac, "Item %s is flagged for GMs.", item->Name);
@@ -2834,23 +2834,23 @@ namespace Trilogy {
 		// General items
 		if (type == 0)
 		{
-			mac_pop_item->equipSlot = ServerToTrilogySlot(slot_id_in);
-			mac_pop_item->common.Charges = inst->GetCharges();
+			trilogy_pop_item->equipSlot = ServerToTrilogySlot(slot_id_in);
+			trilogy_pop_item->common.Charges = inst->GetCharges();
 			if (item->NoDrop == 0)
-				mac_pop_item->Price = 0;
+				trilogy_pop_item->Price = 0;
 			else
-				mac_pop_item->Price = item->Price;
-			mac_pop_item->common.SellRate = item->SellRate;
+				trilogy_pop_item->Price = item->Price;
+			trilogy_pop_item->common.SellRate = item->SellRate;
 		}
 		else
 		{
-			mac_pop_item->common.Charges = 1;
-			mac_pop_item->equipSlot = inst->GetMerchantSlot();
+			trilogy_pop_item->common.Charges = 1;
+			trilogy_pop_item->equipSlot = inst->GetMerchantSlot();
 			if (item->NoDrop == 0)
-				mac_pop_item->Price = 0;
+				trilogy_pop_item->Price = 0;
 			else
-				mac_pop_item->Price = inst->GetPrice();  //This handles sellrate for us. 
-			mac_pop_item->common.SellRate = 1;
+				trilogy_pop_item->Price = inst->GetPrice();  //This handles sellrate for us. 
+			trilogy_pop_item->common.SellRate = 1;
 		}
 
 		// Comment: Flag value indicating type of item:
@@ -2869,202 +2869,202 @@ namespace Trilogy {
 		// Comment: 0x7669 - Book item
 		if (item->ItemClass == 2) {
 			// books
-			mac_pop_item->flag = 0x7669;
+			trilogy_pop_item->flag = 0x7669;
 		}
 		else if (item->ItemClass == 1) {
 			if (item->BagType > 8)
-				mac_pop_item->flag = 0x3d00;
+				trilogy_pop_item->flag = 0x3d00;
 			else
-				mac_pop_item->flag = 0x5450;
+				trilogy_pop_item->flag = 0x5450;
 		}
 		else {
 			if ((item->Worn.Effect > 0 && item->Worn.Effect < 3000) || (item->Click.Effect > 0 && item->Click.Effect < 3000) || (item->Scroll.Effect > 0 && item->Scroll.Effect < 3000) || (item->Proc.Effect > 0 && item->Proc.Effect < 3000))
-				mac_pop_item->flag = 0x0036;
+				trilogy_pop_item->flag = 0x0036;
 			else
-				mac_pop_item->flag = 0x315f;
+				trilogy_pop_item->flag = 0x315f;
 		}
-		//mac_pop_item->flag = 0x0036;
-		mac_pop_item->ItemClass = item->ItemClass;
-		strn0cpy(mac_pop_item->Name, item->Name, 35);
-		strn0cpy(mac_pop_item->Lore, item->Lore, 60);
-		strn0cpy(mac_pop_item->IDFile, item->IDFile, 6);
-		mac_pop_item->Weight = item->Weight;
-		mac_pop_item->NoRent = item->NoRent;
-		mac_pop_item->NoDrop = item->NoDrop;
-		mac_pop_item->Size = item->Size;
-		mac_pop_item->ID = item->ID;
-		mac_pop_item->Icon = item->Icon;
-		mac_pop_item->Slots = item->Slots;
+		//trilogy_pop_item->flag = 0x0036;
+		trilogy_pop_item->ItemClass = item->ItemClass;
+		strn0cpy(trilogy_pop_item->Name, item->Name, 35);
+		strn0cpy(trilogy_pop_item->Lore, item->Lore, 60);
+		strn0cpy(trilogy_pop_item->IDFile, item->IDFile, 6);
+		trilogy_pop_item->Weight = item->Weight;
+		trilogy_pop_item->NoRent = item->NoRent;
+		trilogy_pop_item->NoDrop = item->NoDrop;
+		trilogy_pop_item->Size = item->Size;
+		trilogy_pop_item->ID = item->ID;
+		trilogy_pop_item->Icon = item->Icon;
+		trilogy_pop_item->Slots = item->Slots;
 
 		if (item->ItemClass == 2)
 		{
-			strncpy(mac_pop_item->book.Filename, item->Filename, 15);
-			mac_pop_item->book.Book = item->Book;
-			mac_pop_item->book.BookType = item->BookType;
+			strncpy(trilogy_pop_item->book.Filename, item->Filename, 15);
+			trilogy_pop_item->book.Book = item->Book;
+			trilogy_pop_item->book.BookType = item->BookType;
 		}
 		else
 		{
-			mac_pop_item->common.unknown0282 = 0xFF;
-			mac_pop_item->common.unknown0283 = 0XFF;
-			mac_pop_item->common.CastTime = item->CastTime;
-			mac_pop_item->common.SkillModType = item->SkillModType;
-			mac_pop_item->common.SkillModValue = item->SkillModValue;
-			mac_pop_item->common.BaneDmgRace = item->BaneDmgRace;
-			mac_pop_item->common.BaneDmgBody = item->BaneDmgBody;
-			mac_pop_item->common.BaneDmgAmt = item->BaneDmgAmt;
-			mac_pop_item->common.RecLevel = item->RecLevel;
-			mac_pop_item->common.RecSkill = item->RecSkill;
-			mac_pop_item->common.ProcRate = item->ProcRate;
-			mac_pop_item->common.ElemDmgType = item->ElemDmgType;
-			mac_pop_item->common.ElemDmgAmt = item->ElemDmgAmt;
-			mac_pop_item->common.FactionMod1 = item->FactionMod1;
-			mac_pop_item->common.FactionMod2 = item->FactionMod2;
-			mac_pop_item->common.FactionMod3 = item->FactionMod3;
-			mac_pop_item->common.FactionMod4 = item->FactionMod4;
-			mac_pop_item->common.FactionAmt1 = item->FactionAmt1;
-			mac_pop_item->common.FactionAmt2 = item->FactionAmt2;
-			mac_pop_item->common.FactionAmt3 = item->FactionAmt3;
-			mac_pop_item->common.FactionAmt4 = item->FactionAmt4;
-			mac_pop_item->common.Deity = item->Deity;
+			trilogy_pop_item->common.unknown0282 = 0xFF;
+			trilogy_pop_item->common.unknown0283 = 0XFF;
+			trilogy_pop_item->common.CastTime = item->CastTime;
+			trilogy_pop_item->common.SkillModType = item->SkillModType;
+			trilogy_pop_item->common.SkillModValue = item->SkillModValue;
+			trilogy_pop_item->common.BaneDmgRace = item->BaneDmgRace;
+			trilogy_pop_item->common.BaneDmgBody = item->BaneDmgBody;
+			trilogy_pop_item->common.BaneDmgAmt = item->BaneDmgAmt;
+			trilogy_pop_item->common.RecLevel = item->RecLevel;
+			trilogy_pop_item->common.RecSkill = item->RecSkill;
+			trilogy_pop_item->common.ProcRate = item->ProcRate;
+			trilogy_pop_item->common.ElemDmgType = item->ElemDmgType;
+			trilogy_pop_item->common.ElemDmgAmt = item->ElemDmgAmt;
+			trilogy_pop_item->common.FactionMod1 = item->FactionMod1;
+			trilogy_pop_item->common.FactionMod2 = item->FactionMod2;
+			trilogy_pop_item->common.FactionMod3 = item->FactionMod3;
+			trilogy_pop_item->common.FactionMod4 = item->FactionMod4;
+			trilogy_pop_item->common.FactionAmt1 = item->FactionAmt1;
+			trilogy_pop_item->common.FactionAmt2 = item->FactionAmt2;
+			trilogy_pop_item->common.FactionAmt3 = item->FactionAmt3;
+			trilogy_pop_item->common.FactionAmt4 = item->FactionAmt4;
+			trilogy_pop_item->common.Deity = item->Deity;
 
 			if (item->ItemClass == 1)
 			{
-				mac_pop_item->common.container.BagType = item->BagType;
-				mac_pop_item->common.container.BagSlots = item->BagSlots;
-				mac_pop_item->common.container.IsBagOpen = 0;
-				mac_pop_item->common.container.BagSize = item->BagSize;
-				mac_pop_item->common.container.BagWR = item->BagWR;
+				trilogy_pop_item->common.container.BagType = item->BagType;
+				trilogy_pop_item->common.container.BagSlots = item->BagSlots;
+				trilogy_pop_item->common.container.IsBagOpen = 0;
+				trilogy_pop_item->common.container.BagSize = item->BagSize;
+				trilogy_pop_item->common.container.BagWR = item->BagWR;
 			}
 			else {
-				mac_pop_item->common.normal.Races = item->Races;
+				trilogy_pop_item->common.normal.Races = item->Races;
 				if (item->Click.Effect > 0 && item->Click.Effect < 3000) {
 					if (item->Click.Type == 5) {
-						mac_pop_item->common.normal.click_effect_type = 3;
+						trilogy_pop_item->common.normal.click_effect_type = 3;
 					}
 					else {
-						mac_pop_item->common.normal.click_effect_type = item->Click.Type;
+						trilogy_pop_item->common.normal.click_effect_type = item->Click.Type;
 					}
 				}
 				else if (item->Worn.Effect > 0 && item->Worn.Effect < 3000) {
-					mac_pop_item->common.normal.click_effect_type = item->Worn.Type;
+					trilogy_pop_item->common.normal.click_effect_type = item->Worn.Type;
 				}
 				else if (item->Scroll.Effect > 0 && item->Scroll.Effect < 3000) {
-					mac_pop_item->common.normal.click_effect_type = item->Scroll.Type;
+					trilogy_pop_item->common.normal.click_effect_type = item->Scroll.Type;
 				}
 				else if (item->Proc.Effect > 0 && item->Proc.Effect < 3000) {
-					mac_pop_item->common.normal.click_effect_type = 2;
+					trilogy_pop_item->common.normal.click_effect_type = 2;
 				}
 			}
-			mac_pop_item->common.AStr = item->AStr;
-			mac_pop_item->common.ASta = item->ASta;
-			mac_pop_item->common.ACha = item->ACha;
-			mac_pop_item->common.ADex = item->ADex;
-			mac_pop_item->common.AInt = item->AInt;
-			mac_pop_item->common.AAgi = item->AAgi;
-			mac_pop_item->common.AWis = item->AWis;
-			mac_pop_item->common.MR = item->MR;
-			mac_pop_item->common.FR = item->FR;
-			mac_pop_item->common.CR = item->CR;
-			mac_pop_item->common.DR = item->DR;
-			mac_pop_item->common.PR = item->PR;
-			mac_pop_item->common.HP = item->HP;
-			mac_pop_item->common.Mana = item->Mana;
-			mac_pop_item->common.AC = item->AC;
-			//mac_pop_item->MaxCharges = item->MaxCharges;    
-			mac_pop_item->common.Light = item->Light;
-			mac_pop_item->common.Delay = item->Delay;
-			mac_pop_item->common.Damage = item->Damage;
-			mac_pop_item->common.Range = item->Range;
-			mac_pop_item->common.ItemType = item->ItemType;
-			mac_pop_item->common.Magic = item->Magic;
-			mac_pop_item->common.Material = item->Material;
-			mac_pop_item->common.Color = item->Color;
-			//mac_pop_item->common.Faction = item->Faction;   
-			mac_pop_item->common.Classes = item->Classes;
-			mac_pop_item->common.Stackable = (item->Stackable_ == 1 ? 1 : 0);
+			trilogy_pop_item->common.AStr = item->AStr;
+			trilogy_pop_item->common.ASta = item->ASta;
+			trilogy_pop_item->common.ACha = item->ACha;
+			trilogy_pop_item->common.ADex = item->ADex;
+			trilogy_pop_item->common.AInt = item->AInt;
+			trilogy_pop_item->common.AAgi = item->AAgi;
+			trilogy_pop_item->common.AWis = item->AWis;
+			trilogy_pop_item->common.MR = item->MR;
+			trilogy_pop_item->common.FR = item->FR;
+			trilogy_pop_item->common.CR = item->CR;
+			trilogy_pop_item->common.DR = item->DR;
+			trilogy_pop_item->common.PR = item->PR;
+			trilogy_pop_item->common.HP = item->HP;
+			trilogy_pop_item->common.Mana = item->Mana;
+			trilogy_pop_item->common.AC = item->AC;
+			//trilogy_pop_item->MaxCharges = item->MaxCharges;    
+			trilogy_pop_item->common.Light = item->Light;
+			trilogy_pop_item->common.Delay = item->Delay;
+			trilogy_pop_item->common.Damage = item->Damage;
+			trilogy_pop_item->common.Range = item->Range;
+			trilogy_pop_item->common.ItemType = item->ItemType;
+			trilogy_pop_item->common.Magic = item->Magic;
+			trilogy_pop_item->common.Material = item->Material;
+			trilogy_pop_item->common.Color = item->Color;
+			//trilogy_pop_item->common.Faction = item->Faction;   
+			trilogy_pop_item->common.Classes = item->Classes;
+			trilogy_pop_item->common.Stackable = (item->Stackable_ == 1 ? 1 : 0);
 		}
 
 		//FocusEffect and BardEffect is already handled above. Now figure out click, scroll, proc, and worn.
 
 		if (item->Click.Effect > 0 && item->Click.Effect < 3000)
 		{
-			mac_pop_item->common.Effect1 = item->Click.Effect;
-			mac_pop_item->common.Effect2 = item->Click.Effect;
-			mac_pop_item->common.EffectType2 = item->Click.Type;
-			mac_pop_item->common.EffectType1 = item->Click.Type;
+			trilogy_pop_item->common.Effect1 = item->Click.Effect;
+			trilogy_pop_item->common.Effect2 = item->Click.Effect;
+			trilogy_pop_item->common.EffectType2 = item->Click.Type;
+			trilogy_pop_item->common.EffectType1 = item->Click.Type;
 			if (item->Click.Level > 0)
 			{
-				mac_pop_item->common.EffectLevel1 = item->Click.Level;
-				mac_pop_item->common.EffectLevel2 = item->Click.Level;
+				trilogy_pop_item->common.EffectLevel1 = item->Click.Level;
+				trilogy_pop_item->common.EffectLevel2 = item->Click.Level;
 			}
 			else
 			{
-				mac_pop_item->common.EffectLevel1 = item->Click.Level2;
-				mac_pop_item->common.EffectLevel2 = item->Click.Level2;
+				trilogy_pop_item->common.EffectLevel1 = item->Click.Level2;
+				trilogy_pop_item->common.EffectLevel2 = item->Click.Level2;
 			}
 		}
 		else if (item->Scroll.Effect > 0 && item->Scroll.Effect < 3000)
 		{
-			mac_pop_item->common.Effect1 = item->Scroll.Effect;
-			mac_pop_item->common.Effect2 = item->Scroll.Effect;
-			mac_pop_item->common.EffectType2 = item->Scroll.Type;
-			mac_pop_item->common.EffectType1 = item->Scroll.Type;
+			trilogy_pop_item->common.Effect1 = item->Scroll.Effect;
+			trilogy_pop_item->common.Effect2 = item->Scroll.Effect;
+			trilogy_pop_item->common.EffectType2 = item->Scroll.Type;
+			trilogy_pop_item->common.EffectType1 = item->Scroll.Type;
 			if (item->Scroll.Level > 0)
 			{
-				mac_pop_item->common.EffectLevel1 = item->Scroll.Level;
-				mac_pop_item->common.EffectLevel2 = item->Scroll.Level;
+				trilogy_pop_item->common.EffectLevel1 = item->Scroll.Level;
+				trilogy_pop_item->common.EffectLevel2 = item->Scroll.Level;
 			}
 			else
 			{
-				mac_pop_item->common.EffectLevel1 = item->Scroll.Level2;
-				mac_pop_item->common.EffectLevel2 = item->Scroll.Level2;
+				trilogy_pop_item->common.EffectLevel1 = item->Scroll.Level2;
+				trilogy_pop_item->common.EffectLevel2 = item->Scroll.Level2;
 			}
 		}
 		//We have some worn effect items (Lodizal Shell Shield) as proceffect in db.
 		else if (item->Proc.Effect > 0 && item->Proc.Effect < 3000)
 		{
-			mac_pop_item->common.Effect1 = item->Proc.Effect;
-			mac_pop_item->common.Effect2 = item->Proc.Effect;
+			trilogy_pop_item->common.Effect1 = item->Proc.Effect;
+			trilogy_pop_item->common.Effect2 = item->Proc.Effect;
 			if (item->Worn.Type > 0)
 			{
-				mac_pop_item->common.EffectType2 = item->Worn.Type;
-				mac_pop_item->common.EffectType1 = item->Worn.Type;
+				trilogy_pop_item->common.EffectType2 = item->Worn.Type;
+				trilogy_pop_item->common.EffectType1 = item->Worn.Type;
 			}
 			else
 			{
-				mac_pop_item->common.EffectType2 = item->Proc.Type;
-				mac_pop_item->common.EffectType1 = item->Proc.Type;
+				trilogy_pop_item->common.EffectType2 = item->Proc.Type;
+				trilogy_pop_item->common.EffectType1 = item->Proc.Type;
 			}
 			if (item->Proc.Level > 0)
 			{
-				mac_pop_item->common.EffectLevel1 = item->Proc.Level;
-				mac_pop_item->common.EffectLevel2 = item->Proc.Level;
+				trilogy_pop_item->common.EffectLevel1 = item->Proc.Level;
+				trilogy_pop_item->common.EffectLevel2 = item->Proc.Level;
 			}
 			else
 			{
-				mac_pop_item->common.EffectLevel1 = item->Proc.Level2;
-				mac_pop_item->common.EffectLevel2 = item->Proc.Level2;
+				trilogy_pop_item->common.EffectLevel1 = item->Proc.Level2;
+				trilogy_pop_item->common.EffectLevel2 = item->Proc.Level2;
 			}
 		}
 		else if (item->Worn.Effect > 0 && item->Worn.Effect < 3000)
 		{
-			mac_pop_item->common.Effect1 = item->Worn.Effect;
-			mac_pop_item->common.Effect2 = item->Worn.Effect;
-			mac_pop_item->common.EffectType2 = item->Worn.Type;
-			mac_pop_item->common.EffectType1 = item->Worn.Type;
+			trilogy_pop_item->common.Effect1 = item->Worn.Effect;
+			trilogy_pop_item->common.Effect2 = item->Worn.Effect;
+			trilogy_pop_item->common.EffectType2 = item->Worn.Type;
+			trilogy_pop_item->common.EffectType1 = item->Worn.Type;
 			if (item->Worn.Level > 0)
 			{
-				mac_pop_item->common.EffectLevel1 = item->Worn.Level;
-				mac_pop_item->common.EffectLevel2 = item->Worn.Level;
+				trilogy_pop_item->common.EffectLevel1 = item->Worn.Level;
+				trilogy_pop_item->common.EffectLevel2 = item->Worn.Level;
 			}
 			else
 			{
-				mac_pop_item->common.EffectLevel1 = item->Worn.Level2;
-				mac_pop_item->common.EffectLevel2 = item->Worn.Level2;
+				trilogy_pop_item->common.EffectLevel1 = item->Worn.Level2;
+				trilogy_pop_item->common.EffectLevel2 = item->Worn.Level2;
 			}
 		}
 
-		return mac_pop_item;
+		return trilogy_pop_item;
 	}
 
 	structs::Spawn_Struct* TrilogySpawns(struct Spawn_Struct* emu, int type)

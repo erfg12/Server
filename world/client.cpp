@@ -73,7 +73,6 @@ Client::Client(EQStreamInterface* ieqs)
 	connect(1000),
 	eqs(ieqs)
 {
-	Log.Out(Logs::General, Logs::World_Server, "Client::Client() starting...");
 	// Live does not send datarate as of 3/11/2005
 	//eqs->SetDataRate(7);
 	ip = eqs->GetRemoteIP();
@@ -89,7 +88,6 @@ Client::Client(EQStreamInterface* ieqs)
 	pwaitingforbootup = 0;
 	ClientVersionBit = 0;
 	numclients++;
-	Log.Out(Logs::General, Logs::World_Server, "Client::Client() ending...");
 }
 
 Client::~Client() {
@@ -175,7 +173,10 @@ void Client::SendCharInfo() {
 }
 
 bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
+	Log.Out(Logs::General, Logs::World_Server, "Client::HandleSendLoginInfoPacket starting...");
+
 	if (app->size != sizeof(LoginInfo_Struct)) {
+		Log.Out(Logs::General, Logs::World_Server, "LoginInfo_Struct is incorrect size!!");
 		return false;
 	}
 
@@ -261,7 +262,7 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 
 		if (!pZoning) {
 			SendExpansionInfo();
-			SendCharInfo();
+			SendCharInfo(); //<--- this is bad
 			database.LoginIP(cle->AccountID(), long2ip(GetIP()).c_str());
 		}
 

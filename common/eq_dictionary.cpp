@@ -493,7 +493,7 @@ uint16 EQLimits::InventoryMapSize(int16 map, uint32 version) {
 		{ // local[MapBank]
 /*Unknown*/		NOT_USED,
 /*Unused*/		0,
-/*Mac*/			MAC::consts::MAP_BANK_SIZE,
+/*Mac*/			TRILOGY::consts::MAP_BANK_SIZE,
 /*evolution*/	0,
 
 /*NPC*/			NOT_USED,
@@ -583,7 +583,7 @@ uint16 EQLimits::InventoryMapSize(int16 map, uint32 version) {
 		{ // local[MapCorpse]
 /*Unknown*/		NOT_USED,
 /*Unused*/		0,
-/*Mac*/			MAC::consts::MAP_CORPSE_SIZE,
+/*Mac*/			TRILOGY::consts::MAP_CORPSE_SIZE,
 /*evolution*/	0,
 
 /*NPC*/			0,
@@ -601,7 +601,7 @@ uint16 EQLimits::InventoryMapSize(int16 map, uint32 version) {
 		{ // local[MapInspect]
 /*Unknown*/		NOT_USED,
 /*Unused*/		0,
-/*Mac*/			MAC::consts::MAP_INSPECT_SIZE,
+/*Mac*/			TRILOGY::consts::MAP_INSPECT_SIZE,
 /*evolution*/	0,
 
 /*NPC*/			NOT_USED,
@@ -783,7 +783,7 @@ bool EQLimits::AllowsEmptyBagInBag(uint32 version) {
 	static const bool local[_EmuClientCount] = {
 		/*Unknown*/		false,
 		/*Unused*/		false,
-		/*Mac*/			MAC::limits::ALLOWS_EMPTY_BAG_IN_BAG,
+		/*Mac*/			TRILOGY::limits::ALLOWS_EMPTY_BAG_IN_BAG,
 		/*Evolution*/	false,
 
 		/*NPC*/			false,
@@ -798,7 +798,7 @@ bool EQLimits::AllowsClickCastFromBag(uint32 version) {
 	static const bool local[_EmuClientCount] = {
 /*Unknown*/		false,
 /*Unused*/		false,
-/*Mac*/			MAC::limits::ALLOWS_CLICK_CAST_FROM_BAG,
+/*Mac*/			TRILOGY::limits::ALLOWS_CLICK_CAST_FROM_BAG,
 /*Evolution*/	false,
 
 /*NPC*/			false,
@@ -841,7 +841,7 @@ bool EQLimits::CoinHasWeight(uint32 version) {
 	static const bool local[_EmuClientCount] = {
 		/*Unknown*/		true,
 		/*Unused*/		true,
-		/*Mac*/			MAC::limits::COIN_HAS_WEIGHT,
+		/*Mac*/			TRILOGY::limits::COIN_HAS_WEIGHT,
 		/*Evolution*/	true,
 
 		/*NPC*/			true,

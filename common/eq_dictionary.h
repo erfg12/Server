@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "eq_constants.h"
 #include "clientversions.h"
 #include <string>
-#include "../common/patches/mac_constants.h"
+#include "../common/patches/trilogy_constants.h"
 //#include "../common/patches/evolution_constants.h"
 
 // *** DO NOT CHANGE without a full understanding of the consequences..the server is set up to use these settings explicitly!! ***
@@ -114,8 +114,8 @@ public:
 
 	// items
 	// common and container sizes will not increase until the new 'location' struct is implemented
-	static const uint16 ITEM_COMMON_SIZE = MAC::consts::ITEM_COMMON_SIZE;
-	static const uint16 ITEM_CONTAINER_SIZE = MAC::consts::ITEM_CONTAINER_SIZE;
+	static const uint16 ITEM_COMMON_SIZE = TRILOGY::consts::ITEM_COMMON_SIZE;
+	static const uint16 ITEM_CONTAINER_SIZE = TRILOGY::consts::ITEM_CONTAINER_SIZE;
 
 	static const int16 CURSOR_QUEUE_BEGIN = 8000;
 	static const int16 CURSOR_QUEUE_END = 8999;

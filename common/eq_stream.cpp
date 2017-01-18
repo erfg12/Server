@@ -2177,6 +2177,8 @@ void EQOldStream::QueuePacket(const EQApplicationPacket *p, bool ack_req)
 {
 //	ack_req = true;	// It's broke right now, dont delete this line till fix it. =P
 
+	Log.Out(Logs::General, Logs::World_Server, DumpPacketToString(p));
+
 	if(p == nullptr)
 		return;
 
@@ -2193,6 +2195,7 @@ void EQOldStream::QueuePacket(const EQApplicationPacket *p, bool ack_req)
 
 void EQOldStream::FastQueuePacket(EQApplicationPacket **p, bool ack_req)
 {
+	Log.Out(Logs::General, Logs::World_Server, DumpPacketToString(*p));
 	EQApplicationPacket *pack=*p;
 	*p = nullptr;		//clear caller's pointer.. effectively takes ownership
 

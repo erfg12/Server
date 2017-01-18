@@ -41,7 +41,7 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 	/* Initialize Variables */
 	for (int i=0; i<10; i++) {
 		strcpy(cs->name[i], "<none>");
-		cs->zone[i] = 0;
+		//cs->zone[i] = 0;
 		cs->level[i] = 0;
 	}
 
@@ -80,15 +80,15 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 		cs->class_[char_num] = atoi(row[4]);
 		cs->race[char_num] = atoi(row[3]);
 		cs->gender[char_num] = atoi(row[2]);
-		cs->deity[char_num] = atoi(row[6]);
-		cs->zone[char_num] = atoi(row[16]);
+		//cs->deity[char_num] = atoi(row[6]);
+		//cs->zone[char_num] = atoi(row[16]);
 		cs->face[char_num] = atoi(row[15]);
-		cs->haircolor[char_num] = atoi(row[9]);
+		/*cs->haircolor[char_num] = atoi(row[9]);
 		cs->beardcolor[char_num] = atoi(row[10]);
 		cs->eyecolor2[char_num] = atoi(row[12]);
 		cs->eyecolor1[char_num] = atoi(row[11]);
 		cs->hairstyle[char_num] = atoi(row[13]);
-		cs->beard[char_num] = atoi(row[14]);
+		cs->beard[char_num] = atoi(row[14]);*/
 
 
 		/* Set Bind Point Data for any character that may possibly be missing it for any reason */
@@ -101,7 +101,7 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 
 		if (has_home == 0 || has_bind == 0){
 			cquery = StringFormat("SELECT `zone_id`, `bind_id`, `x`, `y`, `z` FROM `start_zones` WHERE `player_class` = %i AND `player_deity` = %i AND `player_race` = %i",
-				cs->class_[char_num], cs->deity[char_num], cs->race[char_num]);
+				cs->class_[char_num], /*cs->deity[char_num]*/0, cs->race[char_num]);
 			auto results_bind = database.QueryDatabase(cquery);
 			for (auto row_d = results_bind.begin(); row_d != results_bind.end(); ++row_d) {
 				/* If a bind_id is specified, make them start there */
@@ -171,7 +171,7 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 				if (pp.item_tint[material].rgb.use_tint){ color = pp.item_tint[material].color; }
 				else{ color = item->GetItem()->Color; }
 
-				cs->cs_colors[char_num][material].color = color;
+				//cs->cs_colors[char_num][material].color = color;
 
 				/* Weapons are handled a bit differently */
 				if ((material == MaterialPrimary) || (material == MaterialSecondary)) {
@@ -179,10 +179,10 @@ void WorldDatabase::GetCharSelectInfo(uint32 account_id, CharacterSelect_Struct*
 						uint32 idfile;
 						idfile = atoi(&item->GetItem()->IDFile[2]);
 
-						if (material == MaterialPrimary)
+						/*if (material == MaterialPrimary)
 							cs->primary[char_num] = idfile;
 						else
-							cs->secondary[char_num] = idfile;
+							cs->secondary[char_num] = idfile;*/
 					}
 				}
 			}
