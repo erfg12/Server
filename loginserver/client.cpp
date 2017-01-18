@@ -100,7 +100,8 @@ bool Client::Process()
 			}
 		case OP_PlayEverquestRequest:
 			{
-				if (app->Size() < sizeof(PlayEverquestRequest_Struct) && version != cv_old && version != cv_tri)
+				server_log->Log(log_debug, "OP_PlayEverquestRequest started...");
+				if (app->Size() < sizeof(PlayEverquestRequest_Struct) && (version != cv_old && version != cv_tri))
 				{
 					server_log->Log(log_network_error, "Play received but it is too small, discarding.");
 					break;
@@ -212,6 +213,7 @@ void Client::Handle_Login(const char* data, unsigned int size, string client)
 
 	if (client == "OSX")
 	{
+		server_log->Log(log_debug, "System is OSX...");
 		string ourdata = data;
 		if (size < strlen("eqworld-52.989studios.com") + 1)
 			return;
@@ -227,6 +229,7 @@ void Client::Handle_Login(const char* data, unsigned int size, string client)
 	}
 	else if (client == "PC")
 	{
+		server_log->Log(log_debug, "System is PC...");
 		string e_hash;
 		char *e_buffer = nullptr;
 		uchar eqlogin[40];
@@ -355,6 +358,7 @@ void Client::Handle_LoginComplete(const char* data, unsigned int size) {
 
 void Client::Handle_Play(const char* data)
 {
+	server_log->Log(log_debug, "Handle_Play starting...");
 	if(status != cs_logged_in)
 	{
 		server_log->Log(log_client_error, "Client sent a play request when they either were not logged in, discarding.");

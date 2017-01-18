@@ -42,7 +42,7 @@ class EmuConstants {
 	// an immutable value is required to initialize arrays, etc... use this class as a repository for those
 public:
 	// database
-	static const EQClientVersion CHARACTER_CREATION_CLIENT = EQClientMac; // adjust according to starting item placement and target client
+	static const EQClientVersion CHARACTER_CREATION_CLIENT = EQClientTrilogy; // adjust according to starting item placement and target client
 
 	// inventory
 	static uint16 InventoryMapSize(int16 map);

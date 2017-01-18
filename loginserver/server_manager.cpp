@@ -273,6 +273,7 @@ void ServerManager::SendOldUserToWorldRequest(const char* server_id, unsigned in
 	{
 		if((*iter)->GetRemoteIP() == server_id)
 		{
+			server_log->Log(log_debug, "SendOldUserToWorldRequest starting...");
 			ServerPacket *outapp = new ServerPacket(ServerOP_UsertoWorldReq, sizeof(UsertoWorldRequest_Struct));
 			UsertoWorldRequest_Struct *utwr = (UsertoWorldRequest_Struct*)outapp->pBuffer;
 

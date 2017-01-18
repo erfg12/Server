@@ -1577,7 +1577,7 @@ luabind::scope lua_register_client_version() {
 		.enum_("constants")
 		[
 			luabind::value("Unknown", static_cast<int>(EQClientUnknown)),
-			luabind::value("Unused", static_cast<int>(EQClientUnused)),
+			luabind::value("Trilogy", static_cast<int>(EQClientTrilogy)),
 			luabind::value("EQMac", static_cast<int>(EQClientMac)),
 			luabind::value("Evolution", static_cast<int>(EQClientEvolution))
 		];

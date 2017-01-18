@@ -963,7 +963,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	}
 	else
 	{
-		if(Connection()->ClientVersion() == EQClientUnused)
+		if (Connection()->ClientVersion() == EQClientTrilogy)
 			ClientVersionBit = 1;
 		else
 			ClientVersionBit = 16;

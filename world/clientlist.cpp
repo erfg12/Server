@@ -47,7 +47,7 @@ ClientList::~ClientList() {
 }
 
 void ClientList::Process() {
-
+	//Log.Out(Logs::General, Logs::World_Server, "processing client list...");
 	if (CLStale_timer.Check())
 		CLCheckStale();
 
@@ -58,7 +58,7 @@ void ClientList::Process() {
 		if (!iterator.GetData()->Process()) {
 			struct in_addr in;
 			in.s_addr = iterator.GetData()->GetIP();
-			Log.Out(Logs::Detail, Logs::World_Server,"Removing client from %s:%d", inet_ntoa(in), iterator.GetData()->GetPort());
+			Log.Out(Logs::General, Logs::World_Server, "Removing client from %s:%d", inet_ntoa(in), iterator.GetData()->GetPort());
 			uint32 accountid = iterator.GetData()->GetAccountID();
 			iterator.RemoveCurrent();
 

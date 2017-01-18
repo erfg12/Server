@@ -15,7 +15,7 @@ static const uint32 BIT_AllClients = 0xFFFFFFFF;
 typedef enum
 {
 	EQClientUnknown = 0,
-	EQClientUnused,
+	EQClientTrilogy,
 	EQClientMac,
 	EQClientEvolution,
 	_EQClientCount,			// place new clients before this point (preferably, in release/attribute order)
@@ -34,8 +34,8 @@ static const char* EQClientVersionName(EQClientVersion version)
 	{
 	case EQClientUnknown:
 		return "EQClientUnknown";
-	case EQClientUnused:
-		return "EQClientUnused";
+	case EQClientTrilogy:
+		return "EQClientTrilogy";
 	case EQClientMac:
 		return "EQClientMac";
 	case EQClientEvolution:

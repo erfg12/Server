@@ -5,6 +5,7 @@
 
 
 EQStreamIdentifier::~EQStreamIdentifier() {
+	Log.Out(Logs::General, Logs::Netcode, "EQStreamIdentifier starting...");
 	while(!m_identified.empty()) {
 		m_identified.front()->ReleaseFromUse();
 		m_identified.pop();
@@ -43,6 +44,7 @@ EQStreamIdentifier::~EQStreamIdentifier() {
 }
 
 void EQStreamIdentifier::RegisterPatch(const EQStream::Signature &sig, const char *name, OpcodeManager ** opcodes, const StructStrategy *structs) {
+	Log.Out(Logs::General, Logs::Netcode, "RegisterPatch EQStreamIdentifier");
 	Patch *p = new Patch;
 	p->signature = sig;
 	p->name = name;
@@ -52,6 +54,7 @@ void EQStreamIdentifier::RegisterPatch(const EQStream::Signature &sig, const cha
 }
 
 void EQStreamIdentifier::RegisterOldPatch(const EQStream::Signature &sig, const char *name, OpcodeManager ** opcodes, const StructStrategy *structs) {
+	Log.Out(Logs::General, Logs::Netcode, "RegisterOldPatch EQStreamIdentifier");
 	OldPatch *p = new OldPatch;
 	p->signature = sig;
 	p->name = name;
@@ -62,6 +65,7 @@ void EQStreamIdentifier::RegisterOldPatch(const EQStream::Signature &sig, const 
 
 
 void EQStreamIdentifier::Process() {
+	Log.Out(Logs::General, Logs::Netcode, "Processing EQStreamIdentifier");
 	std::vector<Record *>::iterator cur;
 	std::vector<Patch *>::iterator curp, endp;
 
@@ -278,11 +282,13 @@ void EQStreamIdentifier::Process() {
 }
 
 void EQStreamIdentifier::AddStream(EQStream *&eqs) {
+	Log.Out(Logs::General, Logs::World_Server, "AddStream starting...");
 	m_streams.push_back(new Record(eqs));
 	eqs = nullptr;
 }
 
 void EQStreamIdentifier::AddOldStream(EQOldStream *&eqs) {
+	Log.Out(Logs::General, Logs::World_Server, "AddOldStream starting...");
 	m_oldstreams.push_back(new OldRecord(eqs));
 	eqs = nullptr;
 }

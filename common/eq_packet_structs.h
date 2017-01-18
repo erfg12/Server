@@ -434,6 +434,7 @@ struct Charm_Struct {
 
 struct InterruptCast_Struct
 {
+	uint16 entityid; //trilogy
 	uint16 messageid;
 	uint16 color;
 	char	message[0];
@@ -618,6 +619,7 @@ struct CharCreate_Struct
 /*006*/		uint16  face;
 /*0068*/	uint32	eyecolor1;	//its possiable we could have these switched
 /*0073*/	uint32	eyecolor2;	//since setting one sets the other we really can't check
+char	zonename[20]; //For trilogy
 };
 
 /*

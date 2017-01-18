@@ -42,6 +42,7 @@ namespace Mac {
 			//load up the opcode manager.
 			//TODO: figure out how to support shared memory with multiple patches...
 			opcodes = new RegularOpcodeManager();
+			Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Registering %s. ", opfile.c_str());
 			if(!opcodes->LoadOpcodes(opfile.c_str())) 
 			{
 				Log.Out(Logs::General, Logs::Netcode, "[OPCODES] Error loading opcodes file %s. Not registering patch %s.", opfile.c_str(), name);

@@ -73,7 +73,7 @@ Client::Client(EQStreamInterface* ieqs)
 	connect(1000),
 	eqs(ieqs)
 {
-
+	Log.Out(Logs::General, Logs::World_Server, "Client::Client() starting...");
 	// Live does not send datarate as of 3/11/2005
 	//eqs->SetDataRate(7);
 	ip = eqs->GetRemoteIP();
@@ -89,6 +89,7 @@ Client::Client(EQStreamInterface* ieqs)
 	pwaitingforbootup = 0;
 	ClientVersionBit = 0;
 	numclients++;
+	Log.Out(Logs::General, Logs::World_Server, "Client::Client() ending...");
 }
 
 Client::~Client() {
@@ -227,7 +228,7 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 		}
 		else
 		{
-			if(eqs->ClientVersion() == EQClientUnused)
+			if(eqs->ClientVersion() == EQClientTrilogy)
 				ClientVersionBit = 1;
 			else
 				ClientVersionBit = 16;
@@ -680,6 +681,7 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 }
 
 bool Client::Process() {
+	Log.Out(Logs::Detail, Logs::World_Server, "Client::Process() started...");
 	bool ret = true;
 	//bool sendguilds = true;
 	sockaddr_in to;
