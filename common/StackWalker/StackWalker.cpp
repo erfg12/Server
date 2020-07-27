@@ -174,7 +174,9 @@ DWORD64
 #if _MSC_VER < 1400
 #define strcpy_s strcpy
 #define strcat_s(dst, len, src) strcat(dst, src)
-#define _snprintf_s _snprintf
+#if _MSC_VER < 1900
+#  define snprintf_s _snprintf
+#endif
 #define _tcscat_s _tcscat
 #endif
 

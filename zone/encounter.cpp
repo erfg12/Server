@@ -17,8 +17,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
 #ifdef _WINDOWS
-#define snprintf	_snprintf
+#if _MSC_VER < 1900
+#define snprintf _snprintf
 #define vsnprintf	_vsnprintf
+#endif
 #define strncasecmp	_strnicmp
 #define strcasecmp	_stricmp
 #endif

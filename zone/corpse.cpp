@@ -22,8 +22,10 @@ Child of the Mob class.
 */
 
 #ifdef _WINDOWS
-    #define snprintf	_snprintf
-	#define vsnprintf	_vsnprintf
+#if _MSC_VER < 1900
+#define snprintf _snprintf
+#define vsnprintf	_vsnprintf
+#endif
     #define strncasecmp	_strnicmp
     #define strcasecmp	_stricmp
 #endif

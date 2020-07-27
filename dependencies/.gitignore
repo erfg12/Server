@@ -7,3 +7,7 @@ zlib_x86/
 zlib_x64/
 cyassl/
 websocketpp/
+libsodium/
+libwebsockets/
+luabind
+openssl_x86

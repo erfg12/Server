@@ -34,7 +34,9 @@
 #include <iostream>
 
 #ifdef _WINDOWS
-#define snprintf	_snprintf
+#if _MSC_VER < 1900
+#define snprintf _snprintf
+#endif
 #endif
 
 struct NPCType;

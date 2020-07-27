@@ -34,13 +34,13 @@ SET(MySQL_NAMES mysqlclient_r mysqlclient)
 IF(MYSQL_ROOT)
 	FIND_LIBRARY(MySQL_LIBRARY_DEBUG
 		NAMES ${MySQL_NAMES}
-		PATHS ${MYSQL_ROOT}/lib/debug /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64
+		PATHS ${MYSQL_ROOT}/lib/vs14/debug /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64
 		PATH_SUFFIXES mysql
 	)
 
 	FIND_LIBRARY(MySQL_LIBRARY_RELEASE
 		NAMES ${MySQL_NAMES}
-		PATHS ${MYSQL_ROOT}/lib /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64
+		PATHS ${MYSQL_ROOT}/lib/vs14 /usr/lib /usr/local/lib /usr/lib64 /usr/local/lib64
 		PATH_SUFFIXES mysql
 	)
 ELSE(MYSQL_ROOT)

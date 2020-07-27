@@ -26,7 +26,9 @@
 #ifdef _WINDOWS
 	#include <process.h>
 
-	#define snprintf	_snprintf
+#if _MSC_VER < 1900
+#define snprintf _snprintf
+#endif
 	#define strncasecmp	_strnicmp
 	#define strcasecmp	_stricmp
 #endif

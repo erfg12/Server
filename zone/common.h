@@ -4,6 +4,8 @@
 #include "../common/types.h"
 #include "../common/spdat.h"
 
+
+
 #define	HIGHEST_RESIST 9 //Max resist type value
 
 /* solar: macros for IsAttackAllowed, IsBeneficialAllowed */

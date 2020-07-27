@@ -24,4 +24,11 @@
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
+#define stdin  (__acrt_iob_func(0))
+#define stdout (__acrt_iob_func(1))
+#define stderr (__acrt_iob_func(2))
+
+FILE _iob[] = { *stdin, *stdout, *stderr };
+extern "C" FILE* __cdecl __iob_func(void) { return _iob; }
+
 #endif // !defined(AFX_STDAFX_H__2BA1C837_5B64_460A_9580_0ECEDF126247__INCLUDED_)

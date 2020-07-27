@@ -43,7 +43,9 @@
 #include "remote_call_subscribe.h"
 
 #ifdef _WINDOWS
-	#define snprintf	_snprintf
+#if _MSC_VER < 1900
+#define snprintf _snprintf
+#endif
 	#define strncasecmp	_strnicmp
 	#define strcasecmp	_stricmp
 #endif
