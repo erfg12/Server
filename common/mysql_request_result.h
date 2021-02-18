@@ -5,7 +5,7 @@
 	#include <winsock.h>
 	#include <windows.h>
 #endif
-
+#include <string>
 #include <mysql.h>
 #include "types.h"
 #include "mysql_request_row.h"
